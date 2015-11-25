@@ -1,7 +1,7 @@
-pbcore
-======
+pbcoretools
+===========
 
 .. toctree::
    :maxdepth: 4
 
-   pbcore
+   pbcoretools

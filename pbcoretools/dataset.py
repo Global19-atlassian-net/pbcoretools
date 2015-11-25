@@ -1,11 +1,9 @@
-#!/usr/bin/env python
-
 import sys
 import argparse
 import logging
 import time
-from pbcore.io.dataset import EntryPoints
-from pbcore import __VERSION__
+from pbcoretools import DataSetEntryPoints as EntryPoints
+from pbcoretools.version import __VERSION__
 
 
 LOG_FORMAT = "%(asctime)s [%(levelname)s] %(message)s"
@@ -61,7 +59,6 @@ def main(argv=sys.argv):
     if args.debug:
         log.setLevel(logging.DEBUG)
     return args.func(args)
-    #return main_runner_default(argv[1:], get_parser(), log)
 
 if __name__ == '__main__':
     sys.exit(main())

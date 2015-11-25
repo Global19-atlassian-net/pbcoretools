@@ -42,7 +42,7 @@ clean:
 	-rm -rf $(BUILDDIR)/*
 
 api-doc:
-	sphinx-apidoc -o . -d 4  ../pbcore/
+	sphinx-apidoc -o . -d 4  ../pbcoretools/
 
 html: api-doc
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
@@ -80,17 +80,17 @@ qthelp:
 	@echo
 	@echo "Build finished; now you can run "qcollectiongenerator" with the" \
 	      ".qhcp project file in $(BUILDDIR)/qthelp, like this:"
-	@echo "# qcollectiongenerator $(BUILDDIR)/qthelp/pbcore.qhcp"
+	@echo "# qcollectiongenerator $(BUILDDIR)/qthelp/pbcoretools.qhcp"
 	@echo "To view the help file:"
-	@echo "# assistant -collectionFile $(BUILDDIR)/qthelp/pbcore.qhc"
+	@echo "# assistant -collectionFile $(BUILDDIR)/qthelp/pbcoretools.qhc"
 
 devhelp:
 	$(SPHINXBUILD) -b devhelp $(ALLSPHINXOPTS) $(BUILDDIR)/devhelp
 	@echo
 	@echo "Build finished."
 	@echo "To view the help file:"
-	@echo "# mkdir -p $$HOME/.local/share/devhelp/pbcore"
-	@echo "# ln -s $(BUILDDIR)/devhelp $$HOME/.local/share/devhelp/pbcore"
+	@echo "# mkdir -p $$HOME/.local/share/devhelp/pbcoretools"
+	@echo "# ln -s $(BUILDDIR)/devhelp $$HOME/.local/share/devhelp/pbcoretools"
 	@echo "# devhelp"
 
 epub:

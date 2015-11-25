@@ -18,7 +18,7 @@ clean: doc-clean
 	rm -f nosetests.xml
 
 doc:
-	sphinx-apidoc -o doc/ pbcore/ && cd doc/ && make html
+	sphinx-apidoc -o doc/ pbcoretools/ && cd doc/ && make html
 doc-clean:
 	cd doc && rm -rf _templates _static _build searchindex.js objects.inv
 
@@ -33,7 +33,7 @@ test: doctest unit-test
 tests: test
 check: test
 
-GH_PAGES_SOURCES = pbcore doc
+GH_PAGES_SOURCES = pbcoretools doc
 
 gh-pages:
 	git checkout gh-pages
@@ -46,7 +46,7 @@ gh-pages:
 
 pip-install:
 	@which pip > /dev/null
-	@pip freeze|grep 'pbcore=='>/dev/null \
-      && pip uninstall -y pbcore \
+	@pip freeze|grep 'pbcoretools=='>/dev/null \
+      && pip uninstall -y pbcoretools \
       || echo -n ''
 	@pip install --no-index ./

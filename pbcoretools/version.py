@@ -28,15 +28,5 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #################################################################################
 
-from .BasH5IO import *
-from .FastaIO import *
-from .FastqIO import *
-from .FofnIO  import *
-from .GffIO   import *
-from .base    import *
+__VERSION__ = "0.1.0"
 
-from .align   import *
-
-from .dataset import *
-
-from .opener  import *

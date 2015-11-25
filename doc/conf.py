@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# pbcore documentation build configuration file, created by
+# pbcoretools documentation build configuration file, created by
 # sphinx-quickstart on Thu Nov 10 14:37:34 2011.
 #
 # This file is execfile()d with the current directory set to its containing dir.
@@ -13,7 +13,7 @@
 
 import sys, os
 globals = {}
-execfile("../pbcore/__init__.py", globals)
+execfile("../pbcoretools/__init__.py", globals)
 __VERSION__ = globals["__VERSION__"]
 
 
@@ -48,7 +48,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'pbcore'
+project = u'pbcoretools'
 copyright = u'2011-2015, Pacific Biosciences'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -173,7 +173,7 @@ html_theme_path = ["../../../../doc/theme/","./"]
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'pbcoredoc'
+htmlhelp_basename = 'pbcoretoolsdoc'
 
 
 # -- Options for LaTeX output --------------------------------------------------
@@ -192,7 +192,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'pbcore.tex', u'pbcore Documentation',
+  ('index', 'pbcoretools.tex', u'pbcoretools Documentation',
    u'devnet@pacificbiosciences.com', 'manual'),
 ]
 
@@ -222,7 +222,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'pbcore', u'pbcore Documentation',
+    ('index', 'pbcoretools', u'pbcoretools Documentation',
      [u'devnet@pacificbiosciences.com'], 1)
 ]
 
@@ -236,8 +236,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'pbcore', u'pbcore Documentation', u'devnet@pacificbiosciences.com',
-   'pbcore', 'One line description of project.', 'Miscellaneous'),
+  ('index', 'pbcoretools', u'pbcoretools Documentation', u'devnet@pacificbiosciences.com',
+   'pbcoretools', 'One line description of project.', 'Miscellaneous'),
 ]
 
 # Documents to append as an appendix to all manuals.
