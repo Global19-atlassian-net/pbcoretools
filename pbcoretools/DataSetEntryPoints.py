@@ -14,8 +14,13 @@ def summarizeXml(args):
     dset = openDataSet(args.infile, strict=args.strict)
     for fname in dset.toExternalFiles():
         print fname
-    print "Number of records: {r}".format(r=dset.numRecords)
-    print "Total number of bases: {r}".format(r=dset.totalLength)
+    print "DataSet Type          : {f}".format(f=dset.datasetType)
+    print "Name                  : {f}".format(f=dset.name)
+    print "Id                    : {f}".format(f=dset.uuid)
+    print "Number of records     : {r}".format(r=dset.numRecords)
+    print "Total number of bases : {r}".format(r=dset.totalLength)
+    print "# of Resources        : {r}".format(r=len(dset.toExternalFiles()))
+    return 0
 
 def summarize_options(parser):
     parser.description = "Summarize a DataSet XML file"
@@ -28,13 +33,13 @@ def createXml(args):
     dset = dsTypes[args.dsType](*args.infile, strict=args.strict,
                                 skipCounts=args.skipCounts,
                                 generateIndices=args.generateIndices)
-    if args.dsName != '':
-        dset.name = args.dsName
     if args.generateIndices:
         # we generated the indices with the last open, lets capture them with
         # this one:
         dset = dsTypes[args.dsType](*args.infile, strict=args.strict,
                                     skipCounts=args.skipCounts)
+    if args.dsName != '':
+        dset.name = args.dsName
     log.debug("Dataset created")
     dset.write(args.outfile, validate=args.novalidate, modPaths=True,
                relPaths=args.relative)
