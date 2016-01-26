@@ -26,7 +26,7 @@ doctest:
 	cd doc && make doctest
 
 unit-test:
-	nosetests --with-xunit tests -v
+	nosetests --with-xunit tests/unit -v
 
 test: doctest unit-test
 
