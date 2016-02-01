@@ -12,14 +12,14 @@ log = logging.getLogger(__name__)
 
 def summarizeXml(args):
     dset = openDataSet(args.infile, strict=args.strict)
-    for fname in dset.toExternalFiles():
-        print fname
     print "DataSet Type          : {f}".format(f=dset.datasetType)
     print "Name                  : {f}".format(f=dset.name)
     print "Id                    : {f}".format(f=dset.uuid)
     print "Number of records     : {r}".format(r=dset.numRecords)
     print "Total number of bases : {r}".format(r=dset.totalLength)
     print "# of Resources        : {r}".format(r=len(dset.toExternalFiles()))
+    for fname in dset.toExternalFiles():
+        print fname
     return 0
 
 def summarize_options(parser):
@@ -89,7 +89,7 @@ def filterXml(args):
         raise IOError("No files found/found to be compatible")
 
 def filter_options(parser):
-    pbiFilterOptions = set(Filters()._pbiMappedVecAccMap({}).keys())
+    pbiFilterOptions = set(Filters()._pbiMappedVecAccMap().keys())
     bamFilterOptions = set(Filters()._bamAccMap.keys())
     parser.description = ('Add filters to an XML file. Suggested fields: '
                           '{f}. More expensive fields: {b}'.format(
