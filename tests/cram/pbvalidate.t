@@ -2,7 +2,6 @@
 Test of command-line pbvalidate tool
 
   $ DATA=$TESTDIR/../data
-  $ HDF_SUBREAD_SET=/pbi/dept/secondary/siv/testdata/SA3-RS/ecoli/2590953/0001/m140913_005018_42139_c100713652400000001823152404301534_s1_p0.hdfsubreadset.xml
 
   $ pbvalidate
   usage: pbvalidate [-h] [-v] [-c] [--verbose] [-q] [--debug] [--quick]
@@ -20,7 +19,7 @@ Test of command-line pbvalidate tool
 
 Good Fasta file
 
-  $ pbvalidate /pbi/dept/secondary/siv/references/Helicobacter_pylori_J99/sequence/Helicobacter_pylori_J99.fasta
+  $ pbvalidate $DATA/test0.fasta
 
 Good BAM file
 
@@ -149,10 +148,6 @@ Now a ReferenceSet XML file (i.e. Fasta sequences)
   1 spec violation(s) detected:
     Unexpected error reading dataset: [Errno 5] Cannot create PacBio.DataSet.AlignmentSet from PacBio.DataSet.ReferenceSet: '*/reference.xml'.  This prevents any further validation functions from being run. (glob)
   [1]
-
-Now an HdfSubreadSet - won't do much:
-
-  $ pbvalidate $HDF_SUBREAD_SET
 
 
 bamSieve:
