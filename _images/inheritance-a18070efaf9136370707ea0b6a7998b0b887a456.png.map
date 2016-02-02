@@ -1,0 +1,13 @@
+<map id="inheritance5d781fce17" name="inheritance5d781fce17">
+<area shape="rect" id="node1" href="#pbcore.io.dataset.DataSetIO.AlignmentSet" title="DataSet type specific to Alignments. No type specific Metadata exists," alt="" coords="428,6,531,30"/>
+<area shape="rect" id="node5" href="#pbcore.io.dataset.DataSetIO.ConsensusAlignmentSet" title="Dataset type for aligned CCS reads. &#160;Essentially identical to AlignmentSet" alt="" coords="594,6,763,30"/>
+<area shape="rect" id="node2" href="#pbcore.io.dataset.DataSetIO.ReadSet" title="Base type for read sets, should probably never be used as a concrete" alt="" coords="248,99,319,123"/>
+<area shape="rect" id="node6" href="#pbcore.io.dataset.DataSetIO.ConsensusReadSet" title="DataSet type specific to CCSreads. No type specific Metadata exists, so" alt="" coords="411,52,548,76"/>
+<area shape="rect" id="node13" href="#pbcore.io.dataset.DataSetIO.SubreadSet" title="DataSet type specific to Subreads" alt="" coords="433,145,526,169"/>
+<area shape="rect" id="node3" href="#pbcore.io.dataset.DataSetIO.BarcodeSet" title="DataSet type specific to Barcodes" alt="" coords="237,145,329,169"/>
+<area shape="rect" id="node4" href="#pbcore.io.dataset.DataSetIO.DataSet" title="The record containing the DataSet information, with possible type" alt="" coords="45,145,116,169"/>
+<area shape="rect" id="node7" href="#pbcore.io.dataset.DataSetIO.ContigSet" title="DataSet type specific to Contigs" alt="" coords="243,192,324,216"/>
+<area shape="rect" id="node11" href="#pbcore.io.dataset.DataSetIO.ReferenceSet" title="DataSet type specific to References" alt="" coords="429,192,530,216"/>
+<area shape="rect" id="node8" href="#pbcore.io.dataset.DataSetIO.DataSetMetaTypes" title="This mirrors the PacBioSecondaryDataModel.xsd definitions and be used" alt="" coords="13,99,148,123"/>
+<area shape="rect" id="node10" href="#pbcore.io.dataset.DataSetIO.InvalidDataSetIOError" title="The base class for all DataSetIO related custom exceptions" alt="" coords="6,52,155,76"/>
+</map>
