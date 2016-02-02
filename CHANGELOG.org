@@ -1,2 +1,5 @@
 * Version 0.1.0
   - Extract pbcoretools from pbcore
+
+* Version 0.1.1
+  - Relocate pbvalidate and bamSieve from perforce

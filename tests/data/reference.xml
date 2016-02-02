@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pbds:ReferenceSet CreatedAt="2015-08-06T12:43:30" MetaType="PacBio.DataSet.ReferenceSet" Name="" Tags="" TimeStampedName="PacBio.DataSet.ReferenceSet-150806_194330" UniqueId="66e595ca-cf25-13fc-38b1-cb809bcb9b34" Version="3.0.0" xmlns="http://pacificbiosciences.com/PacBioDataModel.xsd" xmlns:pbbase="http://pacificbiosciences.com/PacBioBaseDataModel.xsd" xmlns:pbds="http://pacificbiosciences.com/PacBioDatasets.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pacificbiosciences.com/PacBioDataModel.xsd">
+	<pbbase:ExternalResources>
+		<pbbase:ExternalResource MetaType="PacBio.ReferenceFile.ReferenceFastaFile" ResourceId="tst1.fasta" TimeStampedName="PacBio.ReferenceFile.ReferenceFastaFile-150806_194330" UniqueId="4f8ae10c-ff6d-4090-bd7f-f5de7367ce78">
+			<pbbase:FileIndices>
+				<pbbase:FileIndex MetaType="PacBio.Index.SamIndex" ResourceId="tst1.fasta.fai" TimeStampedName="PacBio.Index.SamIndex-150806_194330" UniqueId="5d6a4e30-9d7b-4f3b-9ca8-09b4667ffcd2"/>
+			</pbbase:FileIndices>
+		</pbbase:ExternalResource>
+	</pbbase:ExternalResources>
+	<pbds:DataSetMetadata>
+		<pbds:TotalLength>25000</pbds:TotalLength>
+		<pbds:NumRecords>1</pbds:NumRecords>
+		<pbds:Organism/>
+		<pbds:Ploidy/>
+		<pbds:Contigs>
+			<pbds:Contig Description="" Digest="DEPRECATED" Length="25000" Name="ecoliK12_pbi_March2013_2955000_to_2980000"/>
+		</pbds:Contigs>
+	</pbds:DataSetMetadata>
+</pbds:ReferenceSet>

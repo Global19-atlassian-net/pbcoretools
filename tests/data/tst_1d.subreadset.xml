@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SubreadSet CreatedAt="2015-10-09T17:06:41" Description="Merged dataset from 1 files using DatasetMerger 0.2.0" MetaType="PacBio.DataSet.SubreadSet" Name="Subreads from runr000013_42267_150403" Tags="pacbio.secondary.instrument=RS" TimeStampedName="pacbio_dataset_subreadset-151010_000638657" UniqueId="41dab5bb-8b14-0118-348a-927b616de3a5" Version="0.5" xmlns="http://pacificbiosciences.com/PacBioDataModel.xsd" xmlns:pbbase="http://pacificbiosciences.com/PacBioBaseDataModel.xsd" xmlns:pbds="http://pacificbiosciences.com/PacBioDatasets.xsd" xmlns:pbmeta="http://pacificbiosciences.com/PacBioCollectionMetadata.xsd" xmlns:pbsample="http://pacificbiosciences.com/PacBioSampleInfo.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pacificbiosciences.com/PacBioDataModel.xsd">
+	<pbbase:ExternalResources>
+    <pbbase:ExternalResource MetaType="PacBio.SubreadFile.SubreadBamFile" ResourceId="tst_1_subreads.bam" TimeStampedName="pacbio_subreadfile_subreadbamfile-151008_191036549" UniqueId="4e6c74d6-dda6-4060-8bb3-90172523717e"/>
+
+	</pbbase:ExternalResources>
+</SubreadSet>
