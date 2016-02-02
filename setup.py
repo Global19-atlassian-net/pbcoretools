@@ -30,7 +30,11 @@ setup(
                                'data/datasets/yieldtest/*.*']
                                },
     zip_safe = False,
-    entry_points = {"console_scripts": ["dataset = pbcoretools.dataset:main"]},
+    entry_points = {"console_scripts": [
+        "dataset = pbcoretools.dataset:main",
+        'pbvalidate = pbcoretools.pbvalidate.main:main',
+        'bamSieve = pbcoretools.bamSieve:main',
+    ]},
     install_requires=[
         'pbcore >= 1.2.6',
     ])

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SubreadSet CreatedAt="2016-01-12T15:09:20" MetaType="PacBio.DataSet.SubreadSet" Name="pacbio_dataset_subreadset-160112_230920406" Tags="" TimeStampedName="pacbio_dataset_subreadset-160112_230920406" UniqueId="7a558f50-d413-fa3a-5a3a-a396d9aec066" Version="3.0.1" xmlns="http://pacificbiosciences.com/PacBioDatasets.xsd" xmlns:pbbase="http://pacificbiosciences.com/PacBioBaseDataModel.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pacificbiosciences.com/PacBioDataModel.xsd">
+	<pbbase:ExternalResources>
+		<pbbase:ExternalResource MetaType="PacBio.SubreadFile.SubreadBamFile" ResourceId="tst_3_subreads.bam" TimeStampedName="pacbio_subreadfile_subreadbamfile-160112_230920405" UniqueId="b9cbd8c3-34d6-4bb6-855c-ba38fb552f62">
+			<pbbase:FileIndices>
+				<pbbase:FileIndex MetaType="PacBio.Index.PacBioIndex" ResourceId="tst_3_subreads.bam.pbi" TimeStampedName="pacbio_index_pacbioindex-160112_230920405" UniqueId="ea2443ce-3cc4-4a45-9037-4a2224120e9d"/>
+			</pbbase:FileIndices>
+		</pbbase:ExternalResource>
+	</pbbase:ExternalResources>
+	<DataSetMetadata>
+		<TotalLength>20</TotalLength>
+		<NumRecords>2</NumRecords>
+	</DataSetMetadata>
+</SubreadSet>
