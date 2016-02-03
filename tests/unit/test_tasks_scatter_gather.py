@@ -27,6 +27,7 @@ from base import get_temp_file
 from mock import write_random_report, \
     write_random_fasta_records, write_random_fastq_records
 
+DATA = op.join(op.dirname(op.dirname(__file__)), "data")
 MNT_DATA = "/pbi/dept/secondary/siv/testdata"
 skip_if_missing_testdata = unittest.skipUnless(op.isdir(MNT_DATA),
     "Missing {d}".format(d=MNT_DATA))
@@ -121,11 +122,14 @@ class TestScatterSubreadZMWs(CompareScatteredRecordsBase,
     READER_CLASS = SubreadSet
     READER_KWARGS = {'strict': True}
     DRIVER_BASE = "python -m pbcoretools.tasks.scatter_subread_zmws"
+    # NOTE(nechols)(2016-02-03): this input is deliberately made to confuse the
+    # old pbcore chunk-by-ZMW code, which didn't properly handle ZMWs split
+    # across BAM files
     INPUT_FILES = [
-        make_tmp_dataset_xml(pbcore.data.getUnalignedBam(), READER_CLASS)
+        op.join(DATA, "lambda.subreadset.xml")
     ]
-    MAX_NCHUNKS = 12
-    RESOLVED_MAX_NCHUNKS = 12
+    MAX_NCHUNKS = 2
+    RESOLVED_MAX_NCHUNKS = 2
     CHUNK_KEYS = ("$chunk.subreadset_id",)
 
 
