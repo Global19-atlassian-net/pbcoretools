@@ -301,7 +301,7 @@ def apply_validator(v, item):
         #_log.debug("Validating {v} {i}".format(v=v, i=item))
         # XXX using str(item) can be prohibitively slow for .bam files when
         # the reference is loaded!
-        _log.debug("Validating {v} {i}".format(v=v, i=repr(item)))
+        #_log.debug("Validating {v} {i}".format(v=v, i=repr(item)))
         if v.validate(item):
             return ValidMetric(v.__class__, object_ref=item)
         else:
