@@ -69,18 +69,23 @@ def create_options(parser):
                               "absolute (not compatible with --novalidate)"))
     parser.set_defaults(func=createXml)
 
+def parse_filter_list(filtStrs):
+    filters = defaultdict(list)
+    separators = ['<=', '>=', '!=', '==', '>', '<', '=']
+    for filt in filtStrs:
+        for sep in separators:
+            if sep in filt:
+                param, condition = filt.split(sep)
+                condition = (sep.strip(), condition.strip())
+                filters[param.strip()].append(condition)
+                break
+    return filters
+
+
 def filterXml(args):
     if args.infile.endswith('xml'):
         dataSet = openDataSet(args.infile, strict=args.strict)
-        filters = defaultdict(list)
-        separators = ['<=', '>=', '!=', '==', '>', '<', '=']
-        for filt in args.filters:
-            for sep in separators:
-                if sep in filt:
-                    param, condition = filt.split(sep)
-                    condition = (sep, condition)
-                    filters[param].append(condition)
-                    break
+        filters = parse_filter_list(args.filters)
         dataSet.filters.addRequirement(**filters)
         dataSet.updateCounts()
         log.info("{i} filters added".format(i=len(filters)))
