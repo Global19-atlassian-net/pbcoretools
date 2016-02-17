@@ -2,7 +2,10 @@
 # -*- coding: utf-8 -*-
 
 from setuptools import setup, Extension, find_packages
+import os.path
 import sys
+
+REQUIREMENTS_TXT = "requirements.txt"
 
 if ("install" in sys.argv) and sys.version_info < (2, 7, 0):
     print "pbcoretools requires Python 2.7"
@@ -11,6 +14,20 @@ if ("install" in sys.argv) and sys.version_info < (2, 7, 0):
 globals = {}
 execfile("pbcoretools/__init__.py", globals)
 __VERSION__ = globals["__VERSION__"]
+
+def _get_local_file(file_name):
+    return os.path.join(os.path.dirname(__file__), file_name)
+
+
+def _get_requirements(file_name):
+    with open(file_name, 'r') as f:
+        reqs = [line for line in f if not line.startswith("#")]
+    return reqs
+
+
+def _get_local_requirements(file_name):
+    return _get_requirements(_get_local_file(file_name))
+
 
 setup(
     name = 'pbcoretools',
@@ -35,6 +52,4 @@ setup(
         'pbvalidate = pbcoretools.pbvalidate.main:main',
         'bamSieve = pbcoretools.bamSieve:main',
     ]},
-    install_requires=[
-        'pbcore >= 1.2.6',
-    ])
+    install_requires=_get_local_requirements(REQUIREMENTS_TXT))
