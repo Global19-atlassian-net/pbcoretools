@@ -190,6 +190,13 @@ def run_bam2fasta(rtc):
         rtc.task.options["pbcoretools.task_options.min_subread_length"])
 
 
+@registry("bam2fasta_nofilter", "0.1.0",
+          FileTypes.DS_SUBREADS,
+          FileTypes.FASTA, is_distributed=True, nproc=1)
+def run_bam2fasta_nofilter(rtc):
+    return run_bam_to_fasta(rtc.task.input_files[0], rtc.task.output_files[0])
+
+
 @registry("fasta2fofn", "0.1.0",
           FileTypes.FASTA,
           FileTypes.FOFN, is_distributed=False, nproc=1)
