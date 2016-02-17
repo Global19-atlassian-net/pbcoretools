@@ -116,6 +116,12 @@ class TestBam2Fasta(PbTestApp):
 
 
 @skip_unless_bam2fastx
+class TestBam2FastaNoFilter(TestBam2Fasta):
+    TASK_ID = "pbcoretools.tasks.bam2fasta_nofilter"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+
+
+@skip_unless_bam2fastx
 class TestBam2Fastq(TestBam2Fasta):
     TASK_ID = "pbcoretools.tasks.bam2fastq"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
