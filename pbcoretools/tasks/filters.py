@@ -1,21 +1,13 @@
-
 """
 Tool contract wrappers for miscellaneous quick functions involving filtration
 """
 
-import functools
-import tempfile
 import logging
-import shutil
-import gzip
-import re
-import os
 import sys
+import re
 
 from pbcoretools.DataSetEntryPoints import parse_filter_list
-from pbcore.io import (SubreadSet, HdfSubreadSet, FastaReader, FastaWriter,
-                       FastqReader, FastqWriter, openDataSet)
-from pbcommand.engine import run_cmd
+from pbcore.io import openDataSet
 from pbcommand.cli import registry_builder, registry_runner, QuickOpt
 from pbcommand.models import FileTypes
 
@@ -28,18 +20,30 @@ registry = registry_builder(TOOL_NAMESPACE, DRIVER_BASE)
 
 
 rl_opt = QuickOpt(0, "Minimum subread length",
-    "Minimum length of subreads")
+                  "Minimum length of subreads")
 
-filters_opt = QuickOpt("", "Filters to add to the DataSet",
+filters_opt = QuickOpt(
+    "",
+    "Filters to add to the DataSet",
     "A comma separated list of other filters to add to the DataSet")
 
+def sanitize_read_length(read_length):
+    if read_length:
+        if not re.search('^-?\d*(\.\d*)?$', str(read_length).strip()):
+            raise ValueError('read_length filter value "{v}" is not a '
+                             'number'.format(v=read_length))
+        try:
+            return int(read_length)
+        except ValueError:
+            return int(float(read_length))
 
 def run_filter_dataset(in_file, out_file, read_length, other_filters):
     dataSet = openDataSet(in_file)
-    if read_length:
-        dataSet.filters.addRequirement(length=[('>=', read_length)])
-        log.info("Readlength filter added")
-    if other_filters:
+    rlen = sanitize_read_length(read_length)
+    if rlen:
+        dataSet.filters.addRequirement(
+            length=[('>=', rlen)])
+    if other_filters and other_filters != "None":
         filters = parse_filter_list(str(other_filters).split(','))
         dataSet.filters.addRequirement(**filters)
         log.info("{i} other filters added".format(i=len(filters)))

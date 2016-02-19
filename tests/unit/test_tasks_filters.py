@@ -1,6 +1,4 @@
 
-import tempfile
-import unittest
 import logging
 import os.path as op
 
@@ -8,7 +6,6 @@ from pbcore.io import (FastaReader, FastqReader, openDataSet, HdfSubreadSet,
                        SubreadSet, ConsensusReadSet)
 import pbcore.data.datasets as data
 from pbcommand.testkit import PbTestApp
-from pbcommand.utils import which
 
 from base import get_temp_file
 
@@ -20,10 +17,6 @@ SIV_DATA_DIR = "/pbi/dept/secondary/siv/testdata"
 
 def _to_skip_msg(exe):
     return "Missing {e} or {d}".format(d=SIV_DATA_DIR, e=exe)
-
-# XXX hacks to make sure tools are actually available
-HAVE_DATA_DIR = op.isdir(SIV_DATA_DIR)
-
 
 class TestFilterDataSet(PbTestApp):
     TASK_ID = "pbcoretools.tasks.filterdataset"
@@ -56,6 +49,6 @@ class TestFilterDataSet(PbTestApp):
 
     def run_after(self, rtc, output_dir):
         n_expected, n_actual = self._get_counts(rtc)
-        self.assertEqual(self._get_filters(rtc), "( length >= 0 AND length <= 1400 )")
+        self.assertEqual(self._get_filters(rtc), "( length <= 1400 )")
         self.assertEqual(n_actual, n_expected)
 
