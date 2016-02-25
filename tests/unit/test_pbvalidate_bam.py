@@ -25,7 +25,7 @@ rec1 = "movie1/54130/0_10\t2\tecoliK12_pbi_March2013_2955000_to_2980000\t2\t10\t
 sam_str_ = """\
 @HD\tVN:1.5\tSO:%(so)s\tpb:3.0.1
 @SQ\tSN:ecoliK12_pbi_March2013_2955000_to_2980000\tLN:25000\tM5:734d5f3b2859595f4bd87a2fe6b7389b
-@RG\tID:%(rg_id)s%(pl)s\tDS:READTYPE=SUBREAD;DeletionQV=dq;DeletionTag=dt;InsertionQV=iq;MergeQV=mq;SubstitutionQV=sq;%(ipd)s=ip;BASECALLERVERSION=%(bcv)s;%(fr)sBINDINGKIT=%(bk)s;SEQUENCINGKIT=%(sk)s\tPU:movie1
+@RG\tID:%(rg_id)s%(pl)s\tDS:READTYPE=SUBREAD;DeletionQV=dq;DeletionTag=dt;InsertionQV=iq;MergeQV=mq;SubstitutionQV=sq;%(ipd)s=ip;FRAMERATEHZ=75.0;BASECALLERVERSION=%(bcv)s;BINDINGKIT=%(bk)s;SEQUENCINGKIT=%(sk)s\tPU:movie1
 @PG\tID:bax2bam-0.0.2\tPN:bax2bam\tVN:0.0.2\tDS:bax2bam converts the legacy PacBio basecall format (bax.h5) into the BAM basecall format.\tCL:bax2bam in.bax.h5 out.bam
 movie1/54130/0_10\t2\tecoliK12_pbi_March2013_2955000_to_2980000\t2\t10\t%(cigar)s\t*\t0\t0\tAATGAGGAGA\t*\tRG:Z:%(rg_id)s\tdq:Z:2222'$22'2\tdt:Z:NNNNAGNNGN\tip:B:C,255,2,0,10,22,34,0,2,3,0,16\tiq:Z:(+#1'$#*1&\tmq:Z:&1~51*5&~2\tnp:i:1\tqe:i:10\tqs:i:%(qs)d\trq:f:%(rq)s\tsn:B:f,%(sn)s\tsq:Z:<32<4<<<<3\tzm:i:54130\tAS:i:-3020\tNM:i:134\tcx:i:2
 movie1/54130/10_20\t2\tecoliK12_pbi_March2013_2955000_to_2980000\t12\t10\t%(cigar2)s\t*\t0\t0\tAATGAGGAGA\t*\tRG:Z:%(rg_id)s\tdq:Z:2222'$22'2\tdt:Z:NNNNAGNNGN\tip:B:C,255,2,0,10,22,34,0,2,3,0,16\tiq:Z:(+#1'$#*1&\tmq:Z:&1~51*5&~2\tnp:i:1\tqe:i:20\tqs:i:10\trq:f:0.854\tsn:B:f,2.0,2.0,2.0,2.0\tsq:Z:<32<4<<<<3\tzm:i:54130\tAS:i:-3020\tNM:i:134\tcx:i:2
@@ -39,7 +39,6 @@ basic_tags = {
     "cigar2": "10=",
     "dt": "NNNNAGNNGN",
     "flag": "2",
-    "fr": "FRAMERATEHZ=75.000000;",
     "ipd": "Ipd:CodecV1",
     "pl": "\tPL:PACBIO",
     "qe": 30,
@@ -62,7 +61,6 @@ bad_tags = {
     "cigar2": "4=2I2D4=",
     "dt": "012345689",
     "flag": "4",
-    "fr": "",
     "ipd": "Ipd",
     "pl": "",
     "qe": 29,
@@ -79,7 +77,7 @@ bad_tags = {
 
 unmapped_sam_str_ = """\
 @HD\tVN:1.5\tSO:%(so)s\tpb:3.0.1
-@RG\tID:b5482b33\tPL:%(pl)s\tDS:READTYPE=SUBREAD;DeletionQV=dq;DeletionTag=dt;InsertionQV=iq;MergeQV=mq;SubstitutionQV=sq;%(ipd)s=ip;BINDINGKIT=100356300;SEQUENCINGKIT=100356200;BASECALLERVERSION=%(bcv)s;FRAMERATEHZ=75.000000\tPU:m140906_231018_42161_c100676332550000001823129611271486_s1_p0
+@RG\tID:b5482b33\tPL:%(pl)s\tDS:READTYPE=SUBREAD;DeletionQV=dq;DeletionTag=dt;InsertionQV=iq;MergeQV=mq;SubstitutionQV=sq;%(ipd)s=ip;BINDINGKIT=100356300;SEQUENCINGKIT=100356200;FRAMERATEHZ=75.0;BASECALLERVERSION=%(bcv)s;FRAMERATEHZ=75.000000\tPU:m140906_231018_42161_c100676332550000001823129611271486_s1_p0
 @PG\tID:bax2bam-0.0.2\tPN:bax2bam\tVN:0.0.2\tDS:bax2bam converts the legacy PacBio basecall format (bax.h5) into the BAM basecall format.\tCL:bax2bam in.bax.h5 out.bam
 %(qname)s\t%(flag)s\t%(rname)s\t%(pos)s\t255\t*\t*\t0\t0\tAAAGAGAGAG\t*\tRG:Z:b5482b33\tdq:Z:2222222222\tdt:Z:NNNNNNNNNN\tip:B:C,255,9,20,43,38,12,9,30,39,22\tiq:Z:,*11111001\tmq:Z:&47088')34\tnp:i:1\tqe:i:10\tqs:i:0\trq:f:0.811\tsn:B:f,%(sn)s%(sq)s\tzm:i:%(zm)s\tcx:i:2
 m140906_231018_42161_c100676332550000001823129611271486_s1_p0/%(zm2)s/0_10\t4\t*\t0\t255\t*\t*\t0\t0\tAAAGAGAGAG\t*\tRG:Z:b5482b33\tdq:Z:2222222222\tdt:Z:NNNNNNNNNN\tip:B:C,255,9,20,43,38,12,9,30,39,22\tiq:Z:,*11111001\tmq:Z:&47088')34\tnp:i:1\tqe:i:10\tqs:i:0\trq:f:0.811\tsn:B:f,2.0,2.0,2.0,2.0\tsq:Z:8<4<:<6<0<\tzm:i:%(zm2)s\tcx:i:2"""
@@ -207,7 +205,7 @@ class TestCase (unittest.TestCase):
             'AlignmentUnmappedError', 'BasecallerVersionError',
             'MissingCodecError', 'MissingIndexError', 'MissingPlatformError',
             'QnameFormatError', 'QnameRangeError',
-            'ReadGroupChemistryError', 'ReadGroupFramerateError',
+            'ReadGroupChemistryError',
             'ReadGroupIdMismatchError', "ReadLengthError", 'TagValueError',
             'UninitializedSNRError', 'UnsortedError'])
         # a good unaligned file
@@ -265,7 +263,6 @@ class TestCase (unittest.TestCase):
                           'MissingCodecError', 'MissingIndexError',
                           'MissingPlatformError', 'QnameFormatError',
                           'QnameRangeError', 'ReadGroupChemistryError',
-                          'ReadGroupFramerateError',
                           'ReadGroupIdMismatchError', "ReadLengthError",
                           'TagValueError',
                           'UninitializedSNRError', 'UnsortedError'])

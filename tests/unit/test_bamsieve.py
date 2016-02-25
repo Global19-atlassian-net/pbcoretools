@@ -87,9 +87,20 @@ class TestBamSieve(unittest.TestCase):
             seed=12345)
         self.assertEqual(rc, 0)
         with openDataFile(ofn, strict=False) as bam_out:
-            n_records = len([rec for rec in bam_out])
-            print n_records
-            #self.assertEqual(n_records, 1)
+            zmws = set([rec.HoleNumber for rec in bam_out])
+            self.assertEqual(len(zmws), 24)
+
+    def test_count(self):
+        ofn = tempfile.NamedTemporaryFile(suffix=".bam").name
+        rc = bamSieve.filter_reads(
+            input_bam=SUBREADS3,
+            output_bam=ofn,
+            count=1,
+            seed=12345)
+        self.assertEqual(rc, 0)
+        with openDataFile(ofn, strict=False) as bam_out:
+            zmws = set([rec.HoleNumber for rec in bam_out])
+            self.assertEqual(len(zmws), 1)
 
     def test_error(self):
         ofn = tempfile.NamedTemporaryFile(suffix=".bam").name
@@ -109,6 +120,12 @@ class TestBamSieve(unittest.TestCase):
             input_bam=DS1,
             output_bam=ofn,
             percentage=500)
+        self.assertEqual(rc, 1)
+        rc = bamSieve.filter_reads(
+            input_bam=DS1,
+            output_bam=ofn,
+            percentage=50,
+            count=1)
         self.assertEqual(rc, 1)
         # dataset output, but BAM input
         ofn = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
