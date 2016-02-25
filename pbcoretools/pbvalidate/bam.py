@@ -187,11 +187,6 @@ class ReadGroupChemistryError (BAMError):
         "missing or cannot be interpreted: %s"
 
 
-class ReadGroupFramerateError (BAMError):
-    MESSAGE_FORMAT = "The read group %s has a missing or invalid " +\
-        "FRAMERATEHZ field (value = %s)"
-
-
 class MissingCodecError (BAMError):
     MESSAGE_FORMAT = "The read group %s declares the tag '%s' for pulse " +\
         "features, but the encoding scheme is not specified or not recognized"
@@ -571,22 +566,6 @@ class ValidateReadGroupChemistry (ValidateReadGroup):
             return [ReadGroupChemistryError.from_args(rg, rg['ID'],
                                                       tuple(fields))]
         return []
-
-
-class ValidateReadGroupFramerate (ValidateReadGroupChemistry):
-
-    """Check for the FRAMERATEHZ tag in @RG."""
-
-    def _get_errors(self, rg):
-        ds_dict = _get_key_value_pairs_dict(rg.get("DS", ""))
-        framerate_str = ds_dict.get(Constants.FRAMERATE_TAG, None)
-        try:
-            framerate = float(framerate_str)
-        except (ValueError, TypeError) as e:
-            return [ReadGroupFramerateError.from_args(rg, rg['ID'],
-                                                      framerate_str)]
-        else:
-            return []
 
 
 class ValidateReadGroupPulseManifest (ValidateReadGroupChemistry):
@@ -1060,7 +1039,6 @@ def get_validators(aligned=None, contents=None,
             ValidateReadGroupBasecaller(),
         ])
     validators.extend([
-        ValidateReadGroupFramerate(),
         ValidateReadGroupPulseManifest(),
         ValidateReadUnique(),
         ValidateReadReadGroup(),

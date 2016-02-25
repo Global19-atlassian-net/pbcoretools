@@ -28,14 +28,13 @@ Good BAM file
 Awful BAM file
 
   $ pbvalidate --index $DATA/tst_2_subreads.bam
-  23 spec violation(s) detected:
+  22 spec violation(s) detected:
     This file has not been sorted by position, or the header has not been updated.
     Missing corresponding .pbi index file
     Missing platform (PL) for read group 2f48aec3
     Mismatch between specified and expected read group ID: 2f48aec3 in file, but computed as 3f58e5b8
     The chemistry information for read group 2f48aec3 is either missing or cannot be interpreted: ('null', 'null', '9.8')
     The basecaller version number '9.8' in read group '2f48aec3' is not one of the allowed values; it is probably being misreported by an upstream program such as baz2bam or bax2bam.
-    The read group 2f48aec3 has a missing or invalid FRAMERATEHZ field (value = None)
     The read group 2f48aec3 declares the tag 'Ipd' for pulse features, but the encoding scheme is not specified or not recognized
     Range specified in QNAME movie1/54130/0_10 conflicts with QS and QE tags
       [1 similar error(s) not displayed]
@@ -62,12 +61,11 @@ Now with Xunit output (exit code 0):
 Now ignoring some header issues
 
   $ pbvalidate --quick --index --permissive-headers $DATA/tst_2_subreads.bam
-  21 spec violation(s) detected:
+  20 spec violation(s) detected:
     This file has not been sorted by position, or the header has not been updated.
     Missing corresponding .pbi index file
     Missing platform (PL) for read group 2f48aec3
     Mismatch between specified and expected read group ID: 2f48aec3 in file, but computed as 3f58e5b8
-    The read group 2f48aec3 has a missing or invalid FRAMERATEHZ field (value = None)
     The read group 2f48aec3 declares the tag 'Ipd' for pulse features, but the encoding scheme is not specified or not recognized
     Range specified in QNAME movie1/54130/0_10 conflicts with QS and QE tags
       [1 similar error(s) not displayed]
