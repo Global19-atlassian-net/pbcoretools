@@ -53,25 +53,22 @@ def filter_reads(input_bam,
                  whitelist=None,
                  blacklist=None,
                  percentage=None,
+                 count=None,
                  seed=None):
     if output_bam is None:
         log.error("Must specify output file")
         return 1
-    if [whitelist, percentage].count(None) == 0:
-        log.error("Either --percentage or --whitelist (but not both) "
-                  "must be specified")
+    n_specified = 4 - [whitelist, blacklist, percentage, count].count(None)
+    if n_specified != 1:
+        log.error("You must choose one and only one of the following "+
+                  "options: --whitelist, --blacklist, --count, --percentage")
         return 1
     if seed is not None:
         random.seed(seed)
-    if whitelist is None:
-        if blacklist is None and not 0 < percentage < 100:
-            log.error(
-                "--percentage must specify a number between 0 and 100")
+    if whitelist is None and blacklist is None:
+        if not 0 < percentage < 100 and not count > 0:
+            log.error("No reads selected for output.")
             return 1
-    elif blacklist is not None:
-        log.error("Either a whitelist or blacklist of ZMWs may be " +
-                  "supplied, but not both.")
-        return 1
     output_ds = None
     if output_bam.endswith(".xml"):
         if not input_bam.endswith(".xml"):
@@ -92,7 +89,7 @@ def filter_reads(input_bam,
             log.error("Input BAM must have accompanying .pbi index")
             return 1
         f1 = ds_in.resourceReaders()[0]
-        if percentage is not None:
+        if percentage is not None or count is not None:
             with AlignmentFile(output_bam, 'wb', template=f1.peer) as bam_out:
                 zmw_dict = defaultdict(list)
                 for i_file, bam in enumerate(ds_in.resourceReaders()):
@@ -101,7 +98,9 @@ def filter_reads(input_bam,
                         zmw_dict[(movie, zmw, i_file)].append(i_read)
                 zmws = zmw_dict.keys()
                 n_zmws_start = len(zmws)
-                n_zmws_out = int(n_zmws_start * percentage / 100.0)
+                n_zmws_out = count
+                if percentage is not None:
+                    n_zmws_out = int(n_zmws_start * percentage / 100.0)
                 log.info("Will random select {n} / {d} ZMWs".format(
                     n=n_zmws_out, d=n_zmws_start))
                 have_reads = set()
@@ -180,6 +179,7 @@ def run(args):
         whitelist=args.whitelist,
         blacklist=args.blacklist,
         percentage=args.percentage,
+        count=args.count,
         seed=args.seed)
 
 
@@ -205,6 +205,8 @@ def get_parser():
                    help="If you prefer to recover a percentage of a SMRTcell "
                         "rather than a specific list of reads specify that "
                         "percentage (range 0-100) here")
+    p.add_argument("-n", "--count", action="store", type=int, default=None,
+                   help="Recover a specific number of ZMWs picked at random")
     p.add_argument("-s", "--seed", action="store", type=int, default=None,
                    help="Random seed for selecting a percentage of reads")
     return p
