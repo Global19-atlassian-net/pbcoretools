@@ -3,6 +3,7 @@ from collections import defaultdict
 from functools import partial as P
 import argparse
 import logging
+import shutil
 import json
 import os.path as op
 import sys
@@ -201,13 +202,14 @@ def __gather_contigset(resource_file_extension, input_files, output_file,
 gather_contigset = P(__gather_contigset, "fasta")
 
 def gather_fastq_contigset(input_files, output_file):
-    contigset_name = op.splitext(output_file)[0] + ".contigset.xml"
-    __gather_contigset("fastq", input_files, contigset_name,
-        new_resource_file=output_file)
-    # FIXME this will fail under certain circumstances - need to debug further
-    # (possibly just an artifact of unit test setup)
-    assert op.isfile(output_file)
-    return output_file
+    if len(input_files) == 1:
+        shutil.copyfile(input_files[0], output_file)
+    else:
+        contigset_name = op.splitext(output_file)[0] + ".contigset.xml"
+        __gather_contigset("fastq", input_files, contigset_name,
+            new_resource_file=output_file)
+        assert op.isfile(output_file)
+        return output_file
 
 
 def __gather_readset(dataset_type, input_files, output_file, skip_empty=True,
