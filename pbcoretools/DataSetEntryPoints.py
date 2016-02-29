@@ -2,9 +2,10 @@
 
 import os
 import argparse
+import string
 from collections import defaultdict
 from pbcore.io import DataSet, ContigSet, openDataSet
-from pbcore.io.dataset.DataSetMembers import Filters
+from pbcore.io.dataset.DataSetMembers import Filters, OPMAP
 from pbcore.io.dataset.DataSetValidator import validateFile
 import logging
 
@@ -69,9 +70,25 @@ def create_options(parser):
                               "absolute (not compatible with --novalidate)"))
     parser.set_defaults(func=createXml)
 
+def pad_separators(base_set):
+    """e.g. 'gt' will hit 'length', so we pad it to ' gt '"""
+    padded = []
+    for sep in base_set:
+        new_sep = []
+        if sep[0] in string.ascii_lowercase:
+            new_sep.append(" ")
+        new_sep.append(sep)
+        if sep[-1] in string.ascii_lowercase:
+            new_sep.append(" ")
+        padded.append(''.join(new_sep))
+    return padded
+
 def parse_filter_list(filtStrs):
     filters = defaultdict(list)
-    separators = ['<=', '>=', '!=', '==', '>', '<', '=']
+    # pull them from the filter parser:
+    separators = OPMAP.keys()
+    # pad the ones that start and end with letters
+    separators = pad_separators(separators)
     for filt in filtStrs:
         for sep in separators:
             if sep in filt:
@@ -80,7 +97,6 @@ def parse_filter_list(filtStrs):
                 filters[param.strip()].append(condition)
                 break
     return filters
-
 
 def filterXml(args):
     if args.infile.endswith('xml'):

@@ -13,7 +13,7 @@ from pbcoretools import bamSieve
 
 class TestFilterDataSet(unittest.TestCase):
 
-    def test_dataset_io(self):
+    def test_dataset_io_sanitizing(self):
         ssfn = data.getXml(8)
         ofn = tempfile.NamedTemporaryFile(suffix=".xml").name
 
@@ -108,6 +108,43 @@ class TestFilterDataSet(unittest.TestCase):
             sanitize_read_length("None1")
         with self.assertRaises(ValueError):
             sanitize_read_length("1.1None")
+
+    def test_filter_application(self):
+        ssfn = data.getXml(8)
+        ofn = tempfile.NamedTemporaryFile(suffix=".xml").name
+
+        # some smoke tests:
+        run_filter_dataset(ssfn, ofn, "0", "None")
+        ds = openDataSet(ofn)
+        self.assertEqual(len(ds), 92)
+        run_filter_dataset(ssfn, ofn, "10000", "None")
+        ds = openDataSet(ofn)
+        self.assertEqual(len(ds), 0)
+
+        run_filter_dataset(ssfn, ofn, "100", "rq > .7")
+        ds = openDataSet(ofn)
+        self.assertEqual(str(ds.filters),
+                         "( rq > .7 AND length >= 100 )")
+
+        run_filter_dataset(ssfn, ofn, "100", "rq > .7, length < 5000")
+        ds = openDataSet(ofn)
+        self.assertEqual(
+            str(ds.filters),
+            '( length < 5000 AND rq > .7 AND length >= 100 )')
+
+        run_filter_dataset(ssfn, ofn, 0,
+                           "rq>=.7, length >= 1000, length <= 5000")
+        ds = openDataSet(ofn)
+        self.assertEqual(
+            str(ds.filters),
+            '( length >= 1000 AND length <= 5000 AND rq >= .7 )')
+
+        run_filter_dataset(ssfn, ofn, 0,
+                           "rq>=.7, length gte 1000, length lte 5000")
+        ds = openDataSet(ofn)
+        self.assertEqual(
+            str(ds.filters),
+            '( length gte 1000 AND length lte 5000 AND rq >= .7 )')
 
 
 if __name__ == "__main__":
