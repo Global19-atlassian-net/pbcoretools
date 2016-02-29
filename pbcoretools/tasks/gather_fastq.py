@@ -9,15 +9,17 @@ from pbcoretools.chunking.gather import run_main_gather_fastq_contigset
 
 log = logging.getLogger(__name__)
 
-TOOL_ID = "pbcoretools.tasks.gather_fastq"
-CHUNK_KEY = "$chunk.fastq_id"
+class Constants(object):
+    TOOL_ID = "pbcoretools.tasks.gather_fastq"
+    CHUNK_KEY = "$chunk.fastq_id"
+    CHUNK_KEY_ID = "pbcoretools.task_options.dev_scatter_chunk_key"
 
 
 def get_contract_parser():
     driver = "python -m pbcoretools.tasks.gather_fastq --resolved-tool-contract "
 
-    p = get_gather_pbparser(TOOL_ID, "0.1.3", "Gather Fastq",
-                            "Gather Fastq", driver, is_distributed=False)
+    p = get_gather_pbparser(Constants.TOOL_ID, "0.1.3", "Gather Fastq",
+                            "Gather Fastq", driver, is_distributed=True)
 
     p.add_input_file_type(FileTypes.CHUNK, "cjson_in", "Gather ChunkJson",
                           "Fastq Gather Chunk JSON")
@@ -26,13 +28,14 @@ def get_contract_parser():
                            "Fastq Gathered",
                            "file_gathered.fastq")
 
-    p.add_str("pbcoretools.task_options.dev_scatter_chunk_key", "chunk_key",
+    p.add_str(Constants.CHUNK_KEY_ID, "chunk_key",
               "$chunk:fastq_id", "Chunk key", "Chunk key to use (format $chunk:{chunk-key}")
     return p
 
 
 def args_runner(args):
-    return run_main_gather_fastq_contigset(args.cjson_in, args.fastq_out, CHUNK_KEY)
+    return run_main_gather_fastq_contigset(args.cjson_in, args.fastq_out,
+        args.chunk_key)
 
 
 def rtc_runner(rtc):
@@ -41,7 +44,7 @@ def rtc_runner(rtc):
     :return:
     """
     # the input file is just a sentinel file
-    return run_main_gather_fastq_contigset(rtc.task.input_files[0], rtc.task.output_files[0], CHUNK_KEY)
+    return run_main_gather_fastq_contigset(rtc.task.input_files[0], rtc.task.output_files[0], rtc.task.chunk_key)
 
 
 def main(argv=sys.argv):
