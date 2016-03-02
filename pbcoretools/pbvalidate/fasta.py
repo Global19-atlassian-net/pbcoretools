@@ -284,14 +284,6 @@ class ValidateFastaRaw (ValidateFile):
         return self._errors[0]
 
 
-def get_parser():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('file')
-    parser.add_argument("-v", "--verbose", dest="verbose", action="store_true")
-    parser.set_default(func=run)
-    return parser
-
-
 def get_format_specific_args(parser):
     pass
     # parser.add_argument("--strict", dest="strict", action="store_true",
@@ -325,7 +317,6 @@ def _fasta_reader(file_name):
 def validate_fasta(
         file_name,
         strict=False,
-        verbose=False,
         quick=False,
         max_errors=None,
         validate_index=False,

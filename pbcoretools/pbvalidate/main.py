@@ -1,4 +1,9 @@
 
+"""
+Utility for validating files produced by PacBio software against our own
+internal specifications.
+"""
+
 from cStringIO import StringIO
 from xml.dom import minidom
 import argparse
@@ -8,7 +13,8 @@ import time
 import re
 import sys
 
-from pbcommand.cli import pacbio_args_runner
+from pbcommand.cli import (pacbio_args_runner,
+    get_default_argparser_with_base_opts)
 from pbcommand.utils import setup_log
 import bam
 import fasta
@@ -19,15 +25,12 @@ __version__ = "0.2"
 
 
 def get_parser():
-    parser = argparse.ArgumentParser(
+    parser = get_default_argparser_with_base_opts(
         version=__version__,
-        description="Utility for validating files produced by PacBio software "
-        "against our own internal specifications.")
+        description=__doc__,
+        default_level="CRITICAL")
     parser.add_argument('file', help="BAM, FASTA, or DataSet XML file")
     parser.add_argument("-c", dest="use_termcolor", action="store_true")
-    parser.add_argument("--verbose", dest="verbose", action="store_true")
-    parser.add_argument("-q", "--quiet", dest="quiet", action="store_true")
-    parser.add_argument("--debug", dest="debug", action="store_true")
     parser.add_argument("--quick", dest="quick", action="store_true",
                         help="Limits validation to the first 100 records "+
                              "(plus file header); equivalent to "+
@@ -63,13 +66,6 @@ class run_validator (object):
             raise IOError("Not a file: %s" % args.file)
         self.file_name = args.file
         self.silent = args.xunit_out is not None
-        log = logging.getLogger()
-        if args.debug:
-            log.setLevel(logging.DEBUG)
-        elif args.verbose:
-            log.setLevel(logging.INFO)
-        else:
-            log.setLevel(logging.WARN)
         base, ext = os.path.splitext(args.file)
         if ext == ".gz":
             ext_ = ext
@@ -82,7 +78,6 @@ class run_validator (object):
             self.errors, self.metrics = fasta.validate_fasta(
                 file_name=args.file,
                 strict=args.strict,
-                verbose=args.verbose,
                 validate_index=args.validate_index,
                 quick=args.quick)
         elif (args.file_type == "BAM" or
@@ -92,7 +87,6 @@ class run_validator (object):
                 reference=args.reference,
                 aligned=args.aligned,
                 contents=args.contents,
-                verbose=args.verbose,
                 quick=args.quick,
                 max_errors=args.max_errors,
                 max_records=args.max_records,
@@ -107,7 +101,6 @@ class run_validator (object):
                 quick=args.quick,
                 max_errors=args.max_errors,
                 max_records=args.max_records,
-                verbose=args.verbose,
                 aligned=args.aligned,
                 contents=args.contents,
                 validate_index=args.validate_index,
@@ -118,7 +111,6 @@ class run_validator (object):
         self.t_end = time.time()
         if not args.quiet:
             utils.show_validation_errors(self.errors, out=out,
-                                         verbose=args.verbose,
                                          use_termcolor=args.use_termcolor)
         if args.xunit_out is not None:
             doc = self.to_xml()
@@ -179,14 +171,12 @@ def run(*args, **kwds):
 
 
 def main(argv=sys.argv):
-    logging.basicConfig(level=logging.WARN)
-    log = logging.getLogger()
     return pacbio_args_runner(
         argv=argv[1:],
         parser=get_parser(),
         args_runner_func=run,
-        alog=log,
-        setup_log_func=lambda *args, **kwds: log)  # setup_log_func=setup_log)
+        alog=logging.getLogger(),
+        setup_log_func=setup_log)
 
 if __name__ == "__main__":
     sys.exit(main())

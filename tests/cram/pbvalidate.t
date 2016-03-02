@@ -3,20 +3,6 @@ Test of command-line pbvalidate tool
 
   $ DATA=$TESTDIR/../data
 
-  $ pbvalidate
-  usage: pbvalidate [-h] [-v] [-c] [--verbose] [-q] [--debug] [--quick]
-                    [--max MAX_ERRORS] [--max-records MAX_RECORDS]
-                    [--type {BAM,Fasta,AlignmentSet,ConsensusSet,SubreadSet,BarcodeSet,ReferenceSet,HdfSubreadSet}]
-                    [--index] [--strict] [-x XUNIT_OUT] [--unaligned]
-                    [--unmapped] [--aligned] [--mapped]
-                    [--contents {SUBREAD,CCS}] [--reference REFERENCE]
-                    [--permissive-headers]
-                    file
-  pbvalidate: error: too few arguments
-  [2]
-  $ pbvalidate --help | grep -c PacBio
-  1
-
 Good Fasta file
 
   $ pbvalidate $DATA/test0.fasta
@@ -55,7 +41,7 @@ Awful BAM file
 Now with Xunit output (exit code 0):
 
   $ pbvalidate --quiet --index --xunit-out tst_2_subreads_xunit.xml $DATA/tst_2_subreads.bam
-  $ grep -c 'failures="17"' tst_2_subreads_xunit.xml
+  $ grep -c 'failures="16"' tst_2_subreads_xunit.xml
   1
 
 Now ignoring some header issues

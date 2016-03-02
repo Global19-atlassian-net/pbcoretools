@@ -487,7 +487,6 @@ def validate_dataset(
         quick=False,
         max_errors=None,
         max_records=None,
-        verbose=False,
         contents=None,
         aligned=None,
         validate_index=False,
@@ -507,7 +506,7 @@ def validate_dataset(
         # XXX in strict mode the reader will cough up an IOError if the
         # requested dataset type does not agree with the XML.  if this happens
         # there's no point doing any additional validation.
-        if verbose:
+        if False: #True:
             # XXX actually, it can cough up other errors too if there is
             # something wrong with the underlying files and it tries to read
             # them immediately.  Still treating this as a validation error, but
