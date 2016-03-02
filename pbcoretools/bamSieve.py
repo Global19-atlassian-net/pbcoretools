@@ -14,9 +14,10 @@ import sys
 
 from pysam import AlignmentFile
 
-from pbcommand.common_options import add_log_quiet_option
-from pbcommand.cli import pacbio_args_runner, \
-    get_default_argparser_with_base_opts
+from pbcommand.common_options import (add_log_quiet_option,
+    add_log_verbose_option)
+from pbcommand.cli import (pacbio_args_runner,
+    get_default_argparser_with_base_opts)
 from pbcommand.utils import setup_log
 from pbcore.io import openDataFile, openDataSet
 
@@ -184,10 +185,10 @@ def run(args):
 
 
 def get_parser():
-    p = add_log_quiet_option(get_default_argparser_with_base_opts(
-        version=VERSION,
-        description=__doc__,
-        default_level="WARN"))
+    p = get_default_argparser_with_base_opts(
+            version=VERSION,
+            description=__doc__,
+            default_level="WARN")
     p.add_argument("input_bam",
                    help="Input BAM or DataSet from which reads will be read")
     p.add_argument("output_bam", nargs='?', default=None,
