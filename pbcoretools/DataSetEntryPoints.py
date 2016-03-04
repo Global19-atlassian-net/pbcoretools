@@ -180,7 +180,7 @@ def split_options(parser):
                         help="Split on barcodes")
     parser.add_argument("--zmws", default=False, action='store_true',
                         help="Split on zmws")
-    parser.add_argument("--byRefLength", default=False, action='store_true',
+    parser.add_argument("--byRefLength", default=True, action='store_true',
                         help="Split contigs by contig length")
     parser.add_argument("--noCounts", default=False, action='store_true',
                         help="Update dataset counts after split")
@@ -217,7 +217,10 @@ def merge_options(parser):
 
 def loadStatsXml(args):
     dset = openDataSet(args.infile, strict=args.strict)
-    dset.loadStats(args.statsfile)
+    if len(dset.externalResources) > 1:
+        log.info("More than one ExternalResource found, adding the "
+                 "sts.xml nested external resource to the first one")
+    dset.externalResources[0].sts = args.statsfile
     if args.outfile:
         dset.write(args.outfile, validate=False)
     else:

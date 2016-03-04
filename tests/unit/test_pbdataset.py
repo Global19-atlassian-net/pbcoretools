@@ -123,3 +123,17 @@ class TestDataSet(unittest.TestCase):
         self.assertTrue(os.path.exists(
             os.path.join(outdir, os.path.basename(data.getXml(12)))))
 
+    @unittest.skipIf(not _check_constools(),
+                     "bamtools or pbindex not found, skipping")
+    def test_loadstats_cli(self):
+        outfile = os.path.join(
+            tempfile.mkdtemp(suffix="dataset-unittest"),
+            'withStats.alignmentset.xml')
+        cmd = "dataset loadstats {d} {s} --outfile {o}".format(
+            o=outfile, d=data.getXml(8), s=data.getStats())
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(outfile))
+        aln = AlignmentSet(outfile)
+        self.assertTrue(aln.metadata.summaryStats)
