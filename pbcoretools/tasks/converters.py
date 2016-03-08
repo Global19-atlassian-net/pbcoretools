@@ -41,7 +41,7 @@ def _run_bax_to_bam(input_file_name, output_file_name):
         "--output-xml", output_file_name,
         "--xml", input_file_name_tmp
     ]
-    logging.info(" ".join(args))
+    log.info(" ".join(args))
     result = run_cmd(" ".join(args),
                      stdout_fh=sys.stdout,
                      stderr_fh=sys.stderr)
@@ -71,7 +71,7 @@ def run_bax_to_bam(input_file_name, output_file_name):
                     ".hdfsubreadset.xml")
                 rc = _run_bax_to_bam(bax_file, output_file_name_tmp)
                 if rc != 0:
-                    logging.error("bax2bam failed")
+                    log.error("bax2bam failed")
                     return rc
                 ds_out_files.append(output_file_name_tmp)
             ds = SubreadSet(*ds_out_files)
@@ -96,7 +96,7 @@ def run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
         "-o", tmp_out_prefix,
         input_file_name,
     ]
-    logging.info(" ".join(args))
+    log.info(" ".join(args))
     result = run_cmd(" ".join(args),
                      stdout_fh=sys.stdout,
                      stderr_fh=sys.stderr)
@@ -106,17 +106,17 @@ def run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
         base_ext = re.sub("bam2", "", program_name)
         tmp_out = "{p}.{b}.gz".format(p=tmp_out_prefix, b=base_ext)
         assert os.path.isfile(tmp_out), tmp_out
-        logging.info("raw output in {f}".format(f=tmp_out))
+        log.info("raw output in {f}".format(f=tmp_out))
         def _open_file(file_name):
             if file_name.endswith(".gz"):
                 return gzip.open(file_name)
             else:
                 return open(file_name)
         if min_subread_length > 0:
-            logging.info("Filtering subreads by minimum length = {l}".format(
+            log.info("Filtering subreads by minimum length = {l}".format(
                 l=min_subread_length))
         elif min_subread_length < 0:
-            logging.warn("min_subread_length = {l}, ignoring".format(
+            log.warn("min_subread_length = {l}, ignoring".format(
                 l=min_subread_length))
         with _open_file(tmp_out) as raw_in:
             with fastx_reader(raw_in) as fastx_in:
@@ -131,7 +131,7 @@ def run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
 
 def run_fasta_to_fofn(input_file_name, output_file_name):
     args = ["echo", input_file_name, ">", output_file_name]
-    logging.info(" ".join(args))
+    log.info(" ".join(args))
     result = run_cmd(" ".join(args), stdout_fh = sys.stdout,
                      stderr_fh=sys.stderr)
     return result.exit_code
@@ -141,7 +141,7 @@ def run_fasta_to_referenceset(input_file_name, output_file_name):
     # this can be moved out to pbdataset/pbcoretools eventually
     args = ["dataset create", "--type ReferenceSet", "--generateIndices",
             output_file_name, input_file_name]
-    logging.info(" ".join(args))
+    log.info(" ".join(args))
     result = run_cmd(" ".join(args), stdout_fh = sys.stdout,
                      stderr_fh=sys.stderr)
     # the '.py' name difference will be resolved in pbdataset/pbcoretools, but
@@ -150,7 +150,7 @@ def run_fasta_to_referenceset(input_file_name, output_file_name):
         args = ["dataset.py create", "--type ReferenceSet",
                 "--generateIndices",
                 output_file_name, input_file_name]
-        logging.info(" ".join(args))
+        log.info(" ".join(args))
         result = run_cmd(" ".join(args), stdout_fh = sys.stdout,
                          stderr_fh=sys.stderr)
     return result.exit_code
