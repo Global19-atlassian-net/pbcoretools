@@ -27,7 +27,7 @@ def get_contract_parser():
 
     p.add_output_file_type(FileTypes.FASTA, "fasta_out", "Fasta Gathered",
                            "Fasta Gathered",
-                           "file_gathered.fasta")
+                           "gathered")
 
     # FIXME. There's an a bit of friction between the TC and the argrunning
     # layer here. For nproc and nchunks, chunk-key, the values are a bit

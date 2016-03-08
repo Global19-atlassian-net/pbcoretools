@@ -31,7 +31,7 @@ def get_parser(constants=Constants):
 
     p.add_output_file_type(constants.REPORT_TYPE, "json_out",
                            "JSON",
-                           "Gathered JSON", "gathered.json")
+                           "Gathered JSON", "gathered")
 
     # Only need to add to argparse layer for the commandline
     p.arg_parser.add_str(constants.OPT_CHUNK_KEY,

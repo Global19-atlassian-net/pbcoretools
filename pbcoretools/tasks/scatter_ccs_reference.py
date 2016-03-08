@@ -39,7 +39,7 @@ def get_contract_parser():
                            "cjson_out",
                            "Chunk ConsensusReadSet",
                            "PacBio Chunked JSON ConsensusReadSet",
-                           "ccsset_chunked.json")
+                           "ccsset_chunked")
 
     # max nchunks for this specific task
     # FIXME using same option names as scatter_subread_reference.py - it would

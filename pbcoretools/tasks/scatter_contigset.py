@@ -30,7 +30,7 @@ def get_contract_parser():
                           "PacBio ContigSet")
     p.add_output_file_type(FileTypes.CHUNK, "cjson_out", "Chunk JSON Filtered Fasta",
                            "Chunked JSON ContigSet",
-                           "fasta.chunked.json")
+                           "fasta.chunked")
     # max nchunks for this specific task
     p.add_int("pbcoretools.task_options.dev_scatter_max_nchunks", "max_nchunks", Constants.DEFAULT_NCHUNKS,
               "Max NChunks", "Maximum number of Chunks")

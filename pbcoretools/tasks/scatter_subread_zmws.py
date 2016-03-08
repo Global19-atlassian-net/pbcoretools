@@ -44,7 +44,7 @@ def get_contract_parser_impl(C):
                            "chunk_report_json",
                            "Chunk %sSet" % C.READ_TYPE,
                            "PacBio Chunked JSON %sSet" % C.READ_TYPE,
-                           "%sset_chunked.json" % C.READ_TYPE_ABBREV)
+                           "%sset_chunked" % C.READ_TYPE_ABBREV)
 
     # max nchunks for this specific task
     p.add_int("pbcoretools.task_options.scatter_subread_max_nchunks",

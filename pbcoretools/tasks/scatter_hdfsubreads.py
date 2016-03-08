@@ -34,7 +34,7 @@ def get_contract_parser():
     p.add_output_file_type(FileTypes.CHUNK, "cjson_out",
                            "Chunk HdfSubreadSet",
                            "PacBio Chunked JSON HdfSubread Set",
-                           "hdfsubreadset_chunked.json")
+                           "hdfsubreadset_chunked")
 
     # max nchunks for this specific task
     p.add_int("pbcoretools.task_options.scatter_hdfsubread_max_nchunks", "max_nchunks", Constants.DEFAULT_NCHUNKS,

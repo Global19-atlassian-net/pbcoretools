@@ -41,7 +41,7 @@ def get_contract_parser():
                            "cjson_out",
                            "Chunk SubreadSet",
                            "PacBio Chunked JSON SubreadSet",
-                           "subreadset_chunked.json")
+                           "subreadset_chunked")
 
     # max nchunks for this specific task
     p.add_int("pbcoretools.task_options.scatter_subread_max_nchunks", "max_nchunks", Constants.DEFAULT_NCHUNKS,

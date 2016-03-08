@@ -35,7 +35,7 @@ def get_parser():
                            "ds_out",
                            "AlignmentSet",
                            "Gathered AlignmentSet",
-                           "gathered.alignmentset.xml")
+                           default_name="gathered")
     # XXX moved this functionality to pbalign
 #    p.add_boolean(Constants.CONSOLIDATE_ID, "consolidate",
 #        default=False,

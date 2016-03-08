@@ -25,8 +25,8 @@ def get_parser():
                             is_distributed=False)
     p.add_input_file_type(FileTypes.CHUNK, "cjson_in", "GCHUNK Json",
                           "Gathered CHUNK Json with Gff chunk key")
-    p.add_output_file_type(FileTypes.GFF, "gff_out", "Gff", "Gathered Gff", "gathered.gff")
-
+    p.add_output_file_type(FileTypes.GFF, "gff_out", "Gff", "Gathered Gff",
+                           default_name="gathered")
     p.arg_parser.add_str(Constants.OPT_CHUNK_KEY,
                          "chunk_key",
                          "$chunk.gff_id",
