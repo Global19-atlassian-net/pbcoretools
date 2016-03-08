@@ -2,18 +2,14 @@ import sys
 import argparse
 import logging
 import time
+
+from pbcommand.cli import get_default_argparser_with_base_opts, pacbio_args_runner
+from pbcommand.utils import setup_log
+
 from pbcoretools import DataSetEntryPoints as EntryPoints
 from pbcoretools.version import __VERSION__
 
-
-LOG_FORMAT = "%(asctime)s [%(levelname)s] %(message)s"
-
-def _setup_logging():
-    log = logging.getLogger()
-    logging.Formatter.converter = time.gmtime
-    if not log.handlers:
-        logging.basicConfig(level=logging.WARN, format=LOG_FORMAT)
-    return log
+log = logging.getLogger(__name__)
 
 def get_subparsers():
     sps = [('create', EntryPoints.create_options),
@@ -39,12 +35,10 @@ def add_subparsers(parser, sps):
 
 def get_parser():
     description = 'Run dataset.py by specifying a command.'
-    parser = argparse.ArgumentParser(
+    parser = get_default_argparser_with_base_opts(
         version=__VERSION__,
         description=description,
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--debug", default=False, action='store_true',
-                        help="Turn on debug level logging")
+        default_level="WARNING")
     parser.add_argument("--strict", default=False, action='store_true',
                         help="Turn on strict tests, raise all errors")
     parser.add_argument("--skipCounts", default=False, action='store_true',
@@ -53,16 +47,19 @@ def get_parser():
     parser = add_subparsers(parser, subparser_list)
     return parser
 
-def main(argv=sys.argv):
-    """Main point of Entry"""
-    log = _setup_logging()
+def run(args):
     log.info("Starting {f} version {v} dataset manipulator".format(
         f=__file__, v=__VERSION__))
-    parser = get_parser()
-    args = parser.parse_args()
-    if args.debug:
-        log.setLevel(logging.DEBUG)
-    return args.func(args)
+    args.func(args)
+
+def main(argv=sys.argv):
+    """Main point of Entry"""
+    return pacbio_args_runner(
+        argv=argv[1:],
+        parser=get_parser(),
+        args_runner_func=run,
+        alog=log,
+        setup_log_func=setup_log)
 
 if __name__ == '__main__':
     sys.exit(main())
