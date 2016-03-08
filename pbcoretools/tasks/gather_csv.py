@@ -30,7 +30,7 @@ def get_parser():
 
     p.add_output_file_type(FileTypes.CSV, "csv_out",
                            "CSV",
-                           "Gathered CSV", "gathered.csv")
+                           "Gathered CSV", "gathered")
 
     # Only need to add to argparse layer for the commandline
     p.arg_parser.add_str(Constants.OPT_CHUNK_KEY,

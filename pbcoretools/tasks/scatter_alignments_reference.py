@@ -47,7 +47,7 @@ def get_contract_parser(tool_id=TOOL_ID, module_name=MODULE_NAME):
                            "cjson_out",
                            "Chunk JSON Filtered Fasta",
                            "Chunked JSON Filtered Fasta",
-                           "alignments_reference.chunked.json")
+                           "alignments_reference.chunked")
 
     # max nchunks for this specific task
     p.add_int(Constants.OPT_MAX_NCHUNKS,

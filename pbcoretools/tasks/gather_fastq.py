@@ -26,7 +26,7 @@ def get_contract_parser():
 
     p.add_output_file_type(FileTypes.FASTQ, "fastq_out", "Fastq Gathered",
                            "Fastq Gathered",
-                           "file_gathered.fastq")
+                           default_name="gathered")
 
     p.add_str(Constants.CHUNK_KEY_ID, "chunk_key",
               "$chunk:fastq_id", "Chunk key", "Chunk key to use (format $chunk:{chunk-key}")
