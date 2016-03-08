@@ -47,13 +47,8 @@ def _run_bax_to_bam(input_file_name, output_file_name):
                      stderr_fh=sys.stderr)
     if result.exit_code != 0:
         return result.exit_code
-    tmp = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
-    shutil.move(output_file_name, tmp)
-    # FIXME it would be better to leave this to bax2bam
-    with SubreadSet(tmp) as ds:
-        if not ds.isIndexed:
-            ds.induceIndices()
-        ds.write(output_file_name)
+    with SubreadSet(output_file_name) as ds:
+        ds.assertIndexed()
     return 0
 
 
