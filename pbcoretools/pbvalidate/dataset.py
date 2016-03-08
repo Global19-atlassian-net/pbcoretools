@@ -497,11 +497,12 @@ def validate_dataset(
     ReaderClass = getattr(pbcore.io, str(dataset_type), pbcore.io.openDataSet)
     log.debug("ReaderClass: %s" % ReaderClass.__name__)
     try:
-        logging.disable(logging.CRITICAL)
+        # XXX suppressing logging errors temporarily
+        #logging.disable(logging.CRITICAL)
         try:
             ds = ReaderClass(file_name, strict=True)
         finally:
-            logging.disable(logging.NOTSET)
+            pass #logging.disable(logging.NOTSET)
     except Exception as e:
         # XXX in strict mode the reader will cough up an IOError if the
         # requested dataset type does not agree with the XML.  if this happens
