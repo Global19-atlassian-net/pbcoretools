@@ -131,16 +131,19 @@ def splitXml(args):
     chunks = len(args.outfiles)
     if args.chunks:
         chunks = args.chunks
-    dss = dataSet.split(chunks=chunks,
-                        ignoreSubDatasets=(not args.subdatasets),
-                        contigs=args.contigs,
-                        maxChunks=args.maxChunks,
-                        breakContigs=args.breakContigs,
-                        targetSize=args.targetSize,
-                        zmws=args.zmws,
-                        barcodes=args.barcodes,
-                        byRecords=(not args.byRefLength),
-                        updateCounts=(not args.noCounts))
+    if isinstance(dataSet, ContigSet):
+        dss = dataSet.split(chunks)
+    else:
+        dss = dataSet.split(chunks=chunks,
+                            ignoreSubDatasets=(not args.subdatasets),
+                            contigs=args.contigs,
+                            maxChunks=args.maxChunks,
+                            breakContigs=args.breakContigs,
+                            targetSize=args.targetSize,
+                            zmws=args.zmws,
+                            barcodes=args.barcodes,
+                            byRecords=(not args.byRefLength),
+                            updateCounts=(not args.noCounts))
     log.debug("Splitting into {i} chunks".format(i=len(dss)))
     infix = 'chunk{i}'
     if args.contigs:

@@ -74,6 +74,23 @@ class TestDataSet(unittest.TestCase):
 
     @unittest.skipIf(not _check_constools(),
                      "bamtools or pbindex not found, skipping")
+    def test_contigset_split_cli(self):
+        outdir = tempfile.mkdtemp(suffix="dataset-unittest")
+        cmd = "dataset split --outdir {o} --chunks 2 {d}".format(
+            o=outdir,
+            d=data.getXml(9))
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(
+            os.path.join(outdir,
+                         "pbalchemysim0.referenceset.chunk0.xml")))
+        self.assertTrue(os.path.exists(
+            os.path.join(outdir,
+                         "pbalchemysim0.referenceset.chunk1.xml")))
+
+    @unittest.skipIf(not _check_constools(),
+                     "bamtools or pbindex not found, skipping")
     def test_filter_cli(self):
         outdir = tempfile.mkdtemp(suffix="dataset-unittest")
         outfn = os.path.join(outdir, "filtered8.xml")
