@@ -21,7 +21,7 @@ from pbcommand.cli import (pacbio_args_runner,
 from pbcommand.utils import setup_log
 from pbcore.io import openDataFile, openDataSet
 
-VERSION = "0.1"
+VERSION = "0.1.1"
 
 log = logging.getLogger(__name__)
 
@@ -55,7 +55,8 @@ def filter_reads(input_bam,
                  blacklist=None,
                  percentage=None,
                  count=None,
-                 seed=None):
+                 seed=None,
+                 ignore_metadata=False):
     if output_bam is None:
         log.error("Must specify output file")
         return 1
@@ -86,6 +87,8 @@ def filter_reads(input_bam,
     n_file_reads = 0
     have_zmws = set()
     with openDataFile(input_bam) as ds_in:
+        # TODO(nechols)(2016-03-11): refactor this to enable propagation of
+        # filtered scraps
         if not ds_in.isIndexed:
             log.error("Input BAM must have accompanying .pbi index")
             return 1
@@ -136,7 +139,7 @@ def filter_reads(input_bam,
     if n_file_reads == 0:
         log.error("No reads written")
         return 1
-    log.info("{n} reads from {z} ZMWs written".format(
+    log.info("{n} records from {z} ZMWs written".format(
         n=n_file_reads, z=len(have_zmws)))
     try:
         rc = subprocess.call(["pbindex", output_bam])
@@ -148,6 +151,9 @@ def filter_reads(input_bam,
     if output_ds is not None:
         with openDataSet(input_bam) as ds_in:
             ds_out = ds_in.__class__(output_bam)
+            if not ignore_metadata:
+                ds_out.metadata = ds_in.metadata
+                ds_out.updateCounts()
             ds_out.write(output_ds)
             log.info("wrote {t} XML to {x}".format(
                 t=ds_in.__class__.__name__, x=output_ds))
@@ -181,7 +187,8 @@ def run(args):
         blacklist=args.blacklist,
         percentage=args.percentage,
         count=args.count,
-        seed=args.seed)
+        seed=args.seed,
+        ignore_metadata=args.ignore_metadata)
 
 
 def get_parser():
@@ -210,6 +217,8 @@ def get_parser():
                    help="Recover a specific number of ZMWs picked at random")
     p.add_argument("-s", "--seed", action="store", type=int, default=None,
                    help="Random seed for selecting a percentage of reads")
+    p.add_argument("--ignore-metadata", action="store_true",
+                   help="Discard input DataSet metadata")
     return p
 
 
