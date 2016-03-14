@@ -199,6 +199,8 @@ def __to_chunked_fastx_files(write_records_func, pbcore_reader_class, pbcore_wri
 
             if i != max_total_nchunks:
                 n_left = nrecords - (n_per_chunk * i)
+                if n_left <= 0:
+                    break
                 for _ in xrange(min(n_per_chunk, n_left)):
                     records.append(it.next())
             else:
