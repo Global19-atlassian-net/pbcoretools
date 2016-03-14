@@ -33,9 +33,9 @@ skip_if_missing_testdata = unittest.skipUnless(op.isdir(MNT_DATA),
     "Missing {d}".format(d=MNT_DATA))
 
 
-def _write_fasta_or_contigset(file_name, make_faidx=False):
+def _write_fasta_or_contigset(file_name, make_faidx=False, n_records=251):
     fasta_file = re.sub(".contigset.xml", ".fasta", file_name)
-    rec = [">chr%d\nacgtacgtacgt" % x for x in range(251)]
+    rec = [">chr%d\nacgtacgtacgt" % x for x in range(n_records)]
     with open(fasta_file, "w") as f:
         f.write("\n".join(rec))
         f.flush()
@@ -49,28 +49,36 @@ def _write_fasta_or_contigset(file_name, make_faidx=False):
 class CompareScatteredRecordsBase(object):
     READER_CLASS = None
     READER_KWARGS = {}
+    NCHUNKS_EXPECTED = None
 
     def run_after(self, rtc, output_dir):
         unchunked = self.INPUT_FILES[0]
         json_file = rtc.task.output_files[0]
         chunks = load_pipeline_chunks_from_json(json_file)
+        if self.NCHUNKS_EXPECTED is not None:
+            self.assertEqual(len(chunks), self.NCHUNKS_EXPECTED)
         n_rec = 0
         with self.READER_CLASS(unchunked, **self.READER_KWARGS) as f:
             n_rec = len([rec for rec in f])
+            self.assertTrue(n_rec > 0)
         n_rec_chunked = 0
         for chunk in chunks:
             d = chunk.chunk_d
             chunked = d[self.CHUNK_KEYS[0]]
             with self.READER_CLASS(chunked, **self.READER_KWARGS) as cs:
-                n_rec_chunked += len([rec for rec in cs])
+                n_rec_chunk = len([rec for rec in cs])
+                self.assertTrue(n_rec_chunk > 0)
+                n_rec_chunked += n_rec_chunk
         self.assertEqual(n_rec_chunked, n_rec)
 
 
 class ScatterSequenceBase(CompareScatteredRecordsBase):
+    NRECORDS = 251
 
     def setUp(self):
         super(ScatterSequenceBase, self).setUp()
-        _write_fasta_or_contigset(self.INPUT_FILES[0], make_faidx=True)
+        _write_fasta_or_contigset(self.INPUT_FILES[0], make_faidx=True,
+                                  n_records=self.NRECORDS)
 
 
 class TestScatterFilterFasta(ScatterSequenceBase,
@@ -95,13 +103,15 @@ class TestScatterContigSet(TestScatterFilterFasta,
     """
     Test pbcoretools.tasks.scatter_contigset
     """
+    NRECORDS = 51
     READER_CLASS = ContigSet
     DRIVER_BASE = "python -m pbcoretools.tasks.scatter_contigset"
     INPUT_FILES = [
         get_temp_file(suffix=".contigset.xml")
     ]
-    MAX_NCHUNKS = 12
-    RESOLVED_MAX_NCHUNKS = 12
+    MAX_NCHUNKS = 24
+    RESOLVED_MAX_NCHUNKS = 24
+    NCHUNKS_EXPECTED = 17
     CHUNK_KEYS = ("$chunk.contigset_id",)
 
 
