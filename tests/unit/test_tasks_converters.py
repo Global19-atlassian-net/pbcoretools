@@ -10,6 +10,8 @@ import pbcore.data
 from pbcommand.testkit import PbTestApp
 from pbcommand.utils import which
 
+from pbcoretools import pbvalidate
+
 from base import get_temp_file
 
 log = logging.getLogger(__name__)
@@ -20,6 +22,7 @@ DATA = op.join(op.dirname(__file__), "data")
 class Constants(object):
     BAX2BAM = "bax2bam"
     BAM2FASTA = "bam2fasta"
+    BAM2BAM = "bam2bam"
 
 
 SIV_DATA_DIR = "/pbi/dept/secondary/siv/testdata"
@@ -30,15 +33,19 @@ def _to_skip_msg(exe):
 
 # XXX hacks to make sure tools are actually available
 HAVE_BAX2BAM = which(Constants.BAX2BAM) is not None
+HAVE_BAM2BAM = which(Constants.BAM2BAM) is not None
 HAVE_BAM2FASTX = which(Constants.BAM2FASTA) is not None
 HAVE_DATA_DIR = op.isdir(SIV_DATA_DIR)
 HAVE_DATA_AND_BAX2BAM = HAVE_BAX2BAM and HAVE_DATA_DIR
+HAVE_DATA_AND_BAM2BAM = HAVE_BAM2BAM and HAVE_DATA_DIR
 
 SKIP_MSG_BAX2BAM = _to_skip_msg(Constants.BAX2BAM)
 SKIP_MSG_BAM2FX = _to_skip_msg(Constants.BAM2FASTA)
+SKIP_MSG_BAM2BAM = _to_skip_msg(Constants.BAM2BAM)
 
 skip_unless_bax2bam = unittest.skipUnless(HAVE_DATA_AND_BAX2BAM, SKIP_MSG_BAX2BAM)
 skip_unless_bam2fastx = unittest.skipUnless(HAVE_BAM2FASTX, SKIP_MSG_BAM2FX)
+skip_unless_bam2bam = unittest.skipUnless(HAVE_DATA_AND_BAM2BAM, SKIP_MSG_BAM2BAM)
 
 
 def _get_bax2bam_inputs():
@@ -84,6 +91,37 @@ class TestBax2Bam(PbTestApp):
         with SubreadSet(rtc.task.output_files[0]) as ds_out:
             self.assertEqual(len(ds_out.toExternalFiles()), 2)
             self.assertEqual(ds_out.name, "lambda_rsii")
+
+
+@skip_unless_bam2bam
+class TestBam2Bam(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.bam2bam_barcode"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [
+        "/pbi/dept/secondary/siv/testdata/SA3-Sequel/phi29/315/3150101/r54008_20160219_002905/1_A01_tiny/m54008_160219_003234_tiny.subreadset.xml",
+        "/pbi/dept/secondary/siv/testdata/pblaa-unittest/Sequel/Phi29/References/pacbio_384_barcodes.fasta"
+    ]
+    MAX_NPROC = 8
+    RESOLVED_NPROC = 8
+    IS_DISTRIBUTED = True
+    RESOLVED_IS_DISTRIBUTED = True
+
+    def run_after(self, rtc, output_dir):
+        err, metrics = pbvalidate.validate_dataset(
+            file_name=rtc.task.output_files[0],
+            dataset_type="SubreadSet",
+            quick=False,
+            validate_index=True,
+            strict=True)
+        self.assertEqual(len(err), 0)
+        # TODO replace with BarcodedSubreadSet
+        with SubreadSet(rtc.task.output_files[0]) as ds:
+            self.assertEqual(len(ds.externalResources), 1)
+            self.assertTrue(ds.externalResources[0].scraps is not None)
+            rr = ds.resourceReaders()[0]
+            self.assertTrue(rr.pbi.hasBarcodeInfo)
+            #self.assertEqual(len(rr.pbi.bcReverse), 13194)
 
 
 @skip_unless_bam2fastx
