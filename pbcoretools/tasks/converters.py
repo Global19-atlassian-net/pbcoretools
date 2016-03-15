@@ -93,8 +93,8 @@ def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
             assert subreads_bam is not None
             if scraps_bam is None:
                 raise TypeError("The input SubreadSet must include scraps.")
-            new_prefix = re.sub(".subreads.bam", "_barcoded",
-                                op.basename(subreads_bam))
+            new_prefix = op.join(op.dirname(output_file_name),
+                re.sub(".subreads.bam", "_barcoded", op.basename(subreads_bam)))
             if not op.isabs(subreads_bam):
                 subreads_bam = op.join(op.dirname(subread_set_file),
                     subreads_bam)
