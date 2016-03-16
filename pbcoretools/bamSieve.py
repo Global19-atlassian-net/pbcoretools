@@ -49,6 +49,13 @@ def _process_zmw_list(zmw_list):
     return zmws
 
 
+def _anonymize_sequence(rec):
+    rseq_ = [random.randint(0,3) for i in range(len(rec.query_sequence))]
+    rseq = "".join(["ACTG"[i] for i in rseq_])
+    rec.query_sequence = rseq
+    return rec
+
+
 def filter_reads(input_bam,
                  output_bam,
                  whitelist=None,
@@ -56,7 +63,8 @@ def filter_reads(input_bam,
                  percentage=None,
                  count=None,
                  seed=None,
-                 ignore_metadata=False):
+                 ignore_metadata=False,
+                 anonymize=False):
     if output_bam is None:
         log.error("Must specify output file")
         return 1
@@ -115,6 +123,8 @@ def filter_reads(input_bam,
                         bam = ds_in.resourceReaders()[i_file]
                         for i_read in zmw_dict[zmws[i_zmw]]:
                             assert not (i_file, i_read) in have_reads
+                            if anonymize:
+                                _anonymize_sequence(bam[i_read].peer)
                             bam_out.write(bam[i_read].peer)
                             have_reads.add((i_file, i_read))
                             n_file_reads += 1
@@ -133,6 +143,8 @@ def filter_reads(input_bam,
                         if ((len(_whitelist) > 0 and zmw in _whitelist) or
                                 (len(_blacklist) > 0 and not zmw in _blacklist)):
                             rec = f[i_zmw]
+                            if anonymize:
+                                _anonymize_sequence(rec.peer)
                             bam_out.write(rec.peer)
                             have_zmws.add(zmw)
                             n_file_reads += 1
@@ -188,7 +200,8 @@ def run(args):
         percentage=args.percentage,
         count=args.count,
         seed=args.seed,
-        ignore_metadata=args.ignore_metadata)
+        ignore_metadata=args.ignore_metadata,
+        anonymize=args.anonymize)
 
 
 def get_parser():
@@ -219,6 +232,8 @@ def get_parser():
                    help="Random seed for selecting a percentage of reads")
     p.add_argument("--ignore-metadata", action="store_true",
                    help="Discard input DataSet metadata")
+    p.add_argument("--anonymize", action="store_true",
+                   help="Randomize sequences for privacy")
     return p
 
 
