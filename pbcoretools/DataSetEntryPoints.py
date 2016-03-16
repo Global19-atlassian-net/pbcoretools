@@ -3,6 +3,7 @@
 import os
 import argparse
 import string
+import re
 from collections import defaultdict
 from pbcore.io import DataSet, ContigSet, openDataSet
 from pbcore.io.dataset.DataSetMembers import Filters, OPMAP
@@ -146,16 +147,17 @@ def splitXml(args):
                             updateCounts=(not args.noCounts))
     log.debug("Splitting into {i} chunks".format(i=len(dss)))
     infix = 'chunk{i}'
-    if args.contigs:
-        infix += 'contigs'
+    nSuf = -2 if re.search(r".+\.\w+set\.xml", args.infile) else -1
     if not args.outfiles:
         if not args.outdir:
-            args.outfiles = ['.'.join(args.infile.split('.')[:-1] +
-                                      [infix.format(i=chNum), 'xml'])
+            args.outfiles = ['.'.join(args.infile.split('.')[:nSuf] +
+                                      [infix.format(i=chNum)] +
+                                      args.infile.split('.')[nSuf:])
                              for chNum in range(len(dss))]
         else:
-            args.outfiles = ['.'.join(args.infile.split('.')[:-1] +
-                                      [infix.format(i=chNum), 'xml'])
+            args.outfiles = ['.'.join(args.infile.split('.')[:nSuf] +
+                                      [infix.format(i=chNum)] +
+                                      args.infile.split('.')[nSuf:])
                              for chNum in range(len(dss))]
             args.outfiles = [os.path.join(args.outdir,
                                           os.path.basename(outfn))
