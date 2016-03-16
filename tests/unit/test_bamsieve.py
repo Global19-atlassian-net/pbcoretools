@@ -59,6 +59,27 @@ class TestBamSieve(unittest.TestCase):
             have_zmws = set([rec.HoleNumber for rec in bam_out])
             self.assertEqual(have_zmws, set([8]))
 
+    def test_anonymize(self):
+        ofn1 = tempfile.NamedTemporaryFile(suffix=".bam").name
+        ofn2 = tempfile.NamedTemporaryFile(suffix=".bam").name
+        rc = bamSieve.filter_reads(
+            input_bam=SUBREADS3,
+            output_bam=ofn1,
+            whitelist=set([24962]))
+        self.assertEqual(rc, 0)
+        rc = bamSieve.filter_reads(
+            input_bam=SUBREADS3,
+            output_bam=ofn2,
+            whitelist=set([24962]),
+            anonymize=True)
+        self.assertEqual(rc, 0)
+        with openDataFile(ofn1, strict=False) as bam1:
+            with openDataFile(ofn2, strict=False) as bam2:
+                for rec1, rec2 in zip(bam1, bam2):
+                    self.assertEqual(rec1.qName, rec2.qName)
+                    self.assertNotEqual(rec1.peer.seq, rec2.peer.seq)
+
+
     def test_blacklist(self):
         ofn = tempfile.NamedTemporaryFile(suffix=".bam").name
 
