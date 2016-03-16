@@ -9,14 +9,16 @@ import logging
 import shutil
 import gzip
 import re
+import os.path as op
 import os
 import sys
 
 from pbcore.io import (SubreadSet, HdfSubreadSet, FastaReader, FastaWriter,
-                       FastqReader, FastqWriter)
+                       FastqReader, FastqWriter, BarcodeSet, ExternalResource,
+                       ExternalResources)
 from pbcommand.engine import run_cmd
 from pbcommand.cli import registry_builder, registry_runner, QuickOpt
-from pbcommand.models import FileTypes
+from pbcommand.models import FileTypes, SymbolTypes
 
 log = logging.getLogger(__name__)
 
@@ -77,6 +79,63 @@ def run_bax_to_bam(input_file_name, output_file_name):
             ds.write(output_file_name)
         else:
             return _run_bax_to_bam(input_file_name, output_file_name)
+    return 0
+
+
+def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
+                   nproc=1):
+    with SubreadSet(subread_set_file) as ds:
+        # TODO(nechols)(2016-03-15): replace with BarcodedSubreadSet
+        ds_new = SubreadSet(strict=True)
+        for ext_res in ds.externalResources:
+            subreads_bam = ext_res.bam
+            scraps_bam = ext_res.scraps
+            assert subreads_bam is not None
+            if scraps_bam is None:
+                raise TypeError("The input SubreadSet must include scraps.")
+            new_prefix = op.join(op.dirname(output_file_name),
+                re.sub(".subreads.bam", "_barcoded", op.basename(subreads_bam)))
+            if not op.isabs(subreads_bam):
+                subreads_bam = op.join(op.dirname(subread_set_file),
+                    subreads_bam)
+            if not op.isabs(scraps_bam):
+                scraps_bam = op.join(op.dirname(subread_set_file), scraps_bam)
+            args = [
+                "bam2bam",
+                "-j", str(nproc),
+                "-b", str(nproc),
+                "-o", new_prefix,
+                "--barcodes", barcode_set_file,
+                subreads_bam, scraps_bam
+            ]
+            print args
+            log.info(" ".join(args))
+            result = run_cmd(" ".join(args),
+                             stdout_fh=sys.stdout,
+                             stderr_fh=sys.stderr)
+            if result.exit_code != 0:
+                return result.exit_code
+            subreads_bam = new_prefix + ".subreads.bam"
+            scraps_bam = new_prefix + ".scraps.bam"
+            assert op.isfile(subreads_bam), "Missing {f}".format(f=subreads_bam)
+            # FIXME we need a more general method for this
+            ext_res_new = ExternalResource()
+            ext_res_new.resourceId = subreads_bam
+            ext_res_new.metaType = 'PacBio.SubreadFile.SubreadBamFile'
+            ext_res_new.addIndices([subreads_bam + ".pbi"])
+            ext_res_inner = ExternalResources()
+            ext_res_scraps = ExternalResource()
+            ext_res_scraps.resourceId = scraps_bam
+            ext_res_scraps.metaType = 'PacBio.SubreadFile.ScrapsBamFile'
+            ext_res_scraps.addIndices([scraps_bam + ".pbi"])
+            ext_res_inner.append(ext_res_scraps)
+            ext_res_new.append(ext_res_inner)
+            ds_new.externalResources.append(ext_res_new)
+        ds._filters.clearCallbacks()
+        ds_new._filters = ds._filters
+        ds_new._populateMetaTypes()
+        ds_new.updateCounts()
+        ds_new.write(output_file_name)
     return 0
 
 
@@ -162,6 +221,19 @@ run_bam_to_fastq = functools.partial(run_bam_to_fastx, "bam2fastq",
           FileTypes.DS_SUBREADS, is_distributed=True, nproc=1)
 def run_bax2bam(rtc):
     return run_bax_to_bam(rtc.task.input_files[0], rtc.task.output_files[0])
+
+
+@registry("bam2bam_barcode", "0.1.0",
+          (FileTypes.DS_SUBREADS, FileTypes.DS_BARCODE),
+          FileTypes.DS_SUBREADS,
+          is_distributed=True,
+          nproc=SymbolTypes.MAX_NPROC)
+def run_bam2bam(rtc):
+    return run_bam_to_bam(
+        subread_set_file=rtc.task.input_files[0],
+        barcode_set_file=rtc.task.input_files[1],
+        output_file_name=rtc.task.output_files[0],
+        nproc=rtc.task.nproc)
 
 
 min_subread_length_opt = QuickOpt(0, "Minimum subread length",
