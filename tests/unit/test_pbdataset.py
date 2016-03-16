@@ -68,9 +68,9 @@ class TestDataSet(unittest.TestCase):
         o, r, m = backticks(cmd)
         self.assertEqual(r, 0)
         self.assertTrue(os.path.exists(
-            os.path.join(outdir, os.path.basename(data.getXml(15)))))
+            os.path.join(outdir, 'pbalchemysim0.chunk0.alignmentset.xml')))
         self.assertTrue(os.path.exists(
-            os.path.join(outdir, os.path.basename(data.getXml(16)))))
+            os.path.join(outdir, 'pbalchemysim0.chunk1.alignmentset.xml')))
 
     @unittest.skipIf(not _check_constools(),
                      "bamtools or pbindex not found, skipping")
@@ -84,10 +84,10 @@ class TestDataSet(unittest.TestCase):
         self.assertEqual(r, 0)
         self.assertTrue(os.path.exists(
             os.path.join(outdir,
-                         "pbalchemysim0.referenceset.chunk0.xml")))
+                         "pbalchemysim0.chunk0.referenceset.xml")))
         self.assertTrue(os.path.exists(
             os.path.join(outdir,
-                         "pbalchemysim0.referenceset.chunk1.xml")))
+                         "pbalchemysim0.chunk1.referenceset.xml")))
 
     @unittest.skipIf(not _check_constools(),
                      "bamtools or pbindex not found, skipping")

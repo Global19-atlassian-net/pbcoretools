@@ -212,7 +212,7 @@ def mergeXml(args):
     reduce(lambda ds1, ds2: ds1 + ds2, dss).write(args.outfile)
 
 def merge_options(parser):
-    parser.description = 'Combine XML (and BAM) files'
+    parser.description = 'Combine XML files'
     parser.add_argument("outfile", type=str,
                         help="The resulting XML file")
     #parser.add_argument("infiles", type=validate_file, nargs='+',
