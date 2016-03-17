@@ -84,6 +84,10 @@ def run_bax_to_bam(input_file_name, output_file_name):
 
 def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
                    nproc=1):
+    bc = BarcodeSet(barcode_set_file)
+    if len(bc.resourceReaders()) > 1:
+        raise NotImplementedError("Multi-FASTA BarcodeSet input is not supported.")
+    barcode_fasta = bc.toExternalFiles()[0]
     with SubreadSet(subread_set_file) as ds:
         # TODO(nechols)(2016-03-15): replace with BarcodedSubreadSet
         ds_new = SubreadSet(strict=True)
@@ -105,7 +109,7 @@ def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
                 "-j", str(nproc),
                 "-b", str(nproc),
                 "-o", new_prefix,
-                "--barcodes", barcode_set_file,
+                "--barcodes", barcode_fasta,
                 subreads_bam, scraps_bam
             ]
             print args
