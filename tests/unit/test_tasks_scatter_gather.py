@@ -281,7 +281,7 @@ class _SetupGatherApp(CompareGatheredRecordsBase,
         tempfile.NamedTemporaryFile(suffix=".chunks.json").name
     ]
 
-    def _generate_chunk_output_file(self):
+    def _generate_chunk_output_file(self, i=None):
         raise NotImplementedError()
 
     def _generate_chunk_json(self, data_files):
@@ -304,7 +304,7 @@ class _SetupGatherApp(CompareGatheredRecordsBase,
         return make_tmp_dataset_xml(file_name, self.READER_CLASS)
 
     def setUp(self):
-        data_files = [self._generate_chunk_output_file()
+        data_files = [self._generate_chunk_output_file(i=i)
                       for i in range(self.NCHUNKS)]
         self._generate_chunk_json(data_files)
 
@@ -318,7 +318,7 @@ class TestGatherSubreads(_SetupGatherApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.gather_subreads"
     CHUNK_KEY = "$chunk.subreadset_id"
 
-    def _generate_chunk_output_file(self):
+    def _generate_chunk_output_file(self, i=None):
         return self._copy_mock_output_file(pbcore.data.getUnalignedBam())
 
 
@@ -331,7 +331,7 @@ class TestGatherWrongType(_SetupGatherApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.gather_ccs"
     CHUNK_KEY = "$chunk.consensusreadset_id"
 
-    def _generate_chunk_output_file(self):
+    def _generate_chunk_output_file(self, i=None):
         return self._copy_mock_output_file(pbcore.data.getUnalignedBam())
 
     def _make_dataset_file(self, file_name):
@@ -351,7 +351,7 @@ class TestGatherAlignmentSet(_SetupGatherApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.gather_alignments"
     CHUNK_KEY = "$chunk.alignmentset_id"
 
-    def _generate_chunk_output_file(self):
+    def _generate_chunk_output_file(self, i=None):
         return self._copy_mock_output_file(pbcore.data.getBamAndCmpH5()[0])
 
     def run_after(self, rtc, output_dir):
@@ -375,7 +375,7 @@ class TestGatherCCS(_SetupGatherApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.gather_ccs"
     CHUNK_KEY = "$chunk.ccsset_id"
 
-    def _generate_chunk_output_file(self):
+    def _generate_chunk_output_file(self, i=None):
         return self._copy_mock_output_file(pbcore.data.getCCSBAM())
 
 
@@ -400,7 +400,7 @@ class TestGatherReport(_SetupGatherApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.gather_report"
     CHUNK_KEY = "$chunk.report_id"
 
-    def _generate_chunk_output_file(self):
+    def _generate_chunk_output_file(self, i=None):
         tmp_file = tempfile.NamedTemporaryFile(suffix=".json").name
         write_random_report(tmp_file, 5)
         return tmp_file
@@ -434,11 +434,31 @@ class TestGatherContigs(_SetupGatherApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.gather_contigs"
     CHUNK_KEY = "$chunk.contigset_id"
 
-    def _generate_chunk_output_file(self):
+    def _generate_chunk_output_file(self, i=None):
         fn = tempfile.NamedTemporaryFile(suffix=".fasta").name
         write_random_fasta_records(fn)
         pysam.faidx(fn)
         return self._make_dataset_file(fn)
+
+
+class TestGatherContigsConsolidate(TestGatherContigs):
+    CHUNK_CONTIGS = [
+        ("lambda_NEB3011_0_30", "GGGCGGCGACCTCGCGGGTTTTCGCTATTT"),
+        ("lambda_NEB3011_60_90", "CACTGAATCATGGCTTTATGACGTAACATC"),
+        ("lambda_NEB3011_30_60", "GTGGACTCGGAGCAGTTCGGCAGCCAGCAG")
+    ]
+    def _generate_chunk_output_file(self, i=None):
+        fn = tempfile.NamedTemporaryFile(suffix=".fasta").name
+        suffix = "|arrow"
+        with open(fn, "w") as f:
+            header, seq = self.CHUNK_CONTIGS[i]
+            f.write(">{h}{s}\n{q}".format(h=header, s=suffix, q=seq))
+        pysam.faidx(fn)
+        return self._make_dataset_file(fn)
+
+    def run_after(self, rtc, output_dir):
+        with ContigSet(rtc.task.output_files[0]) as ds:
+            self.assertEqual(len([r for r in ds]), 1)
 
 
 class TestGatherFasta(_SetupGatherApp):
@@ -449,7 +469,7 @@ class TestGatherFasta(_SetupGatherApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.gather_fasta"
     CHUNK_KEY = "$chunk.fasta_id"
 
-    def _generate_chunk_output_file(self):
+    def _generate_chunk_output_file(self, i=None):
         fn = tempfile.NamedTemporaryFile(suffix=".fasta").name
         write_random_fasta_records(fn,
             prefix="contig{n}".format(n=random.randint(1,10000)))
@@ -465,7 +485,7 @@ class TestGatherFastq(_SetupGatherApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.gather_fastq"
     CHUNK_KEY = "$chunk.fastq_id"
 
-    def _generate_chunk_output_file(self):
+    def _generate_chunk_output_file(self, i=None):
         fn = tempfile.NamedTemporaryFile(suffix=".fastq").name
         write_random_fastq_records(fn,
             prefix="contig{n}".format(n=random.randint(1,10000)))
