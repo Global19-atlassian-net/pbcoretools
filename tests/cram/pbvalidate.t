@@ -103,10 +103,8 @@ Mysterious PyXB error
 Now a dataset with the awful .bam file.  We can't actually do much with this
 because there's no .pbi file (pbindex doesn't like this .bam).
 
-  $ pbvalidate $DATA/tst_2_subreads.xml
-  1 spec violation(s) detected:
-    Unexpected error reading dataset: IndexedBamReader requires bam.pbi index file to read *.  This prevents any further validation functions from being run. (glob)
-  [1]
+  $ pbvalidate $DATA/tst_2_subreads.xml | grep -c "1 spec violation"
+  1
 
 #Now a copy of tst_1.alignmentset.xml, with misleading file name
 #FIXME disabled for now pending further discussion
