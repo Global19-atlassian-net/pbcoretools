@@ -135,6 +135,11 @@ class RootTagError(ValidatorError):
         "dataset MetaType '%s'."
 
 
+class NumRecordsError(ValidatorError):
+    MESSAGE_FORMAT = "The number of records specified in the metadata (%s) "+\
+        "is greater than the number of records in the data file(s) (%s)."
+
+
 class ValidateXML(ValidateFile):
 
     def _get_errors(self, path):
@@ -421,6 +426,24 @@ class ValidateFastaRaw (ValidateFileObject):
         return list(self._errors)
 
 
+class ValidateNumRecords(ValidateResources):
+
+    def _get_errors(self, file_obj):
+        ds = DatasetReader.get_dataset_object(file_obj)
+        nr_metadata = ds.numRecords
+        nr_actual = 0
+        if ds.isIndexed:
+            for rr in ds.resourceReaders():
+                nr_actual += len(rr)
+        else:
+            for rr in ds.resourceReaders():
+                nr_actual += len([rec for rec in rr])
+        if nr_metadata > nr_actual:
+            return [NumRecordsError.from_args(ds, nr_metadata, nr_actual)]
+        return []
+
+
+
 class DatasetReader (object):
 
     """
@@ -538,6 +561,7 @@ def validate_dataset(
     if not dataset_type in DatasetTypes.HDF5_DATASET:
         validators.extend([
             ValidateResourcesOpen(),
+            ValidateNumRecords(),
         ])
     if validate_index:
         validators.append(ValidateIndex())
