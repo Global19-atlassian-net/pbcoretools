@@ -153,7 +153,7 @@ def gather_txt(input_files, output_file, skip_empty=False):
     for input_file in input_files:
         with open(input_file, "r") as txt:
             lines.append("### FILE {f}:\n{t}".format(f=input_file,
-                                                     t=txt.read())
+                                                     t=txt.read()))
     with open(output_file, "w") as out:
         out.write("\n\n\n".join(lines))
     return output_file
@@ -262,6 +262,7 @@ def __add_chunk_key_option(default_chunk_key):
     return _add_chunk_key_option
 
 add_chunk_key_csv = __add_chunk_key_option('$chunk.csv_id')
+add_chunk_key_txt = __add_chunk_key_option('$chunk.txt_id')
 add_chunk_key_fasta = __add_chunk_key_option('$chunk.fasta_id')
 add_chunk_key_fastq = __add_chunk_key_option('$chunk.fastq_id')
 add_chunk_key_gff = __add_chunk_key_option('$chunk.gff_id')
