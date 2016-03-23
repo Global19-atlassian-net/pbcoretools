@@ -145,6 +145,20 @@ def gather_report(json_files, output_file):
     return output_file
 
 
+def gather_txt(input_files, output_file, skip_empty=False):
+    """
+    Very simple concatenation of text files labeled by file name.
+    """
+    lines = []
+    for input_file in input_files:
+        with open(input_file, "r") as txt:
+            lines.append("### FILE {f}:\n{t}".format(f=input_file,
+                                                     t=txt.read())
+    with open(output_file, "w") as out:
+        out.write("\n\n\n".join(lines))
+    return output_file
+
+
 def gather_fofn(input_files, output_file, skip_empty=True):
     """
     This should be better spec'ed and impose a tighter constraint on the FOFN
@@ -281,6 +295,7 @@ def __add_gather_options(output_file_msg, input_file_msg, chunk_key_func):
 
 
 _gather_csv_options = __add_gather_options("Output CSV file", "input CSV file", add_chunk_key_csv)
+_gather_txt_options = __add_gather_options("Output text file", "input text file", add_chunk_key_txt)
 _gather_report_options = __add_gather_options("Output JSON file", "input JSON file", add_chunk_key_report)
 _gather_fastq_options = __add_gather_options("Output Fastq file", "Chunk input JSON file", add_chunk_key_fastq)
 _gather_fasta_options = __add_gather_options("Output Fasta file", "Chunk input JSON file", add_chunk_key_fasta)
@@ -341,6 +356,7 @@ _args_runner_gather_ccs_alignmentset = P(
     __args_gather_runner, gather_ccs_alignmentset)
 _args_runner_gather_contigset = P(__args_gather_runner, gather_contigset)
 _args_runner_gather_csv = P(__args_gather_runner, gather_csv)
+_args_runner_gather_txt = P(__args_gather_runner, gather_txt)
 _args_runner_gather_report = P(__args_gather_runner, gather_report)
 
 # (chunk.json, output_file, chunk_key)
@@ -348,6 +364,7 @@ run_main_gather_fasta = P(__gather_runner, gather_fasta)
 run_main_gather_fastq = P(__gather_runner, gather_fastq)
 run_main_gather_fastq_contigset = P(__gather_runner, gather_fastq_contigset)
 run_main_gather_csv = P(__gather_runner, gather_csv)
+run_main_gather_txt = P(__gather_runner, gather_txt)
 run_main_gather_report = P(__gather_runner, gather_report)
 run_main_gather_gff = P(__gather_runner, gather_gff)
 run_main_gather_alignmentset = P(__gather_runner, gather_alignmentset)
@@ -374,6 +391,10 @@ def get_parser():
     # CSV
     builder('csv', "Merge CSV files into a single file.",
             _gather_csv_options, _args_runner_gather_csv)
+
+    # Simple text
+    builder('txt', "Merge text files into a single file.",
+            _gather_txt_options, _args_runner_gather_txt)
 
     # Fastq
     builder('fastq', "Merge Fastq files into a single file.",
