@@ -47,7 +47,7 @@ def args_runner(args):
 
 
 def rtc_runner(rtc):
-    return run_main_gather_csv(rtc.task.input_files[0], rtc.task.output_files[0], Constants.CHUNK_KEY)
+    return run_main_gather_csv(rtc.task.input_files[0], rtc.task.output_files[0], rtc.task.chunk_key)
 
 
 def main(argv=sys.argv):
