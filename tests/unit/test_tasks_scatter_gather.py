@@ -585,3 +585,42 @@ class TestGatherCSV(TextRecordsGatherBase,
 
     def _get_lines(self, lines):
         return [l.strip() for l in lines[1:]]
+
+
+
+class TextReader(object):
+    """
+    Very simple text reader specifically for checking the gathered output in
+    TestGatherTxt.
+    """
+    def __init__(self, file_name):
+        self.file_name = file_name
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
+    def __iter__(self):
+        with open(self.file_name, "r") as txt:
+            for line in txt.read().splitlines():
+                if line != "" and not line.startswith("#"):
+                    yield line
+
+
+class TestGatherTxt(_SetupGatherApp):
+
+    """
+    Test pbcoretools.tasks.gather_txt
+    """
+    NCHUNKS = 10
+    READER_CLASS = TextReader
+    DRIVER_BASE = "python -m pbcoretools.tasks.gather_txt"
+    CHUNK_KEY = "$chunk.txt_id"
+
+    def _generate_chunk_output_file(self, i=None):
+        fn = tempfile.NamedTemporaryFile(suffix=".txt").name
+        with open(fn, "w") as f:
+            f.write("Output text {i}".format(i=i))
+        return fn
