@@ -47,8 +47,9 @@ class Constants(object):
 
 
 class DatasetTypes(object):
-    BAM_DATASET = ["AlignmentSet", "ConsensusSet", "SubreadSet"]
-    FASTA_DATASET = ["BarcodeSet", "ReferenceSet"]
+    BAM_DATASET = ["AlignmentSet", "ConsensusSet", "ConsensusAlignmentSet",
+                   "SubreadSet"]
+    FASTA_DATASET = ["BarcodeSet", "ContigSet", "ReferenceSet"]
     HDF5_DATASET = ["HdfSubreadSet"]
     ALL = BAM_DATASET + FASTA_DATASET + HDF5_DATASET
 
@@ -558,13 +559,13 @@ def validate_dataset(
         ValidateNamespace(),
         ValidateRandomAccess(),
     ]
-    if not dataset_type in DatasetTypes.HDF5_DATASET:
+    if not actual_dataset_type in DatasetTypes.HDF5_DATASET:
         validators.extend([
             ValidateResourcesOpen(),
             ValidateNumRecords(),
         ])
-    if validate_index:
-        validators.append(ValidateIndex())
+        if validate_index:
+            validators.append(ValidateIndex())
     if strict:
         validators.extend([
             ValidateXML(),
