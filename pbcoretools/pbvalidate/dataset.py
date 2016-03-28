@@ -564,7 +564,6 @@ def validate_dataset(
             ValidateResourcesOpen(),
             ValidateNumRecords(),
         ])
-        print dataset_type
         if validate_index:
             validators.append(ValidateIndex())
     if strict:
