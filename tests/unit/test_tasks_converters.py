@@ -115,10 +115,11 @@ class TestBam2Bam(PbTestApp):
             validate_index=True,
             strict=True)
         self.assertEqual(len(err), 0)
-        # TODO replace with BarcodedSubreadSet
         with SubreadSet(rtc.task.output_files[0]) as ds:
             self.assertEqual(len(ds.externalResources), 1)
             self.assertTrue(ds.externalResources[0].scraps is not None)
+            self.assertEqual(ds.externalResources[0].barcodes,
+                             self.INPUT_FILES[1])
             rr = ds.resourceReaders()[0]
             self.assertTrue(rr.pbi.hasBarcodeInfo)
             #self.assertEqual(len(rr.pbi.bcReverse), 13194)
