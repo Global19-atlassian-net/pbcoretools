@@ -29,7 +29,7 @@ ttacaga""",
  GATTACA
 >chr2
 TTACAGA """,
-    # 4. no wrapping
+    # 4. no wrapping; this is actually okay now
     """\
 >chr1
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -168,8 +168,8 @@ class TestCase (unittest.TestCase):
 
     def test_wrapping(self):
         e, c = validate_file("test_4.fa")
-        self.assertEqual(len(e), 1)
-        self.assertIsInstance(e[0], NoWrappingError)
+        self.assertEqual(len(e), 0)
+        #self.assertIsInstance(e[0], NoWrappingError)
         e, c = validate_file("test_5.fa")
         self.assertEqual(len(e), 1)
         self.assertIsInstance(e[0], SeqWrappingError)
@@ -221,7 +221,7 @@ class TestCase (unittest.TestCase):
         e, m = validate_file(file_name)
         self.assertEqual(len(e), 1)
         self.assertEqual(str(
-            e[0]), "Sequence 'ecoliK12_pbi_March2013_2955000_to_2980000' does not have line wrapping")
+            e[0]), "Inconsistent line wrapping for sequence 'ecoliK12_pbi_March2013_2955000_to_2980000'")
 
 
 if __name__ == "__main__":

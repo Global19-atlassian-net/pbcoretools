@@ -223,9 +223,9 @@ class ValidateFastaRaw (ValidateFile):
         def check_current_sequence_lines(lines, label):
             if current_seq_line_lengths:
                 if len(current_seq_line_lengths) == 1:  # all one line
-                    if current_seq_line_lengths[0] > 80:
-                        self._errors.append(
-                            NoWrappingError.from_args(path, label))
+                    pass #if current_seq_line_lengths[0] > 80:
+                         #self._errors.append(
+                         #   NoWrappingError.from_args(path, label))
                 elif (current_seq_line_lengths[-1] >
                       current_seq_line_lengths[-2]):
                     # last line is longer than previous line
