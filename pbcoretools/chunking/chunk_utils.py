@@ -414,7 +414,31 @@ to_zmw_chunked_ccsset_files = functools.partial(
     _to_zmw_chunked_dataset_files, ConsensusReadSet)
 
 
-def _write_dataset_zmw_chunks_to_file(chunk_func, chunk_key, chunk_file,
+def _to_bam_chunked_dataset_files(dataset_type, dataset_path,
+                                  max_total_nchunks, chunk_key, dir_name,
+                                  base_name, ext):
+    """
+    Similar to to_chunked_subreadset_files, but chunks reads by ZMW ranges
+    for input to pbccs or pbtranscript.
+    """
+    dset = dataset_type(dataset_path, strict=True)
+    dset_chunks = dset.split(chunks=max_total_nchunks, zmws=False,
+                             ignoreSubDatasets=True)
+    d = {}
+    for i, dset in enumerate(dset_chunks):
+        chunk_id = '_'.join([base_name, str(i)])
+        chunk_name = '.'.join([chunk_id, ext])
+        chunk_path = os.path.join(dir_name, chunk_name)
+        dset.write(chunk_path)
+        d[chunk_key] = os.path.abspath(chunk_path)
+        c = PipelineChunk(chunk_id, **d)
+        yield c
+
+to_bam_chunked_subreadset_files = functools.partial(
+    _to_bam_chunked_dataset_files, SubreadSet)
+
+
+def _write_dataset_chunks_to_file(chunk_func, chunk_key, chunk_file,
                                       dataset_path, max_total_chunks,
                                       dir_name, chunk_base_name, chunk_ext):
     """
@@ -432,11 +456,14 @@ def _write_dataset_zmw_chunks_to_file(chunk_func, chunk_key, chunk_file,
     return 0
 
 write_subreadset_zmw_chunks_to_file = functools.partial(
-    _write_dataset_zmw_chunks_to_file, to_zmw_chunked_subreadset_files,
+    _write_dataset_chunks_to_file, to_zmw_chunked_subreadset_files,
     Constants.CHUNK_KEY_SUBSET)
 write_ccsset_zmw_chunks_to_file = functools.partial(
-    _write_dataset_zmw_chunks_to_file, to_zmw_chunked_ccsset_files,
+    _write_dataset_chunks_to_file, to_zmw_chunked_ccsset_files,
     Constants.CHUNK_KEY_CCSSET)
+write_subreadset_bam_chunks_to_file = functools.partial(
+    _write_dataset_chunks_to_file, to_bam_chunked_subreadset_files,
+    Constants.CHUNK_KEY_SUBSET)
 
 
 def write_hdfsubreadset_chunks_to_file(chunk_file, hdfsubreadset_path,
