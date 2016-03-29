@@ -91,7 +91,6 @@ def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
         raise NotImplementedError("Multi-FASTA BarcodeSet input is not supported.")
     barcode_fasta = bc.toExternalFiles()[0]
     with SubreadSet(subread_set_file) as ds:
-        # TODO(nechols)(2016-03-15): replace with BarcodedSubreadSet
         ds_new = SubreadSet(strict=True)
         for ext_res in ds.externalResources:
             subreads_bam = ext_res.bam
@@ -135,8 +134,13 @@ def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
             ext_res_scraps.metaType = 'PacBio.SubreadFile.ScrapsBamFile'
             ext_res_scraps.addIndices([scraps_bam + ".pbi"])
             ext_res_inner.append(ext_res_scraps)
+            ext_res_barcode = ExternalResource()
+            ext_res_barcode.resourceId = barcode_set_file
+            ext_res_barcode.metaType = "PacBio.DataSet.BarcodeSet"
+            ext_res_inner.append(ext_res_barcode)
             ext_res_new.append(ext_res_inner)
             ds_new.externalResources.append(ext_res_new)
+        # TODO include BarcodeSet as external resource
         ds._filters.clearCallbacks()
         ds_new._filters = ds._filters
         ds_new._populateMetaTypes()

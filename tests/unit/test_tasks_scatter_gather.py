@@ -115,10 +115,10 @@ class TestScatterContigSet(TestScatterFilterFasta,
     CHUNK_KEYS = ("$chunk.contigset_id",)
 
 
-def make_tmp_dataset_xml(bam_file, ds_type):
+def make_tmp_dataset_xml(ds_type, *bam_files):
     suffix = ".{t}.xml".format(t=ds_type.__name__.lower())
     tmp_file = tempfile.NamedTemporaryFile(suffix=suffix).name
-    ds = ds_type(bam_file, strict=True)
+    ds = ds_type(*bam_files, strict=True)
     ds.write(tmp_file)
     return tmp_file
 
@@ -153,7 +153,7 @@ class TestScatterCCSZMWs(CompareScatteredRecordsBase,
     READER_KWARGS = {'strict': True}
     DRIVER_BASE = "python -m pbcoretools.tasks.scatter_ccs_zmws"
     INPUT_FILES = [
-        make_tmp_dataset_xml(pbcore.data.getCCSBAM(), READER_CLASS)
+        make_tmp_dataset_xml(READER_CLASS, pbcore.data.getCCSBAM())
     ]
     MAX_NCHUNKS = 6
     RESOLVED_MAX_NCHUNKS = 6
@@ -224,8 +224,8 @@ class TestScatterSubreadReference(pbcommand.testkit.core.PbTestScatterApp):
 class TestScatterCCSReference(pbcommand.testkit.core.PbTestScatterApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.scatter_ccs_reference"
     INPUT_FILES = [
-        make_tmp_dataset_xml(pbcore.data.getCCSBAM(), ConsensusReadSet),
-        make_tmp_dataset_xml(pbcore.data.getLambdaFasta(), ReferenceSet)
+        make_tmp_dataset_xml(ConsensusReadSet, pbcore.data.getCCSBAM()),
+        make_tmp_dataset_xml(ReferenceSet, pbcore.data.getLambdaFasta())
     ]
     MAX_NCHUNKS = 8
     RESOLVED_MAX_NCHUNKS = 8
@@ -242,6 +242,24 @@ class TestScatterSubreadBarcodes(pbcommand.testkit.core.PbTestScatterApp):
     MAX_NCHUNKS = 8
     RESOLVED_MAX_NCHUNKS = 8
     CHUNK_KEYS = ("$chunk.subreadset_id", )
+
+
+class TestScatterSubreadBAMs(pbcommand.testkit.core.PbTestScatterApp):
+    DRIVER_BASE = "python -m pbcoretools.tasks.scatter_subread_bams"
+    INPUT_FILES = [tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name]
+    MAX_NCHUNKS = 8
+    RESOLVED_MAX_NCHUNKS = 8
+    NCHUNKS_EXPECTED = 2
+    CHUNK_KEYS = ("$chunk.ccsset_id", "$chunk.reference_id")
+
+    @classmethod
+    def setUpClass(cls):
+        tmp_bam = tempfile.NamedTemporaryFile(suffix=".subreads.bam").name
+        shutil.copyfile(pbcore.data.getUnalignedBam(), tmp_bam)
+        shutil.copyfile(pbcore.data.getUnalignedBam()+".pbi", tmp_bam+".pbi")
+        ds = SubreadSet(tmp_bam, pbcore.data.getUnalignedBam(), strict=True)
+        ds.write(cls.INPUT_FILES[0])
+        super(TestScatterSubreadBAMs, cls).setUpClass()
 
 
 ########################################################################
@@ -301,7 +319,7 @@ class _SetupGatherApp(CompareGatheredRecordsBase,
         return tmp_file
 
     def _make_dataset_file(self, file_name):
-        return make_tmp_dataset_xml(file_name, self.READER_CLASS)
+        return make_tmp_dataset_xml(self.READER_CLASS, file_name)
 
     def setUp(self):
         data_files = [self._generate_chunk_output_file(i=i)
@@ -335,7 +353,7 @@ class TestGatherWrongType(_SetupGatherApp):
         return self._copy_mock_output_file(pbcore.data.getUnalignedBam())
 
     def _make_dataset_file(self, file_name):
-        return make_tmp_dataset_xml(file_name, SubreadSet)
+        return make_tmp_dataset_xml(SubreadSet, file_name)
 
     def test_run_e2e(self):
         self.assertRaises(AssertionError,
