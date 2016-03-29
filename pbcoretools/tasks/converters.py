@@ -83,7 +83,9 @@ def run_bax_to_bam(input_file_name, output_file_name):
 
 
 def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
-                   nproc=1):
+                   nproc=1, score_mode="symmetric"):
+    if not score_mode in ["asymmetric", "symmetric"]:
+        raise ValueError("Unrecognized score mode '{m}'".format(m=score_mode))
     bc = BarcodeSet(barcode_set_file)
     if len(bc.resourceReaders()) > 1:
         raise NotImplementedError("Multi-FASTA BarcodeSet input is not supported.")
@@ -110,9 +112,9 @@ def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
                 "-b", str(nproc),
                 "-o", new_prefix,
                 "--barcodes", barcode_fasta,
+                "--scoreMode", score_mode,
                 subreads_bam, scraps_bam
             ]
-            print args
             log.info(" ".join(args))
             result = run_cmd(" ".join(args),
                              stdout_fh=sys.stdout,
@@ -231,13 +233,15 @@ def run_bax2bam(rtc):
           (FileTypes.DS_SUBREADS, FileTypes.DS_BARCODE),
           FileTypes.DS_SUBREADS,
           is_distributed=True,
-          nproc=SymbolTypes.MAX_NPROC)
+          nproc=SymbolTypes.MAX_NPROC,
+          options={"score_mode":"symmetric"})
 def run_bam2bam(rtc):
     return run_bam_to_bam(
         subread_set_file=rtc.task.input_files[0],
         barcode_set_file=rtc.task.input_files[1],
         output_file_name=rtc.task.output_files[0],
-        nproc=rtc.task.nproc)
+        nproc=rtc.task.nproc,
+        score_mode=rtc.task.options["pbcoretools.task_options.score_mode"])
 
 
 min_subread_length_opt = QuickOpt(0, "Minimum subread length",
