@@ -391,7 +391,7 @@ write_ccsset_barcode_chunks_to_file = functools.partial(
 
 def _to_zmw_chunked_dataset_files(dataset_type, dataset_path,
                                   max_total_nchunks, chunk_key, dir_name,
-                                  base_name, ext):
+                                  base_name, ext, extra_chunk_keys=None):
     """
     Similar to to_chunked_subreadset_files, but chunks reads by ZMW ranges
     for input to pbccs or pbtranscript.
@@ -405,6 +405,8 @@ def _to_zmw_chunked_dataset_files(dataset_type, dataset_path,
         chunk_path = os.path.join(dir_name, chunk_name)
         dset.write(chunk_path)
         d[chunk_key] = os.path.abspath(chunk_path)
+        if extra_chunk_keys is not None:
+            d.update(extra_chunk_keys)
         c = PipelineChunk(chunk_id, **d)
         yield c
 
@@ -416,7 +418,7 @@ to_zmw_chunked_ccsset_files = functools.partial(
 
 def _to_bam_chunked_dataset_files(dataset_type, dataset_path,
                                   max_total_nchunks, chunk_key, dir_name,
-                                  base_name, ext):
+                                  base_name, ext, extra_chunk_keys=None):
     """
     Similar to to_chunked_subreadset_files, but chunks reads by ZMW ranges
     for input to pbccs or pbtranscript.
@@ -431,6 +433,8 @@ def _to_bam_chunked_dataset_files(dataset_type, dataset_path,
         chunk_path = os.path.join(dir_name, chunk_name)
         dset.write(chunk_path)
         d[chunk_key] = os.path.abspath(chunk_path)
+        if extra_chunk_keys is not None:
+            d.update(extra_chunk_keys)
         c = PipelineChunk(chunk_id, **d)
         yield c
 
@@ -439,8 +443,9 @@ to_bam_chunked_subreadset_files = functools.partial(
 
 
 def _write_dataset_chunks_to_file(chunk_func, chunk_key, chunk_file,
-                                      dataset_path, max_total_chunks,
-                                      dir_name, chunk_base_name, chunk_ext):
+                                  dataset_path, max_total_chunks,
+                                  dir_name, chunk_base_name, chunk_ext,
+                                  extra_chunk_keys=None):
     """
     Similar to write_subreadset_chunks_to_file, but chunks reads (subread or
     CCS) by ZMW ranges for input to pbccs.
@@ -451,7 +456,8 @@ def _write_dataset_chunks_to_file(chunk_func, chunk_key, chunk_file,
         chunk_key=chunk_key,
         dir_name=dir_name,
         base_name=chunk_base_name,
-        ext=chunk_ext))
+        ext=chunk_ext,
+        extra_chunk_keys=extra_chunk_keys))
     write_chunks_to_json(chunks, chunk_file)
     return 0
 

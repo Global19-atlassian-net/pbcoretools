@@ -19,7 +19,7 @@ from pbcommand.models import PipelineChunk
 import pbcommand.testkit.core
 from pbcore.io import SubreadSet, ContigSet, FastaReader, FastqReader, \
     ConsensusReadSet, AlignmentSet, ConsensusAlignmentSet, HdfSubreadSet, \
-    ReferenceSet
+    ReferenceSet, BarcodeSet
 import pbcore.data
 
 
@@ -33,8 +33,10 @@ skip_if_missing_testdata = unittest.skipUnless(op.isdir(MNT_DATA),
     "Missing {d}".format(d=MNT_DATA))
 
 
-def _write_fasta_or_contigset(file_name, make_faidx=False, n_records=251):
-    fasta_file = re.sub(".contigset.xml", ".fasta", file_name)
+def _write_fasta_or_contigset(file_name, make_faidx=False, n_records=251,
+                              ds_class=ContigSet):
+    fasta_file = re.sub(".contigset.xml", ".fasta",
+                        re.sub(".barcodeset.xml", ".fasta", file_name))
     rec = [">chr%d\nacgtacgtacgt" % x for x in range(n_records)]
     with open(fasta_file, "w") as f:
         f.write("\n".join(rec))
@@ -42,7 +44,7 @@ def _write_fasta_or_contigset(file_name, make_faidx=False, n_records=251):
     if make_faidx:
         pysam.faidx(fasta_file)
     if file_name.endswith(".xml"):
-        cs = ContigSet(fasta_file, strict=make_faidx)
+        cs = ds_class(fasta_file, strict=make_faidx)
         cs.write(file_name)
 
 
@@ -246,7 +248,10 @@ class TestScatterSubreadBarcodes(pbcommand.testkit.core.PbTestScatterApp):
 
 class TestScatterSubreadBAMs(pbcommand.testkit.core.PbTestScatterApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.scatter_subread_bams"
-    INPUT_FILES = [tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name]
+    INPUT_FILES = [
+        tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name,
+        tempfile.NamedTemporaryFile(suffix=".barcodeset.xml").name
+    ]
     MAX_NCHUNKS = 8
     RESOLVED_MAX_NCHUNKS = 8
     NCHUNKS_EXPECTED = 2
@@ -259,6 +264,8 @@ class TestScatterSubreadBAMs(pbcommand.testkit.core.PbTestScatterApp):
         shutil.copyfile(pbcore.data.getUnalignedBam()+".pbi", tmp_bam+".pbi")
         ds = SubreadSet(tmp_bam, pbcore.data.getUnalignedBam(), strict=True)
         ds.write(cls.INPUT_FILES[0])
+        _write_fasta_or_contigset(cls.INPUT_FILES[1], make_faidx=True,
+                                  ds_class=BarcodeSet)
         super(TestScatterSubreadBAMs, cls).setUpClass()
 
 

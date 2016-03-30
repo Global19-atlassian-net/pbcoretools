@@ -32,11 +32,12 @@ def get_parser():
 
 
 def args_runner(args):
-    return run_main_gather_subreadset(args.cjson_in, args.ds_out, Constants.CHUNK_KEY)
-
+    return run_main_gather_subreadset(args.cjson_in, args.ds_out,
+                                      Constants.CHUNK_KEY)
 
 def rtc_runner(rtc):
-    return run_main_gather_subreadset(rtc.task.input_files[0], rtc.task.output_files[0], Constants.CHUNK_KEY)
+    return run_main_gather_subreadset(rtc.task.input_files[0],
+        rtc.task.output_files[0], rtc.task.chunk_key)
 
 
 def main(argv=sys.argv):

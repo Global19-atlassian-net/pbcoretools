@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 class Constants(object):
     TOOL_ID = "pbcoretools.tasks.subreadset_bam_scatter"
     DEFAULT_NCHUNKS = 5
-    DRIVER_EXE = "python -m pbcoretools.tasks.scatter_subread_bams _--resolved-tool-contract "
+    DRIVER_EXE = "python -m pbcoretools.tasks.scatter_subread_bams --resolved-tool-contract "
     DATASET_TYPE = FileTypes.DS_SUBREADS
     CHUNK_KEYS = ("$chunk.subreadset_id", )
     READ_TYPE = "Subread"
@@ -37,7 +37,10 @@ def get_contract_parser_impl(C):
                           "dataset",
                           "%sSet" % C.READ_TYPE,
                           "Pac Bio Fasta format")
-
+    p.add_input_file_type(FileTypes.DS_BARCODE,
+                          "barcodes",
+                          "BarcodeSet",
+                          "Pac Bio Barcode Dataset XML")
     p.add_output_file_type(FileTypes.CHUNK,
                            "chunk_report_json",
                            "Chunk %sSet" % C.READ_TYPE,
@@ -56,18 +59,20 @@ def get_contract_parser_impl(C):
 
 get_contract_parser = functools.partial(get_contract_parser_impl, Constants)
 
-def run_main(chunk_output_json, dataset_xml, max_nchunks, output_dir):
+def run_main(chunk_output_json, dataset_xml, barcode_xml, max_nchunks,
+             output_dir):
     return CU.write_subreadset_bam_chunks_to_file(
         chunk_file=chunk_output_json,
         dataset_path=dataset_xml,
         max_total_chunks=max_nchunks,
         dir_name=output_dir,
         chunk_base_name="chunk_dataset",
-        chunk_ext=FileTypes.DS_SUBREADS.ext)
+        chunk_ext=FileTypes.DS_SUBREADS.ext,
+        extra_chunk_keys={"$chunk.barcodeset_id":barcode_xml})
 
 
 def _args_runner(args):
-    return run_main(args.chunk_report_json, args.subreadset,
+    return run_main(args.chunk_report_json, args.subreadset, args.barcodeset,
                     args.max_nchunks, os.path.dirname(args.chunk_report_json))
 
 
@@ -75,6 +80,7 @@ def _rtc_runner(rtc):
     output_dir = os.path.dirname(rtc.task.output_files[0])
     max_nchunks = rtc.task.max_nchunks
     return run_main(rtc.task.output_files[0], rtc.task.input_files[0],
+                    rtc.task.input_files[1],
                     max_nchunks, output_dir)
 
 
