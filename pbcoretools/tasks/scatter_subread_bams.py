@@ -68,7 +68,7 @@ def run_main(chunk_output_json, dataset_xml, barcode_xml, max_nchunks,
         dir_name=output_dir,
         chunk_base_name="chunk_dataset",
         chunk_ext=FileTypes.DS_SUBREADS.ext,
-        extra_chunk_keys={"$chunk.barcode_id":barcode_xml})
+        extra_chunk_keys={"$chunk.barcodeset_id":barcode_xml})
 
 
 def _args_runner(args):
