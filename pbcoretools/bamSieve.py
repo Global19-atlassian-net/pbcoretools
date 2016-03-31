@@ -64,7 +64,8 @@ def filter_reads(input_bam,
                  count=None,
                  seed=None,
                  ignore_metadata=False,
-                 anonymize=False):
+                 anonymize=False,
+                 use_barcodes=False):
     if output_bam is None:
         log.error("Must specify output file")
         return 1
@@ -135,19 +136,32 @@ def filter_reads(input_bam,
             # convert these to Python sets
             _whitelist = _process_zmw_list(whitelist)
             _blacklist = _process_zmw_list(blacklist)
+            def _is_whitelisted(x):
+                if ((len(_whitelist) > 0 and x in _whitelist) or
+                    (len(_blacklist) > 0 and not x in _blacklist)):
+                    return True
             have_zmws = set()
-            n_reads = 0
+            have_records = []
             with AlignmentFile(output_bam, 'wb', template=f1.peer) as bam_out:
                 for f in ds_in.resourceReaders():
-                    for i_zmw, zmw in enumerate(f.holeNumber):
-                        if ((len(_whitelist) > 0 and zmw in _whitelist) or
-                                (len(_blacklist) > 0 and not zmw in _blacklist)):
-                            rec = f[i_zmw]
-                            if anonymize:
-                                _anonymize_sequence(rec.peer)
-                            bam_out.write(rec.peer)
-                            have_zmws.add(zmw)
-                            n_file_reads += 1
+                    def _add_read(i_rec, zmw):
+                        rec = f[i_rec]
+                        if anonymize:
+                            _anonymize_sequence(rec.peer)
+                        bam_out.write(rec.peer)
+                        have_zmws.add(zmw)
+                        have_records.append(i_rec)
+                    if use_barcodes:
+                        for i_rec in range(len(f.holeNumber)):
+                            bc_fwd = f.bcForward[i_rec]
+                            bc_rev = f.bcReverse[i_rec]
+                            if _is_whitelisted(bc_fwd) or _is_whitelisted(bc_rev):
+                                _add_read(i_rec, f.holeNumber[i_rec])
+                    else:
+                        for i_rec, zmw in enumerate(f.holeNumber):
+                            if _is_whitelisted(zmw):
+                                _add_read(i_rec, zmw)
+            n_file_reads = len(have_records)
     if n_file_reads == 0:
         log.error("No reads written")
         return 1
@@ -201,7 +215,8 @@ def run(args):
         count=args.count,
         seed=args.seed,
         ignore_metadata=args.ignore_metadata,
-        anonymize=args.anonymize)
+        anonymize=args.anonymize,
+        use_barcodes=args.barcodes)
 
 
 def get_parser():
@@ -234,6 +249,9 @@ def get_parser():
                    help="Discard input DataSet metadata")
     p.add_argument("--anonymize", action="store_true",
                    help="Randomize sequences for privacy")
+    p.add_argument("--barcodes", action="store_true",
+                   help="Indicates that the whitelist or blacklist contains "+
+                        "barcode indices instead of ZMW numbers")
     return p
 
 

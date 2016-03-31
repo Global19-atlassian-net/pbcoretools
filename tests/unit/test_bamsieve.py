@@ -17,6 +17,7 @@ DS2 = op.join(DATA_DIR, "tst_3.subreadset.xml")
 SUBREADS3 = pbcore.data.getUnalignedBam()
 SUBREADS4 = pbcore.data.getBamAndCmpH5()[0]
 CCS = pbcore.data.getCCSBAM()
+BARCODED = op.join(DATA_DIR, "barcoded.subreads.bam")
 
 
 class TestBamSieve(unittest.TestCase):
@@ -98,6 +99,18 @@ class TestBamSieve(unittest.TestCase):
         with open(tmp_bl, "w") as bl_out:
             bl_out.write("8\n233")
         _run_with_blacklist(tmp_bl)
+
+    def test_barcodes(self):
+        ofn = tempfile.NamedTemporaryFile(suffix=".bam").name
+        rc = bamSieve.filter_reads(
+            input_bam=BARCODED,
+            output_bam=ofn,
+            whitelist=[0],
+            use_barcodes=True)
+        with openDataFile(ofn, strict=False) as bam_out:
+            zmws = set([rec.HoleNumber for rec in bam_out])
+            self.assertEqual(len(zmws), 1)
+            self.assertTrue(74056024 in zmws)
 
     def test_percentage(self):
         ofn = tempfile.NamedTemporaryFile(suffix=".bam").name
