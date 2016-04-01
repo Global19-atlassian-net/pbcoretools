@@ -217,14 +217,14 @@ class TestCase (unittest.TestCase):
         bam_file = pbcore.io.BamReader(file_name)
         _run_validators(f=bam_file, expected_failures=[
             'BasecallerVersionError', 'MissingCodecError',
-            'PulseFeatureError', 'QnameHoleNumberError', 'QnameMovieError',
+            'QnameHoleNumberError', 'QnameMovieError',
             'ReadGroupChemistryError', 'UninitializedSNRError',
             'UnmappedPropertiesError', 'UnsortedError',
             'WrongPlatformError'])
         _validators = bam.get_validators(aligned=True)
         _run_validators(f=bam_file, expected_failures=[
             'BasecallerVersionError',
-            'FileNotAlignedError', 'MissingCodecError', 'PulseFeatureError',
+            'FileNotAlignedError', 'MissingCodecError',
             'QnameHoleNumberError', 'QnameMovieError',
             'ReadGroupChemistryError',
             'UninitializedSNRError', 'UnsortedError',
@@ -284,7 +284,8 @@ class TestCase (unittest.TestCase):
         errors1 = sorted([type(err).__name__ for err in e])
         self.assertEqual(errors1, ['BasecallerVersionError',
                                    'MissingCodecError',
-                                   'PulseFeatureError', 'QnameHoleNumberError',                                    'QnameMovieError', 'ReadGroupChemistryError',
+                                   'QnameHoleNumberError', 'QnameMovieError',
+                                   'ReadGroupChemistryError',
                                    'UninitializedSNRError',
                                    'UnmappedPropertiesError', 'UnsortedError',
                                    'WrongPlatformError'])
@@ -293,7 +294,6 @@ class TestCase (unittest.TestCase):
         self.assertEqual(errors2,
                          ['BasecallerVersionError',
                           'FileNotAlignedError', 'MissingCodecError',
-                          'PulseFeatureError',
                           'QnameHoleNumberError', 'QnameMovieError',
                           'ReadGroupChemistryError',
                           'UninitializedSNRError', 'UnsortedError',

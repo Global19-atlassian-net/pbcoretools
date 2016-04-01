@@ -82,6 +82,31 @@ def run_bax_to_bam(input_file_name, output_file_name):
     return 0
 
 
+def add_subread_resources(self, subreads, scraps=None, barcodes=None):
+    assert subreads.endswith(".subreads.bam")
+    ext_res_new = ExternalResource()
+    ext_res_new.resourceId = subreads
+    ext_res_new.metaType = 'PacBio.SubreadFile.SubreadBamFile'
+    ext_res_new.addIndices([subreads + ".pbi"])
+    if scraps is not None or barcodes is not None:
+        ext_res_inner = ExternalResources()
+        if scraps is not None:
+            assert scraps.endswith(".scraps.bam")
+            ext_res_scraps = ExternalResource()
+            ext_res_scraps.resourceId = scraps
+            ext_res_scraps.metaType = 'PacBio.SubreadFile.ScrapsBamFile'
+            ext_res_scraps.addIndices([scraps + ".pbi"])
+            ext_res_inner.append(ext_res_scraps)
+        if barcodes is not None:
+            assert barcodes.endswith(".barcodeset.xml"), barcodes
+            ext_res_barcode = ExternalResource()
+            ext_res_barcode.resourceId = barcodes
+            ext_res_barcode.metaType = "PacBio.DataSet.BarcodeSet"
+            ext_res_inner.append(ext_res_barcode)
+            ext_res_new.append(ext_res_inner)
+    self.externalResources.append(ext_res_new)
+
+
 def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
                    nproc=1, score_mode="symmetric"):
     if not score_mode in ["asymmetric", "symmetric"]:
@@ -123,24 +148,10 @@ def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
             subreads_bam = new_prefix + ".subreads.bam"
             scraps_bam = new_prefix + ".scraps.bam"
             assert op.isfile(subreads_bam), "Missing {f}".format(f=subreads_bam)
-            # FIXME we need a more general method for this
-            ext_res_new = ExternalResource()
-            ext_res_new.resourceId = subreads_bam
-            ext_res_new.metaType = 'PacBio.SubreadFile.SubreadBamFile'
-            ext_res_new.addIndices([subreads_bam + ".pbi"])
-            ext_res_inner = ExternalResources()
-            ext_res_scraps = ExternalResource()
-            ext_res_scraps.resourceId = scraps_bam
-            ext_res_scraps.metaType = 'PacBio.SubreadFile.ScrapsBamFile'
-            ext_res_scraps.addIndices([scraps_bam + ".pbi"])
-            ext_res_inner.append(ext_res_scraps)
-            ext_res_barcode = ExternalResource()
-            ext_res_barcode.resourceId = barcode_set_file
-            ext_res_barcode.metaType = "PacBio.DataSet.BarcodeSet"
-            ext_res_inner.append(ext_res_barcode)
-            ext_res_new.append(ext_res_inner)
-            ds_new.externalResources.append(ext_res_new)
-        # TODO include BarcodeSet as external resource
+            add_subread_resources(ds_new,
+                subreads=subreads_bam,
+                scraps=scraps_bam,
+                barcodes=barcode_set_file)
         ds._filters.clearCallbacks()
         ds_new._filters = ds._filters
         ds_new._populateMetaTypes()

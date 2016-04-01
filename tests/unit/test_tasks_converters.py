@@ -100,7 +100,7 @@ class TestBam2Bam(PbTestApp):
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
     INPUT_FILES = [
         "/pbi/dept/secondary/siv/testdata/SA3-Sequel/phi29/315/3150101/r54008_20160219_002905/1_A01_tiny/m54008_160219_003234_tiny.subreadset.xml",
-        "/pbi/dept/secondary/siv/testdata/pblaa-unittest/Sequel/Phi29/References/pacbio_384_barcodes.fasta"
+        "/pbi/dept/secondary/siv/barcodes/pacbio_barcodes_384/pacbio_barcodes_384.barcodeset.xml"
     ]
     MAX_NPROC = 8
     RESOLVED_NPROC = 8
