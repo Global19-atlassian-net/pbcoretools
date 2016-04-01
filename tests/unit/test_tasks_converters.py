@@ -129,8 +129,7 @@ class TestBam2Bam(PbTestApp):
             #self.assertEqual(len(rr.pbi.bcReverse), 13194)
 
 
-@skip_unless_bam2fastx
-class TestBam2Fasta(PbTestApp):
+class _BaseTestBam2Fasta(PbTestApp):
     TASK_ID = "pbcoretools.tasks.bam2fasta"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
@@ -140,11 +139,6 @@ class TestBam2Fasta(PbTestApp):
     IS_DISTRIBUTED = True
     RESOLVED_IS_DISTRIBUTED = True
     READER_CLASS = FastaReader
-
-    @classmethod
-    def setUpClass(cls):
-        ds = SubreadSet(pbcore.data.getUnalignedBam(), strict=True)
-        ds.write(cls.INPUT_FILES[0])
 
     def _get_output_file(self, rtc):
         return rtc.task.output_files[0]
@@ -159,6 +153,25 @@ class TestBam2Fasta(PbTestApp):
     def run_after(self, rtc, output_dir):
         n_expected, n_actual = self._get_counts(rtc)
         self.assertEqual(n_actual, n_expected)
+
+
+@skip_unless_bam2fastx
+class TestBam2Fasta(_BaseTestBam2Fasta):
+
+    @classmethod
+    def setUpClass(cls):
+        ds = SubreadSet(pbcore.data.getUnalignedBam(), strict=True)
+        ds.write(cls.INPUT_FILES[0])
+        super(TestBam2Fasta, cls).setUpClass()
+
+
+@skip_unless_bam2fastx
+class TestBam2FastaIgnoreBarcodes(_BaseTestBam2Fasta):
+    """
+    Make sure the base bam2fasta task always outputs a single FASTA file
+    even when barcoding is present.
+    """
+    INPUT_FILES = [BARCODED_SUBREAD_SET]
 
 
 @skip_unless_bam2fastx
