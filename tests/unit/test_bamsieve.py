@@ -5,7 +5,7 @@ import unittest
 import os.path as op
 import os
 
-from pbcore.io import openDataFile, openDataSet, IndexedBamReader
+from pbcore.io import openDataFile, openDataSet
 import pbcore.data
 
 from pbcoretools import bamSieve
@@ -124,7 +124,7 @@ class TestBamSieve(unittest.TestCase):
             with openDataFile(ofn, strict=False) as ds_out:
                 ext_res = ds_out.externalResources[0]
                 for bam_file in [ext_res.bam, ext_res.scraps]:
-                    with IndexedBamReader(bam_file) as bam:
+                    with openDataFile(bam_file, strict=False) as bam:
                         zmws = set([rec.HoleNumber for rec in bam])
                         self.assertEqual(len(zmws), 1)
                         self.assertTrue(74056024 in zmws)
