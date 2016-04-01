@@ -15,7 +15,7 @@ import sys
 
 from pbcore.io import (SubreadSet, HdfSubreadSet, FastaReader, FastaWriter,
                        FastqReader, FastqWriter, BarcodeSet, ExternalResource,
-                       ExternalResources)
+                       ExternalResources, openDataSet)
 from pbcommand.engine import run_cmd
 from pbcommand.cli import registry_builder, registry_runner, QuickOpt
 from pbcommand.models import FileTypes, SymbolTypes
@@ -161,17 +161,38 @@ def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
     return 0
 
 
+def _filter_fastx(fastx_reader, fastx_writer, input_file, output_file,
+                  min_subread_length):
+    def _open_file(file_name):
+        if file_name.endswith(".gz"):
+            return gzip.open(file_name)
+        else:
+            return open(file_name)
+    with _open_file(input_file) as raw_in:
+        with fastx_reader(raw_in) as fastx_in:
+            with fastx_writer(output_file) as fastx_out:
+                for rec in fastx_in:
+                    if (min_subread_length < 1 or
+                        min_subread_length < len(rec.sequence)):
+                        fastx_out.writeRecord(rec)
+
+
 def run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                      input_file_name, output_file_name,
                      min_subread_length=0):
     assert isinstance(program_name, basestring)
-    # XXX this is really annoying; bam2fastx needs a --no-gzip feature
+    barcode_mode = False
+    if output_file_name.endswith(".gz"):
+        with openDataSet(input_file_name) as ds_in:
+            barcode_mode = ds_in.isBarcoded
     tmp_out_prefix = tempfile.NamedTemporaryFile().name
     args = [
         program_name,
         "-o", tmp_out_prefix,
         input_file_name,
     ]
+    if barcode_mode:
+        args.insert(1, "--split-barcodes")
     log.info(" ".join(args))
     result = run_cmd(" ".join(args),
                      stdout_fh=sys.stdout,
@@ -179,29 +200,64 @@ def run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
     if result.exit_code != 0:
         return result.exit_code
     else:
-        base_ext = re.sub("bam2", "", program_name)
-        tmp_out = "{p}.{b}.gz".format(p=tmp_out_prefix, b=base_ext)
-        assert os.path.isfile(tmp_out), tmp_out
-        log.info("raw output in {f}".format(f=tmp_out))
-        def _open_file(file_name):
-            if file_name.endswith(".gz"):
-                return gzip.open(file_name)
-            else:
-                return open(file_name)
+        base_ext = re.sub("bam2", "", program_name) 
         if min_subread_length > 0:
             log.info("Filtering subreads by minimum length = {l}".format(
                 l=min_subread_length))
         elif min_subread_length < 0:
             log.warn("min_subread_length = {l}, ignoring".format(
                 l=min_subread_length))
-        with _open_file(tmp_out) as raw_in:
-            with fastx_reader(raw_in) as fastx_in:
-                with fastx_writer(output_file_name) as fastx_out:
-                    for rec in fastx_in:
-                        if (min_subread_length < 1 or
-                            min_subread_length < len(rec.sequence)):
-                            fastx_out.writeRecord(rec)
-        os.remove(tmp_out)
+        if not barcode_mode:
+            tmp_out = "{p}.{b}.gz".format(p=tmp_out_prefix, b=base_ext)
+            assert os.path.isfile(tmp_out), tmp_out
+            log.info("raw output in {f}".format(f=tmp_out))
+            if output_file_name.endswith(".gz"):
+                with gzip.open(output_file_name, "wb") as out:
+                    _filter_fastx(fastx_reader, fastx_writer, tmp_out, out,
+                                  min_subread_length)
+            else:
+                _filter_fastx(fastx_reader, fastx_writer, tmp_out,
+                              output_file_name, min_subread_length)
+            os.remove(tmp_out)
+        else:
+            suffix = "{f}.gz".format(f=base_ext)
+            tmp_out_dir = op.dirname(tmp_out_prefix)
+            tc_out_dir = op.dirname(output_file_name)
+            barcoded_file_names = []
+            # find the barcoded FASTX files and unzip them to the same
+            # output directory and file prefix as the ultimate output
+            for fn in os.listdir(tmp_out_dir):
+                fn = op.join(tmp_out_dir, fn)
+                if fn.startswith(tmp_out_prefix) and fn.endswith(suffix):
+                    bc_fwd_rev = fn.split(".")[-3].split("_")
+                    suffix2 = ".{f}_{r}.{t}".format(
+                        f=bc_fwd_rev[0], r=bc_fwd_rev[1], t=base_ext)
+                    assert fn == tmp_out_prefix + suffix2 + ".gz"
+                    fn_out = re.sub(".gz$", suffix2, output_file_name)
+                    fastx_out = op.join(tc_out_dir, fn_out)
+                    _filter_fastx(fastx_reader, fastx_writer, fn,
+                                  fastx_out, min_subread_length)
+                    barcoded_file_names.append(op.basename(fn_out))
+                    os.remove(fn)
+            assert len(barcoded_file_names) > 0
+            # now make a gzipped tarball
+            args = ["tar", "-czf", output_file_name] + barcoded_file_names
+            log.info("Running '{a}'".format(a=" ".join(args)))
+            _cwd = os.getcwd()
+            try:
+                # we want the files to have no leading path
+                os.chdir(op.dirname(output_file_name))
+                result = run_cmd(" ".join(args),
+                                 stdout_fh=sys.stdout,
+                                 stderr_fh=sys.stderr)
+            except Exception:
+                raise
+            else:
+                if result.exit_code != 0:
+                    return result.exit_code
+            finally:
+                os.chdir(_cwd)
+            assert op.isfile(output_file_name)
     return 0
 
 
@@ -288,6 +344,24 @@ def run_bam2fasta_nofilter(rtc):
     return run_bam_to_fasta(rtc.task.input_files[0], rtc.task.output_files[0])
 
 
+@registry("bam2fasta_archive", "0.1.0",
+          FileTypes.DS_SUBREADS,
+          FileTypes.GZIP, is_distributed=True, nproc=1,
+          options={"min_subread_length":min_subread_length_opt})
+def run_bam2fasta_archive(rtc):
+    return run_bam_to_fasta(rtc.task.input_files[0], rtc.task.output_files[0],
+        rtc.task.options["pbcoretools.task_options.min_subread_length"])
+
+
+@registry("bam2fastq_archive", "0.1.0",
+          FileTypes.DS_SUBREADS,
+          FileTypes.GZIP, is_distributed=True, nproc=1,
+          options={"min_subread_length":min_subread_length_opt})
+def run_bam2fasta_archive(rtc):
+    return run_bam_to_fastq(rtc.task.input_files[0], rtc.task.output_files[0],
+        rtc.task.options["pbcoretools.task_options.min_subread_length"])
+
+
 @registry("fasta2fofn", "0.1.0",
           FileTypes.FASTA,
           FileTypes.FOFN, is_distributed=False, nproc=1)
@@ -303,6 +377,9 @@ def run_fasta2referenceset(rtc):
                                      rtc.task.output_files[0])
 
 
+# FIXME(nechols)(2016-04-01) this only outputs uncompressed single files, if
+# CCS is modified to output barcodes then we will need a separate version to
+# handle that use case
 @registry("bam2fastq_ccs", "0.1.0",
           FileTypes.DS_CCS,
           FileTypes.FASTQ, is_distributed=True, nproc=1)
@@ -313,6 +390,7 @@ def run_bam2fastq_ccs(rtc):
     return run_bam_to_fastq(rtc.task.input_files[0], rtc.task.output_files[0])
 
 
+# FIXME see above
 @registry("bam2fasta_ccs", "0.1.0",
           FileTypes.DS_CCS,
           FileTypes.FASTA, is_distributed=True, nproc=1)

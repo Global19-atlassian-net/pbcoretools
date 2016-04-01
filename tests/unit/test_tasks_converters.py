@@ -1,8 +1,11 @@
 
+import subprocess
 import tempfile
 import unittest
 import logging
+import gzip
 import os.path as op
+import os
 
 from pbcore.io import (FastaReader, FastqReader, openDataSet, HdfSubreadSet,
                        SubreadSet, ConsensusReadSet)
@@ -16,7 +19,8 @@ from base import get_temp_file
 
 log = logging.getLogger(__name__)
 
-DATA = op.join(op.dirname(__file__), "data")
+DATA = op.join(op.dirname(op.dirname(__file__)), "data")
+BARCODED_SUBREAD_SET = op.join(DATA, "barcoded.subreadset.xml")
 
 
 class Constants(object):
@@ -142,10 +146,13 @@ class TestBam2Fasta(PbTestApp):
         ds = SubreadSet(pbcore.data.getUnalignedBam(), strict=True)
         ds.write(cls.INPUT_FILES[0])
 
+    def _get_output_file(self, rtc):
+        return rtc.task.output_files[0]
+
     def _get_counts(self, rtc):
         with openDataSet(self.INPUT_FILES[0]) as ds:
             n_expected = len([rec for rec in ds])
-        with self.READER_CLASS(rtc.task.output_files[0]) as f:
+        with self.READER_CLASS(self._get_output_file(rtc)) as f:
             n_actual = len([rec for rec in f])
         return n_expected, n_actual
 
@@ -196,3 +203,70 @@ class TestBam2FastqCCS(TestBam2FastaCCS):
     TASK_ID = "pbcoretools.tasks.bam2fastq_ccs"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     READER_CLASS = FastqReader
+
+
+@skip_unless_bam2fastx
+class TestBam2FastaArchive(TestBam2Fasta):
+    TASK_ID = "pbcoretools.tasks.bam2fasta_archive"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    TASK_OPTIONS = {"pbcoretools.task_options.min_subread_length": 1000}
+    RESOLVED_TASK_OPTIONS = {"pbcoretools.task_options.min_subread_length": 1000}
+
+    def _get_output_file(self, rtc):
+        return gzip.open(rtc.task.output_files[0])
+
+    def run_after(self, rtc, output_dir):
+        n_expected, n_actual = self._get_counts(rtc)
+        self.assertTrue(0 < n_actual < n_expected,
+            "FAILED: 0 < {a} < {e}".format(a=n_actual, e=n_expected))
+
+
+@skip_unless_bam2fastx
+class TestBam2FastqArchive(TestBam2Fastq):
+    TASK_ID = "pbcoretools.tasks.bam2fastq_archive"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+
+    def _get_output_file(self, rtc):
+        return gzip.open(rtc.task.output_files[0])
+
+
+@skip_unless_bam2fastx
+class TestBam2FastaBarcoded(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.bam2fasta_archive"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [BARCODED_SUBREAD_SET]
+    MAX_NPROC = 24
+    RESOLVED_NPROC = 1
+    IS_DISTRIBUTED = True
+    RESOLVED_IS_DISTRIBUTED = True
+    READER_CLASS = FastaReader
+    EXT = "fasta"
+
+    def run_after(self, rtc, output_dir):
+        tmp_dir = tempfile.mkdtemp()
+        _cwd = os.getcwd()
+        try:
+            os.chdir(tmp_dir)
+            args = ["tar", "xzf", rtc.task.output_files[0]]
+            self.assertEqual(subprocess.call(args), 0)
+            file_names = sorted(os.listdir(tmp_dir))
+            self.assertEqual(file_names,
+                             ["file.0_0."+self.EXT, "file.2_2."+self.EXT])
+            fastx_ids = ["m54008_160219_003234/74056024/3985_5421", # bc 0
+                         "m54008_160219_003234/28901719/5058_5262" ] # bc 2
+            for file_name, fastx_id in zip(file_names, fastx_ids):
+                with self.READER_CLASS(file_name) as f:
+                    records = [rec.id for rec in f]
+                    self.assertEqual(len(records), 1)
+                    self.assertEqual(records[0], fastx_id)
+        finally:
+            os.chdir(_cwd)
+
+
+@skip_unless_bam2fastx
+class TestBam2FastqBarcoded(TestBam2FastaBarcoded):
+    TASK_ID = "pbcoretools.tasks.bam2fastq_archive"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    READER_CLASS = FastqReader
+    EXT = "fastq"
