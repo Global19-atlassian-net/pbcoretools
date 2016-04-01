@@ -3,8 +3,9 @@ import subprocess
 import tempfile
 import unittest
 import os.path as op
+import os
 
-from pbcore.io import openDataFile, openDataSet
+from pbcore.io import openDataFile, openDataSet, IndexedBamReader
 import pbcore.data
 
 from pbcoretools import bamSieve
@@ -18,7 +19,7 @@ SUBREADS3 = pbcore.data.getUnalignedBam()
 SUBREADS4 = pbcore.data.getBamAndCmpH5()[0]
 CCS = pbcore.data.getCCSBAM()
 BARCODED = op.join(DATA_DIR, "barcoded.subreads.bam")
-
+BARCODED_DS = op.join(DATA_DIR, "barcoded.subreadset.xml")
 
 class TestBamSieve(unittest.TestCase):
 
@@ -111,6 +112,28 @@ class TestBamSieve(unittest.TestCase):
             zmws = set([rec.HoleNumber for rec in bam_out])
             self.assertEqual(len(zmws), 1)
             self.assertTrue(74056024 in zmws)
+
+    def test_subreadset_scraps(self):
+        ofn = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
+        rc = bamSieve.filter_reads(
+            input_bam=BARCODED_DS,
+            output_bam=ofn,
+            whitelist=[74056024])
+        self.assertEqual(rc, 0)
+        def _verify():
+            with openDataFile(ofn, strict=False) as ds_out:
+                ext_res = ds_out.externalResources[0]
+                for bam_file in [ext_res.bam, ext_res.scraps]:
+                    with IndexedBamReader(bam_file) as bam:
+                        zmws = set([rec.HoleNumber for rec in bam])
+                        self.assertEqual(len(zmws), 1)
+                        self.assertTrue(74056024 in zmws)
+        _verify()
+        rc = bamSieve.filter_reads(
+            input_bam=BARCODED_DS,
+            output_bam=ofn,
+            blacklist=[28901719])
+        self.assertEqual(rc, 0)
 
     def test_percentage(self):
         ofn = tempfile.NamedTemporaryFile(suffix=".bam").name

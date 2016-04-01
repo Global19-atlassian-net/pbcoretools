@@ -184,7 +184,12 @@ def filter_reads(input_bam,
             if output_ds is not None and output_ds.endswith(".subreadset.xml"):
                 for ext_res in ds_in.externalResources:
                     if ext_res.scraps is not None:
-                        scraps_in = IndexedBamReader(ext_res.scraps)
+                        if use_barcodes:
+                            log.warn("Scraps BAM is present but lacks "+
+                                     "barcodes - will not be propagated "+
+                                     "to output SubreadSet")
+                        else:
+                            scraps_in = IndexedBamReader(ext_res.scraps)
                         break
             with AlignmentFile(output_bam, 'wb',
                                template=f1.peer) as bam_out:
