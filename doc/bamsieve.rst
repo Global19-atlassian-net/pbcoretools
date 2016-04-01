@@ -5,8 +5,8 @@ bamSieve - a tool for dataset reduction
 on a per-ZMW basis (keeping all subreads within a read together), inspired on
 the ``baxSieve`` program for RSII datasets.
 Although it is BAM-centric it has some support for
-dataset XML and will propagate metadata (but not, at present, external
-resources associated with individual BAM files).  We use this extensively
+dataset XML and will propagate metadata, as well as scraps BAM files in
+the special case of SubreadSets.  We use this extensively
 internally for testing and debugging purposes, e.g. generating minimal test
 datasets containing a handful of reads.
 
@@ -29,7 +29,7 @@ Output of ``bamSieve --help``::
                   [--log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL} | --debug | --quiet | -v]
                   [--show-zmws] [--whitelist WHITELIST] [--blacklist BLACKLIST]
                   [--percentage PERCENTAGE] [-n COUNT] [-s SEED]
-                  [--ignore-metadata] [--anonymize]
+                  [--ignore-metadata] [--anonymize] [--barcodes]
                   input_bam [output_bam]
   
   Tool for subsetting a BAM or PacBio DataSet file based on either a whitelist
@@ -70,7 +70,9 @@ Output of ``bamSieve --help``::
                           (default: None)
     --ignore-metadata     Discard input DataSet metadata (default: False)
     --anonymize           Randomize sequences for privacy (default: False)
-  
+    --barcodes            Indicates that the whitelist or blacklist contains
+                          barcode indices instead of ZMW numbers (default:
+                          False)
 
 
 Examples
@@ -115,3 +117,17 @@ Selecting a different 0.1% of reads::
 Selecting just two ZMWs/reads at random::
 
   $ bamSieve --count 2 full.subreads.bam two_reads.subreads.bam
+
+Selecting by barcode::
+
+  $ bamSieve --barcodes --whitelist 4,7 full.subreads.bam two_barcodes.subreads.bam
+
+Generating a tiny BAM file that contains only mappable reads::
+
+  $ bamSieve --whitelist mapped.subreads.bam full.subreads.bam mappable.subreads.bam
+  $ bamSieve --count 4 mappable.subreads.bam tiny.subreads.bam
+
+Splitting a dataset into two halves::
+
+  $ bamSieve --percentage 50 full.subreadset.xml split.1of2.subreadset.xml
+  $ bamSieve --blacklist split.1of2.subreadset.xml full.subreadset.xml split.2of2.subreadset.xml

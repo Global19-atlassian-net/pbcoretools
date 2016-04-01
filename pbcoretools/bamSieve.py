@@ -10,6 +10,7 @@ import subprocess
 import logging
 import random
 import os.path as op
+import re
 import sys
 
 from pysam import AlignmentFile
@@ -19,7 +20,7 @@ from pbcommand.common_options import (add_log_quiet_option,
 from pbcommand.cli import (pacbio_args_runner,
     get_default_argparser_with_base_opts)
 from pbcommand.utils import setup_log
-from pbcore.io import openDataFile, openDataSet
+from pbcore.io import openDataFile, openDataSet, IndexedBamReader
 
 VERSION = "0.1.1"
 
@@ -56,6 +57,34 @@ def _anonymize_sequence(rec):
     return rec
 
 
+def _process_bam_whitelist(bam_in, bam_out, whitelist, blacklist,
+                           use_barcodes=False, anonymize=False):
+    def _is_whitelisted(x):
+        if ((len(whitelist) > 0 and x in whitelist) or
+            (len(blacklist) > 0 and not x in blacklist)):
+            return True
+    have_zmws = set()
+    have_records = []
+    def _add_read(i_rec, zmw):
+        rec = bam_in[i_rec]
+        if anonymize:
+            _anonymize_sequence(rec.peer)
+        bam_out.write(rec.peer)
+        have_zmws.add(zmw)
+        have_records.append(i_rec)
+    if use_barcodes:
+        for i_rec in range(len(bam_in.holeNumber)):
+            bc_fwd = bam_in.bcForward[i_rec]
+            bc_rev = bam_in.bcReverse[i_rec]
+            if _is_whitelisted(bc_fwd) or _is_whitelisted(bc_rev):
+                _add_read(i_rec, bam_in.holeNumber[i_rec])
+    else:
+        for i_rec, zmw in enumerate(bam_in.holeNumber):
+            if _is_whitelisted(zmw):
+                _add_read(i_rec, zmw)
+    return len(have_records), have_zmws
+
+
 def filter_reads(input_bam,
                  output_bam,
                  whitelist=None,
@@ -85,8 +114,18 @@ def filter_reads(input_bam,
         if not input_bam.endswith(".xml"):
             print "DataSet output only supported for DataSet inputs."
             return 1
+        ds_type = output_bam.split(".")[-2]
+        ext2 = {
+            "subreadset": "subreads",
+            "alignmentset": "subreads",
+            "consensusreadset": "ccs",
+            "consensusalignmentset": "ccs"
+        }
+        if not ds_type in ext2:
+            raise ValueError("Invalid dataset type 't'".format(t=ds_type))
         output_ds = output_bam
-        output_bam = op.splitext(output_ds)[0] + ".bam"
+        output_bam = ".".join(output_ds.split(".")[:-2] +
+                              [ext2[ds_type], "bam"])
     if output_bam == input_bam:
         log.error("Input and output files must not be the same path")
         return 1
@@ -95,12 +134,17 @@ def filter_reads(input_bam,
         return 1
     n_file_reads = 0
     have_zmws = set()
+    scraps_bam = barcode_set = None
     with openDataFile(input_bam) as ds_in:
         # TODO(nechols)(2016-03-11): refactor this to enable propagation of
         # filtered scraps
         if not ds_in.isIndexed:
             log.error("Input BAM must have accompanying .pbi index")
             return 1
+        for ext_res in ds_in.externalResources:
+            if ext_res.barcodes is not None:
+                assert barcode_set is None or barcode_set == ext_res.barcodes
+                barcode_set = barcode_set
         f1 = ds_in.resourceReaders()[0]
         if percentage is not None or count is not None:
             with AlignmentFile(output_bam, 'wb', template=f1.peer) as bam_out:
@@ -136,53 +180,66 @@ def filter_reads(input_bam,
             # convert these to Python sets
             _whitelist = _process_zmw_list(whitelist)
             _blacklist = _process_zmw_list(blacklist)
-            def _is_whitelisted(x):
-                if ((len(_whitelist) > 0 and x in _whitelist) or
-                    (len(_blacklist) > 0 and not x in _blacklist)):
-                    return True
-            have_zmws = set()
-            have_records = []
-            with AlignmentFile(output_bam, 'wb', template=f1.peer) as bam_out:
-                for f in ds_in.resourceReaders():
-                    def _add_read(i_rec, zmw):
-                        rec = f[i_rec]
-                        if anonymize:
-                            _anonymize_sequence(rec.peer)
-                        bam_out.write(rec.peer)
-                        have_zmws.add(zmw)
-                        have_records.append(i_rec)
-                    if use_barcodes:
-                        for i_rec in range(len(f.holeNumber)):
-                            bc_fwd = f.bcForward[i_rec]
-                            bc_rev = f.bcReverse[i_rec]
-                            if _is_whitelisted(bc_fwd) or _is_whitelisted(bc_rev):
-                                _add_read(i_rec, f.holeNumber[i_rec])
-                    else:
-                        for i_rec, zmw in enumerate(f.holeNumber):
-                            if _is_whitelisted(zmw):
-                                _add_read(i_rec, zmw)
-            n_file_reads = len(have_records)
+            scraps_in = None
+            if output_ds is not None and output_ds.endswith(".subreadset.xml"):
+                for ext_res in ds_in.externalResources:
+                    if ext_res.scraps is not None:
+                        scraps_in = IndexedBamReader(ext_res.scraps)
+                        break
+            with AlignmentFile(output_bam, 'wb',
+                               template=f1.peer) as bam_out:
+                for bam_in in ds_in.resourceReaders():
+                    n_records, have_zmws_ =_process_bam_whitelist(
+                        bam_in, bam_out,
+                        whitelist=_whitelist,
+                        blacklist=_blacklist,
+                        use_barcodes=use_barcodes,
+                        anonymize=anonymize)
+                    n_file_reads += n_records
+                    have_zmws.update(have_zmws_)
+            if scraps_in is not None:
+                scraps_bam = re.sub("subreads.bam$", "scraps.bam", output_bam)
+                with AlignmentFile(scraps_bam, 'wb',
+                                   template=scraps_in.peer) as scraps_out:
+                    for ext_res in ds_in.externalResources:
+                        if ext_res.scraps is not None:
+                            scraps_in_ = IndexedBamReader(ext_res.scraps)
+                            n_records, have_zmws_ =_process_bam_whitelist(
+                                scraps_in_, scraps_out, _whitelist, _blacklist,
+                                use_barcodes=use_barcodes,
+                                anonymize=anonymize)
+                            have_zmws.update(have_zmws_)
     if n_file_reads == 0:
         log.error("No reads written")
         return 1
     log.info("{n} records from {z} ZMWs written".format(
         n=n_file_reads, z=len(have_zmws)))
-    try:
-        rc = subprocess.call(["pbindex", output_bam])
-    except OSError as e:
-        if e.errno == 2:
-            log.warn("pbindex not present, will not create .pbi file")
-        else:
-            raise
+    def _run_pbindex(bam_file):
+        try:
+            rc = subprocess.call(["pbindex", bam_file])
+        except OSError as e:
+            if e.errno == 2:
+                log.warn("pbindex not present, will not create .pbi file")
+            else:
+                raise
+    _run_pbindex(output_bam)
     if output_ds is not None:
         with openDataSet(input_bam) as ds_in:
             ds_out = ds_in.__class__(output_bam)
+            if scraps_bam is not None:
+                _run_pbindex(scraps_bam)
+                ds_out.externalResources[0].scraps = scraps_bam
+                # XXX it doesn't pick up the .pbi file - sort of annoying
+                # but since the pbcore API doesn't provide a read for the
+                # scraps automatically anyway, the impact is minimal
+            if barcode_set is not None:
+                ds_out.externalResources[0].barcodes = barcode_set
             if not ignore_metadata:
                 ds_out.metadata = ds_in.metadata
                 ds_out.updateCounts()
             ds_out.write(output_ds)
             log.info("wrote {t} XML to {x}".format(
-                t=ds_in.__class__.__name__, x=output_ds))
+                     t=ds_out.__class__.__name__, x=output_ds))
     return 0
 
 
