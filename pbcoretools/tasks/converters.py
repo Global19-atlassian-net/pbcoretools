@@ -155,6 +155,8 @@ def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
         ds._filters.clearCallbacks()
         ds_new._filters = ds._filters
         ds_new._populateMetaTypes()
+        ds_new.metadata = ds.metadata
+        ds_new.name = ds.name + " (barcoded)"
         ds_new.updateCounts()
         ds_new.newUuid()
         ds_new.write(output_file_name)

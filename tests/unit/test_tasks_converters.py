@@ -103,7 +103,7 @@ class TestBam2Bam(PbTestApp):
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
     INPUT_FILES = [
-        "/pbi/dept/secondary/siv/testdata/SA3-Sequel/phi29/315/3150101/r54008_20160219_002905/1_A01_tiny/m54008_160219_003234_tiny.subreadset.xml",
+        "/pbi/dept/secondary/siv/testdata/SA3-Sequel/phi29/315/3150101/r54008_20160219_002905/1_A01_micro/m54008_160219_003234_micro.subreadset.xml",
         "/pbi/dept/secondary/siv/barcodes/pacbio_barcodes_384/pacbio_barcodes_384.barcodeset.xml"
     ]
     MAX_NPROC = 8
@@ -121,6 +121,11 @@ class TestBam2Bam(PbTestApp):
         self.assertEqual(len(err), 0)
         with SubreadSet(rtc.task.output_files[0]) as ds:
             self.assertEqual(len(ds.externalResources), 1)
+            # make sure metadata are propagated
+            md = ds.metadata
+            self.assertEqual(
+                md.collections.submetadata[0].attrib['InstrumentName'],
+                "Inst54008")
             self.assertTrue(ds.externalResources[0].scraps is not None)
             self.assertEqual(ds.externalResources[0].barcodes,
                              self.INPUT_FILES[1])
