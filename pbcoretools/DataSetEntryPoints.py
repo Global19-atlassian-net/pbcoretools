@@ -20,6 +20,8 @@ def summarizeXml(args):
     print "Number of records     : {r}".format(r=dset.numRecords)
     print "Total number of bases : {r}".format(r=dset.totalLength)
     print "# of Resources        : {r}".format(r=len(dset.toExternalFiles()))
+    print "Filters               : {r}".format(r=str(dset.filters) if
+                                               dset.filters else "None")
     for fname in dset.toExternalFiles():
         print fname
     return 0
