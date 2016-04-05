@@ -204,26 +204,6 @@ class TestBam2FastqFiltered(TestBam2Fastq):
 
 
 @skip_unless_bam2fastx
-class TestBam2FastaCCS(TestBam2Fasta):
-    TASK_ID = "pbcoretools.tasks.bam2fasta_ccs"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
-    INPUT_FILES = [get_temp_file(".consensusreadset.xml")]
-    READER_CLASS = FastaReader
-
-    @classmethod
-    def setUpClass(cls):
-        ds = ConsensusReadSet(pbcore.data.getCCSBAM(), strict=True)
-        ds.write(cls.INPUT_FILES[0])
-
-
-@skip_unless_bam2fastx
-class TestBam2FastqCCS(TestBam2FastaCCS):
-    TASK_ID = "pbcoretools.tasks.bam2fastq_ccs"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
-    READER_CLASS = FastqReader
-
-
-@skip_unless_bam2fastx
 class TestBam2FastaArchive(TestBam2Fasta):
     TASK_ID = "pbcoretools.tasks.bam2fasta_archive"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
@@ -246,6 +226,26 @@ class TestBam2FastqArchive(TestBam2Fastq):
 
     def _get_output_file(self, rtc):
         return gzip.open(rtc.task.output_files[0])
+
+
+@skip_unless_bam2fastx
+class TestBam2FastaCCS(TestBam2FastqArchive):
+    TASK_ID = "pbcoretools.tasks.bam2fasta_ccs"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    INPUT_FILES = [get_temp_file(".consensusreadset.xml")]
+    READER_CLASS = FastaReader
+
+    @classmethod
+    def setUpClass(cls):
+        ds = ConsensusReadSet(pbcore.data.getCCSBAM(), strict=True)
+        ds.write(cls.INPUT_FILES[0])
+
+
+@skip_unless_bam2fastx
+class TestBam2FastqCCS(TestBam2FastaCCS):
+    TASK_ID = "pbcoretools.tasks.bam2fastq_ccs"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    READER_CLASS = FastqReader
 
 
 @skip_unless_bam2fastx

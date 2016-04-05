@@ -379,12 +379,9 @@ def run_fasta2referenceset(rtc):
                                      rtc.task.output_files[0])
 
 
-# FIXME(nechols)(2016-04-01) this only outputs uncompressed single files, if
-# CCS is modified to output barcodes then we will need a separate version to
-# handle that use case
 @registry("bam2fastq_ccs", "0.1.0",
           FileTypes.DS_CCS,
-          FileTypes.FASTQ, is_distributed=True, nproc=1)
+          FileTypes.GZIP, is_distributed=True, nproc=1)
 def run_bam2fastq_ccs(rtc):
     """
     Duplicate of run_bam2fastq, but with ConsensusReadSet as input.
@@ -392,10 +389,9 @@ def run_bam2fastq_ccs(rtc):
     return run_bam_to_fastq(rtc.task.input_files[0], rtc.task.output_files[0])
 
 
-# FIXME see above
 @registry("bam2fasta_ccs", "0.1.0",
           FileTypes.DS_CCS,
-          FileTypes.FASTA, is_distributed=True, nproc=1)
+          FileTypes.GZIP, is_distributed=True, nproc=1)
 def run_bam2fasta_ccs(rtc):
     """
     Duplicate of run_bam2fasta, but with ConsensusReadSet as input.
