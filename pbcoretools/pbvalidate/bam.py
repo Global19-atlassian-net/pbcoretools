@@ -59,13 +59,13 @@ class Constants (object):
     CODEC_NAMES = ["FRAMES", "CODECV1"]
     PULSE_FEATURE_KEYS = ["IPD", "PULSEWIDTH"]
     REQUIRES_CONTEXT_TAGS = ["SUBREAD", "CSS"]
-    UNKNOWN_READ_TYPES = ["POLYMERASE", "SCRAP"]
+    UNKNOWN_READ_TYPES = ["ZMW", "SCRAP"]
     EXPECTED_SUFFIX = {
         "standard": "subreads",  # really SUBREAD
         "CCS": "ccs",
         #"SUBREAD" : "subreads",
         "SCRAP": "scraps",
-        "POLYMERASE": "polymerase",
+        "ZMW": "zmws",
     }
     # misc string constants
     READ_TYPE_SUBREAD = "SUBREAD"
