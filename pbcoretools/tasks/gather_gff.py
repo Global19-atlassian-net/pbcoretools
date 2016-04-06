@@ -22,7 +22,7 @@ def get_parser():
                             "Dev Gff Gather",
                             "General Chunk Gff Gather",
                             Constants.DRIVER,
-                            is_distributed=False)
+                            is_distributed=True)
     p.add_input_file_type(FileTypes.CHUNK, "cjson_in", "GCHUNK Json",
                           "Gathered CHUNK Json with Gff chunk key")
     p.add_output_file_type(FileTypes.GFF, "gff_out", "Gff", "Gathered Gff",

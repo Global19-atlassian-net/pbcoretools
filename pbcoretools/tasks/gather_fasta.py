@@ -20,7 +20,7 @@ def get_contract_parser():
     driver = "python -m pbcoretools.tasks.gather_fasta --resolved-tool-contract "
 
     p = get_gather_pbparser(TOOL_ID, "0.1.3", "Gather Fasta",
-                            "Gather Fasta", driver, is_distributed=False)
+                            "Gather Fasta", driver, is_distributed=True)
 
     p.add_input_file_type(FileTypes.CHUNK, "cjson_in", "Gather ChunkJson",
                           "Fasta Gather Chunk JSON")

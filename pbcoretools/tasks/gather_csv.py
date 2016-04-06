@@ -24,7 +24,7 @@ def get_parser():
                             "Dev CSV Gather",
                             "General Chunk CSV Gather",
                             Constants.DRIVER,
-                            is_distributed=False)
+                            is_distributed=True)
     p.add_input_file_type(FileTypes.CHUNK, "cjson_in", "GCHUNK Json",
                           "Gathered CHUNK Json with CSV chunk key")
 
