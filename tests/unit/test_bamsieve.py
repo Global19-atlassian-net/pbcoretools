@@ -2,6 +2,7 @@
 import subprocess
 import tempfile
 import unittest
+import shutil
 import os.path as op
 import os
 
@@ -60,6 +61,33 @@ class TestBamSieve(unittest.TestCase):
         with openDataSet(ofn, strict=False) as bam_out:
             have_zmws = set([rec.HoleNumber for rec in bam_out])
             self.assertEqual(have_zmws, set([8]))
+        # make sure paths are absolute
+        tmpdir = tempfile.mkdtemp()
+        ofn2 = op.join(tmpdir, op.basename(ofn))
+        shutil.copyfile(ofn, ofn2)
+        with openDataSet(ofn2, strict=False) as bam_out:
+            have_zmws = set([rec.HoleNumber for rec in bam_out])
+            self.assertEqual(have_zmws, set([8]))
+
+    def test_dataset_relative_paths(self):
+        ofn = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
+        basename = op.basename(ofn).split(".")[0]
+        rc = bamSieve.filter_reads(
+            input_bam=DS2,
+            output_bam=ofn,
+            whitelist="8",
+            relative=True)
+        self.assertEqual(rc, 0)
+        # move everything to another directory and make sure paths still work
+        tmpdir = tempfile.mkdtemp()
+        for file_name in os.listdir(op.dirname(ofn)):
+            if file_name.startswith(basename):
+                shutil.move(op.join(op.dirname(ofn), file_name),
+                            op.join(tmpdir, file_name))
+        ofn2 = op.join(tmpdir, op.basename(ofn))
+        with openDataSet(ofn2, strict=False) as bam_out:
+            have_zmws = set([rec.HoleNumber for rec in bam_out])
+            self.assertEqual(have_zmws, set([8]))
 
     def test_anonymize(self):
         ofn1 = tempfile.NamedTemporaryFile(suffix=".bam").name
@@ -80,7 +108,6 @@ class TestBamSieve(unittest.TestCase):
                 for rec1, rec2 in zip(bam1, bam2):
                     self.assertEqual(rec1.qName, rec2.qName)
                     self.assertNotEqual(rec1.peer.seq, rec2.peer.seq)
-
 
     def test_blacklist(self):
         ofn = tempfile.NamedTemporaryFile(suffix=".bam").name
