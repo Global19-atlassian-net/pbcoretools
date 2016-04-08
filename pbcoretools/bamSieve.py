@@ -93,10 +93,16 @@ def filter_reads(input_bam,
                  count=None,
                  seed=None,
                  ignore_metadata=False,
+                 relative=None,
                  anonymize=False,
                  use_barcodes=False):
     if output_bam is None:
         log.error("Must specify output file")
+        return 1
+    output_bam = op.abspath(output_bam)
+    if not op.isdir(op.dirname(output_bam)):
+        log.error("Output path '{d}' does not exist.".format(
+                  d=op.dirname(output_bam)))
         return 1
     n_specified = 4 - [whitelist, blacklist, percentage, count].count(None)
     if n_specified != 1:
@@ -242,6 +248,8 @@ def filter_reads(input_bam,
             if not ignore_metadata:
                 ds_out.metadata = ds_in.metadata
                 ds_out.updateCounts()
+            if relative:
+                ds_out.makePathsRelative(op.dirname(output_ds))
             ds_out.write(output_ds)
             log.info("wrote {t} XML to {x}".format(
                      t=ds_out.__class__.__name__, x=output_ds))
@@ -277,6 +285,7 @@ def run(args):
         count=args.count,
         seed=args.seed,
         ignore_metadata=args.ignore_metadata,
+        relative=args.relative,
         anonymize=args.anonymize,
         use_barcodes=args.barcodes)
 
@@ -309,6 +318,8 @@ def get_parser():
                    help="Random seed for selecting a percentage of reads")
     p.add_argument("--ignore-metadata", action="store_true",
                    help="Discard input DataSet metadata")
+    p.add_argument("--relative", action="store_true",
+                   help="Make external resource paths relative")
     p.add_argument("--anonymize", action="store_true",
                    help="Randomize sequences for privacy")
     p.add_argument("--barcodes", action="store_true",
