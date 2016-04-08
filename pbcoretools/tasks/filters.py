@@ -39,6 +39,7 @@ def sanitize_read_length(read_length):
 
 def run_filter_dataset(in_file, out_file, read_length, other_filters):
     dataSet = openDataSet(in_file)
+    dataSet.updateCounts() # just in case
     if other_filters and other_filters != "None":
         filters = parse_filter_list(str(other_filters).split(','))
         dataSet.filters.addFilter(**filters)
