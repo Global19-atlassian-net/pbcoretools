@@ -5,7 +5,7 @@ import argparse
 import string
 import re
 from collections import defaultdict
-from pbcore.io import DataSet, ContigSet, openDataSet
+from pbcore.io import DataSet, ContigSet, openDataSet, openDataFile
 from pbcore.io.dataset.DataSetMembers import Filters, OPMAP
 from pbcore.io.dataset.DataSetValidator import validateFile
 import logging
@@ -33,10 +33,15 @@ def summarize_options(parser):
     parser.set_defaults(func=summarizeXml)
 
 def createXml(args):
-    dsTypes = DataSet.castableTypes()
-    dset = dsTypes[args.dsType](*args.infile, strict=args.strict,
-                                skipCounts=args.skipCounts,
-                                generateIndices=args.generateIndices)
+    if args.dsType is None:
+        dset = openDataFile(*args.infile, strict=args.strict,
+                            skipCounts=args.skipCounts,
+                            generateIndices=args.generateIndices)
+    else:
+        dsTypes = DataSet.castableTypes()
+        dset = dsTypes[args.dsType](*args.infile, strict=args.strict,
+                                    skipCounts=args.skipCounts,
+                                    generateIndices=args.generateIndices)
     if args.generateIndices:
         # we generated the indices with the last open, lets capture them with
         # this one:
@@ -59,7 +64,7 @@ def create_options(parser):
     #parser.add_argument("infile", type=validate_file, nargs='+',
     parser.add_argument("infile", type=str, nargs='+',
                         help="The fofn or BAM file(s) to make into an XML")
-    parser.add_argument("--type", type=str, default='DataSet',
+    parser.add_argument("--type", type=str, default=None,
                         dest='dsType', help="The type of XML to create")
     parser.add_argument("--name", type=str, default='',
                         dest='dsName', help="The name of the new DataSet")
