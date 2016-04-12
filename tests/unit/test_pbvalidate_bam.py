@@ -133,7 +133,7 @@ def generate_data_files(dir_name=None):
     with open("tst1.fasta", "w") as f:
         f.write(">ecoliK12_pbi_March2013_2955000_to_2980000\n")
         f.write("AAAGAGAGAG" * 2500)
-    pysam.faidx("tst1.fasta")
+    pysam.samtools.faidx("tst1.fasta", catch_stdout=False)
     for i in range(len(sam_strings)):
         sam_file = "tst_%d_subreads.sam" % (i + 1)
         bam_file = "tst_%d_subreads.bam" % (i + 1)

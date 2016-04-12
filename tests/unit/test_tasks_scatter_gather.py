@@ -42,7 +42,7 @@ def _write_fasta_or_contigset(file_name, make_faidx=False, n_records=251,
         f.write("\n".join(rec))
         f.flush()
     if make_faidx:
-        pysam.faidx(fasta_file)
+        pysam.samtools.faidx(fasta_file, catch_stdout=False)
     if file_name.endswith(".xml"):
         cs = ds_class(fasta_file, strict=make_faidx)
         cs.write(file_name)
@@ -462,7 +462,7 @@ class TestGatherContigs(_SetupGatherApp):
     def _generate_chunk_output_file(self, i=None):
         fn = tempfile.NamedTemporaryFile(suffix=".fasta").name
         write_random_fasta_records(fn)
-        pysam.faidx(fn)
+        pysam.samtools.faidx(fn, catch_stdout=False)
         return self._make_dataset_file(fn)
 
 
@@ -478,7 +478,7 @@ class TestGatherContigsConsolidate(TestGatherContigs):
         with open(fn, "w") as f:
             header, seq = self.CHUNK_CONTIGS[i]
             f.write(">{h}{s}\n{q}".format(h=header, s=suffix, q=seq))
-        pysam.faidx(fn)
+        pysam.samtools.faidx(fn, catch_stdout=False)
         return self._make_dataset_file(fn)
 
     def run_after(self, rtc, output_dir):
