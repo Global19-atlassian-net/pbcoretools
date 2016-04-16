@@ -6,6 +6,7 @@ import string
 import re
 from collections import defaultdict
 from pbcore.io import DataSet, ContigSet, openDataSet, openDataFile
+from pbcore.io.dataset import InvalidDataSetIOError
 from pbcore.io.dataset.DataSetMembers import Filters, OPMAP
 from pbcore.io.dataset.DataSetValidator import validateFile
 import logging
@@ -53,6 +54,7 @@ def createXml(args):
     dset.write(args.outfile, validate=args.novalidate, modPaths=True,
                relPaths=args.relative)
     log.debug("Dataset written")
+    return 0
 
 
 def create_options(parser):
@@ -116,6 +118,7 @@ def filterXml(args):
         dataSet.write(args.outfile)
     else:
         raise IOError("No files found/found to be compatible")
+    return 0
 
 def filter_options(parser):
     pbiFilterOptions = set(Filters()._pbiMappedVecAccMap().keys())
@@ -181,6 +184,7 @@ def splitXml(args):
     for out_fn, dset in zip(args.outfiles, dss):
         dset.write(out_fn)
     log.debug("Done writing files")
+    return 0
 
 def split_options(parser):
     parser.description = "Split the dataset"
@@ -213,10 +217,15 @@ def split_options(parser):
     parser.set_defaults(func=splitXml)
 
 def mergeXml(args):
-    dss = []
-    for infn in args.infiles:
-        dss.append(openDataSet(infn, strict=args.strict))
-    reduce(lambda ds1, ds2: ds1 + ds2, dss).write(args.outfile)
+    dss = [openDataSet(infn, strict=args.strict) for infn in args.infiles]
+    allds = reduce(lambda ds1, ds2: ds1 + ds2, dss)
+    if not allds is None:
+        allds.updateCounts()
+        allds.write(args.outfile)
+    else:
+        raise InvalidDataSetIOError("Merge failed, likely due to "
+                                    "conflicting Filters")
+    return 0
 
 def merge_options(parser):
     parser.description = 'Combine XML files'
@@ -237,6 +246,7 @@ def loadStatsXml(args):
         dset.write(args.outfile, validate=False)
     else:
         dset.write(args.infile, validate=False)
+    return 0
 
 def loadStatsXml_options(parser):
     parser.description = 'Load an sts.xml file into a DataSet XML file'
@@ -252,6 +262,7 @@ def validateXml(args):
     validateFile(args.infile, args.skipFiles)
     print("{f} is valid DataSet XML with valid ResourceId "
           "references".format(f=args.infile))
+    return 0
 
 def validate_options(parser):
     parser.description = 'Validate XML and ResourceId files'
@@ -269,6 +280,7 @@ def consolidateXml(args):
     dset.consolidate(args.datafile, numFiles=args.numFiles, useTmp=(not
                      args.noTmp))
     dset.write(args.xmlfile)
+    return 0
 
 def consolidate_options(parser):
     parser.description = 'Consolidate the XML files'
