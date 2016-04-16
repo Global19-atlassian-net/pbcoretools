@@ -50,7 +50,7 @@ def get_parser():
 def run(args):
     log.info("Starting {f} version {v} dataset manipulator".format(
         f=__file__, v=__VERSION__))
-    args.func(args)
+    return args.func(args)
 
 def main(argv=sys.argv):
     """Main point of Entry"""
