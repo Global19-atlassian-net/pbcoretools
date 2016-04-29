@@ -272,7 +272,6 @@ def run_fasta_to_fofn(input_file_name, output_file_name):
 
 
 def run_fasta_to_referenceset(input_file_name, output_file_name):
-    # this can be moved out to pbdataset/pbcoretools eventually
     args = ["dataset create", "--type ReferenceSet", "--generateIndices",
             output_file_name, input_file_name]
     log.info(" ".join(args))
@@ -288,6 +287,36 @@ def run_fasta_to_referenceset(input_file_name, output_file_name):
         result = run_cmd(" ".join(args), stdout_fh = sys.stdout,
                          stderr_fh=sys.stderr)
     return result.exit_code
+
+
+def run_fasta_to_reference(input_file_name, output_file_name,
+                           organism=None, reference_name=None,
+                           ploidy="haploid"):
+    if reference_name is None or reference_name == "":
+        reference_name = op.splitext(op.basename(input_file_name))[0]
+    ds_in = ContigSet(input_file_name)
+    if len(ds_in.externalResources) > 1:
+        raise TypeError("Only a single FASTA file is supported as input.")
+    fasta_file = ds_in.externalResources[0].resourceId
+    output_dir_name = reference_name
+    args = [
+        "fasta-to-reference",
+        "--organism", str(organism),
+        "--ploidy", str(ploidy),
+        "--debug",
+        fasta_file_name,
+        output_dir_name,
+        reference_name
+    ]
+    log.info(" ".join(args))
+    result = run_cmd(" ".join(args), stdout_fh=sys.stdout, stderr_fh=sys.stderr)
+    if result.exit_code != 0:
+        return result.exit_code
+    ref_file = op.join(output_dir_name, "referenceset.xml")
+    assert op.isfile(ref_file)
+    log.info("symlinking {f} as {l}".format(f=ref_file, l=output_file_name))
+    os.symlink(ref_file, output_file_name)
+    return 0
 
 
 run_bam_to_fasta = functools.partial(run_bam_to_fastx, "bam2fasta",
@@ -377,6 +406,23 @@ def run_fasta2fofn(rtc):
 def run_fasta2referenceset(rtc):
     return run_fasta_to_referenceset(rtc.task.input_files[0],
                                      rtc.task.output_files[0])
+
+
+@registry("fasta_to_reference", "0.1.0",
+          FileTypes.DS_CONTIG,
+          FileTypes.DS_REF, is_distributed=True, nproc=1,
+          options={
+                "organism": "",
+                "ploidy": "haploid",
+                "reference_name":""
+          })
+def run_fasta_to_reference_pbscala(rtc):
+    return run_fasta_to_reference(
+        rtc.task.input_files[0],
+        rtc.task.output_files[1],
+        reference_name=rtc.task.options["pbcoretools.task_options.reference_name"],
+        organism=rtc.task.options["pbcoretools.task_options.organism"],
+        ploidy=rtc.task.options["pbcoretools.task_options.ploidy"])
 
 
 @registry("bam2fastq_ccs", "0.1.0",
