@@ -27,6 +27,7 @@ class Constants(object):
     BAX2BAM = "bax2bam"
     BAM2FASTA = "bam2fasta"
     BAM2BAM = "bam2bam"
+    FASTA2REF = "fasta-to-reference"
 
 
 SIV_DATA_DIR = "/pbi/dept/secondary/siv/testdata"
@@ -39,6 +40,7 @@ def _to_skip_msg(exe):
 HAVE_BAX2BAM = which(Constants.BAX2BAM) is not None
 HAVE_BAM2BAM = which(Constants.BAM2BAM) is not None
 HAVE_BAM2FASTX = which(Constants.BAM2FASTA) is not None
+HAVE_FASTA2REF = which(Constants.FASTA2REF) is not None
 HAVE_DATA_DIR = op.isdir(SIV_DATA_DIR)
 HAVE_DATA_AND_BAX2BAM = HAVE_BAX2BAM and HAVE_DATA_DIR
 HAVE_DATA_AND_BAM2BAM = HAVE_BAM2BAM and HAVE_DATA_DIR
@@ -46,10 +48,12 @@ HAVE_DATA_AND_BAM2BAM = HAVE_BAM2BAM and HAVE_DATA_DIR
 SKIP_MSG_BAX2BAM = _to_skip_msg(Constants.BAX2BAM)
 SKIP_MSG_BAM2FX = _to_skip_msg(Constants.BAM2FASTA)
 SKIP_MSG_BAM2BAM = _to_skip_msg(Constants.BAM2BAM)
+SKIP_MSG_FASTA2REF = _to_skip_msg(Constants.FASTA2REF)
 
 skip_unless_bax2bam = unittest.skipUnless(HAVE_DATA_AND_BAX2BAM, SKIP_MSG_BAX2BAM)
 skip_unless_bam2fastx = unittest.skipUnless(HAVE_BAM2FASTX, SKIP_MSG_BAM2FX)
 skip_unless_bam2bam = unittest.skipUnless(HAVE_DATA_AND_BAM2BAM, SKIP_MSG_BAM2BAM)
+skip_unless_fasta2ref = unittest.skipUnless(HAVE_FASTA2REF, SKIP_MSG_FASTA2REF)
 
 
 def _get_bax2bam_inputs():
@@ -288,3 +292,25 @@ class TestBam2FastqBarcoded(TestBam2FastaBarcoded):
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     READER_CLASS = FastqReader
     EXT = "fastq"
+
+
+@skip_unless_fasta2ref
+class TestFastaToReference(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.fasta_to_reference"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [tempfile.NamedTemporaryFile(suffix=".fasta").name]
+
+    @classmethod
+    def setUpClass(cls):
+        with open(cls.INPUT_FILES[0], "w") as fasta:
+            fasta.write(">chr1\nacgtacgtacgt")
+
+    def run_after(self, rtc, output_dir):
+        from pbcoretools.pbvalidate import validate_dataset
+        e, m = validate_dataset(
+            file_name=rtc.task.output_files[0],
+            dataset_type="ReferenceSet",
+            validate_index=True,
+            strict=True)
+        self.assertEqual(len(e), 0, str(e))
