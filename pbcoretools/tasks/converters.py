@@ -15,7 +15,7 @@ import sys
 
 from pbcore.io import (SubreadSet, HdfSubreadSet, FastaReader, FastaWriter,
                        FastqReader, FastqWriter, BarcodeSet, ExternalResource,
-                       ExternalResources, openDataSet)
+                       ExternalResources, openDataSet, ContigSet, ReferenceSet)
 from pbcommand.engine import run_cmd
 from pbcommand.cli import registry_builder, registry_runner, QuickOpt
 from pbcommand.models import FileTypes, SymbolTypes
@@ -297,12 +297,12 @@ def run_fasta_to_reference(input_file_name, output_file_name,
     ds_in = ContigSet(input_file_name)
     if len(ds_in.externalResources) > 1:
         raise TypeError("Only a single FASTA file is supported as input.")
-    fasta_file = ds_in.externalResources[0].resourceId
-    output_dir_name = reference_name
+    fasta_file_name = ds_in.externalResources[0].resourceId
+    output_dir_name = op.dirname(output_file_name)
     args = [
         "fasta-to-reference",
-        "--organism", str(organism),
-        "--ploidy", str(ploidy),
+        "--organism", str(organism) if organism != "" else "unknown",
+        "--ploidy", str(ploidy) if ploidy != "" else "unknown",
         "--debug",
         fasta_file_name,
         output_dir_name,
@@ -312,10 +312,12 @@ def run_fasta_to_reference(input_file_name, output_file_name,
     result = run_cmd(" ".join(args), stdout_fh=sys.stdout, stderr_fh=sys.stderr)
     if result.exit_code != 0:
         return result.exit_code
-    ref_file = op.join(output_dir_name, "referenceset.xml")
+    ref_file = op.join(output_dir_name, reference_name, "referenceset.xml")
     assert op.isfile(ref_file)
-    log.info("symlinking {f} as {l}".format(f=ref_file, l=output_file_name))
-    os.symlink(ref_file, output_file_name)
+    with ReferenceSet(ref_file, strict=True) as ds_ref:
+        ds_ref.makePathsAbsolute()
+        log.info("saving final ReferenceSet to {f}".format(f=output_file_name))
+        ds_ref.write(output_file_name)
     return 0
 
 
@@ -419,7 +421,7 @@ def run_fasta2referenceset(rtc):
 def run_fasta_to_reference_pbscala(rtc):
     return run_fasta_to_reference(
         rtc.task.input_files[0],
-        rtc.task.output_files[1],
+        rtc.task.output_files[0],
         reference_name=rtc.task.options["pbcoretools.task_options.reference_name"],
         organism=rtc.task.options["pbcoretools.task_options.organism"],
         ploidy=rtc.task.options["pbcoretools.task_options.ploidy"])
