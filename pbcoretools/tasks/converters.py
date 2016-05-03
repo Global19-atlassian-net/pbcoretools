@@ -163,25 +163,14 @@ def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
     return 0
 
 
-def _filter_fastx(fastx_reader, fastx_writer, input_file, output_file,
-                  min_subread_length):
-    def _open_file(file_name):
-        if file_name.endswith(".gz"):
-            return gzip.open(file_name)
-        else:
-            return open(file_name)
-    with _open_file(input_file) as raw_in:
-        with fastx_reader(raw_in) as fastx_in:
-            with fastx_writer(output_file) as fastx_out:
-                for rec in fastx_in:
-                    if (min_subread_length < 1 or
-                        min_subread_length < len(rec.sequence)):
-                        fastx_out.writeRecord(rec)
+def _unzip_fastx(gzip_file_name, fastx_file_name):
+    with gzip.open(gzip_file_name, "rb") as gz_in:
+        with open(fastx_file_name, "wb") as fastx_out:
+            fastx_out.write(gz_in.read())
 
 
-def run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
-                     input_file_name, output_file_name,
-                     min_subread_length=0):
+def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
+                     input_file_name, output_file_name):
     assert isinstance(program_name, basestring)
     barcode_mode = False
     if output_file_name.endswith(".gz"):
@@ -203,23 +192,14 @@ def run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
         return result.exit_code
     else:
         base_ext = re.sub("bam2", "", program_name) 
-        if min_subread_length > 0:
-            log.info("Filtering subreads by minimum length = {l}".format(
-                l=min_subread_length))
-        elif min_subread_length < 0:
-            log.warn("min_subread_length = {l}, ignoring".format(
-                l=min_subread_length))
         if not barcode_mode:
             tmp_out = "{p}.{b}.gz".format(p=tmp_out_prefix, b=base_ext)
             assert os.path.isfile(tmp_out), tmp_out
-            log.info("raw output in {f}".format(f=tmp_out))
             if output_file_name.endswith(".gz"):
-                with gzip.open(output_file_name, "wb") as out:
-                    _filter_fastx(fastx_reader, fastx_writer, tmp_out, out,
-                                  min_subread_length)
+                log.info("cp {t} {f}".format(t=tmp_out, f=output_file_name))
+                shutil.copyfile(tmp_out, output_file_name)
             else:
-                _filter_fastx(fastx_reader, fastx_writer, tmp_out,
-                              output_file_name, min_subread_length)
+                _unzip_fastx(tmp_out, output_file_name)
             os.remove(tmp_out)
         else:
             suffix = "{f}.gz".format(f=base_ext)
@@ -237,8 +217,7 @@ def run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                     assert fn == tmp_out_prefix + suffix2 + ".gz"
                     fn_out = re.sub(".gz$", suffix2, output_file_name)
                     fastx_out = op.join(tc_out_dir, fn_out)
-                    _filter_fastx(fastx_reader, fastx_writer, fn,
-                                  fastx_out, min_subread_length)
+                    _unzip_fastx(fn, fastx_out)
                     barcoded_file_names.append(op.basename(fn_out))
                     os.remove(fn)
             assert len(barcoded_file_names) > 0
@@ -321,9 +300,9 @@ def run_fasta_to_reference(input_file_name, output_file_name,
     return 0
 
 
-run_bam_to_fasta = functools.partial(run_bam_to_fastx, "bam2fasta",
+run_bam_to_fasta = functools.partial(_run_bam_to_fastx, "bam2fasta",
     FastaReader, FastaWriter)
-run_bam_to_fastq = functools.partial(run_bam_to_fastx, "bam2fastq",
+run_bam_to_fastq = functools.partial(_run_bam_to_fastx, "bam2fastq",
     FastqReader, FastqWriter)
 
 
@@ -349,50 +328,32 @@ def run_bam2bam(rtc):
         score_mode=rtc.task.options["pbcoretools.task_options.score_mode"])
 
 
-min_subread_length_opt = QuickOpt(0, "Minimum subread length",
-    "Minimum length of subreads to write to FASTA/FASTQ")
-
 @registry("bam2fastq", "0.1.0",
           FileTypes.DS_SUBREADS,
-          FileTypes.FASTQ, is_distributed=True, nproc=1,
-          options={"min_subread_length":min_subread_length_opt})
+          FileTypes.FASTQ, is_distributed=True, nproc=1)
 def run_bam2fastq(rtc):
-    return run_bam_to_fastq(rtc.task.input_files[0], rtc.task.output_files[0],
-        rtc.task.options["pbcoretools.task_options.min_subread_length"])
+    return run_bam_to_fastq(rtc.task.input_files[0], rtc.task.output_files[0])
 
 
 @registry("bam2fasta", "0.1.0",
           FileTypes.DS_SUBREADS,
-          FileTypes.FASTA, is_distributed=True, nproc=1,
-          options={"min_subread_length":min_subread_length_opt})
-def run_bam2fasta(rtc):
-    return run_bam_to_fasta(rtc.task.input_files[0], rtc.task.output_files[0],
-        rtc.task.options["pbcoretools.task_options.min_subread_length"])
-
-
-@registry("bam2fasta_nofilter", "0.1.0",
-          FileTypes.DS_SUBREADS,
           FileTypes.FASTA, is_distributed=True, nproc=1)
-def run_bam2fasta_nofilter(rtc):
+def run_bam2fasta(rtc):
     return run_bam_to_fasta(rtc.task.input_files[0], rtc.task.output_files[0])
 
 
 @registry("bam2fasta_archive", "0.1.0",
           FileTypes.DS_SUBREADS,
-          FileTypes.GZIP, is_distributed=True, nproc=1,
-          options={"min_subread_length":min_subread_length_opt})
+          FileTypes.GZIP, is_distributed=True, nproc=1)
 def run_bam2fasta_archive(rtc):
-    return run_bam_to_fasta(rtc.task.input_files[0], rtc.task.output_files[0],
-        rtc.task.options["pbcoretools.task_options.min_subread_length"])
+    return run_bam_to_fasta(rtc.task.input_files[0], rtc.task.output_files[0])
 
 
 @registry("bam2fastq_archive", "0.1.0",
           FileTypes.DS_SUBREADS,
-          FileTypes.GZIP, is_distributed=True, nproc=1,
-          options={"min_subread_length":min_subread_length_opt})
+          FileTypes.GZIP, is_distributed=True, nproc=1)
 def run_bam2fasta_archive(rtc):
-    return run_bam_to_fastq(rtc.task.input_files[0], rtc.task.output_files[0],
-        rtc.task.options["pbcoretools.task_options.min_subread_length"])
+    return run_bam_to_fastq(rtc.task.input_files[0], rtc.task.output_files[0])
 
 
 @registry("fasta2fofn", "0.1.0",
