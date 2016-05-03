@@ -148,6 +148,7 @@ class _BaseTestBam2Fasta(PbTestApp):
     IS_DISTRIBUTED = True
     RESOLVED_IS_DISTRIBUTED = True
     READER_CLASS = FastaReader
+    NRECORDS_EXPECTED = None
 
     def _get_output_file(self, rtc):
         return rtc.task.output_files[0]
@@ -162,16 +163,31 @@ class _BaseTestBam2Fasta(PbTestApp):
     def run_after(self, rtc, output_dir):
         n_expected, n_actual = self._get_counts(rtc)
         self.assertEqual(n_actual, n_expected)
+        if self.NRECORDS_EXPECTED is not None:
+            self.assertEqual(n_actual, self.NRECORDS_EXPECTED)
 
 
 @skip_unless_bam2fastx
 class TestBam2Fasta(_BaseTestBam2Fasta):
+    NRECORDS_EXPECTED = 117
 
     @classmethod
     def setUpClass(cls):
         ds = SubreadSet(pbcore.data.getUnalignedBam(), strict=True)
         ds.write(cls.INPUT_FILES[0])
         super(TestBam2Fasta, cls).setUpClass()
+
+
+@skip_unless_bam2fastx
+class TestBam2FastaFiltered(_BaseTestBam2Fasta):
+    NRECORDS_EXPECTED = 13
+
+    @classmethod
+    def setUpClass(cls):
+        ds = SubreadSet(pbcore.data.getUnalignedBam(), strict=True)
+        ds.filters.addRequirement(length=[('>=', 1000)])
+        ds.write(cls.INPUT_FILES[0])
+        super(TestBam2FastaFiltered, cls).setUpClass()
 
 
 @skip_unless_bam2fastx
@@ -184,12 +200,6 @@ class TestBam2FastaIgnoreBarcodes(_BaseTestBam2Fasta):
 
 
 @skip_unless_bam2fastx
-class TestBam2FastaNoFilter(TestBam2Fasta):
-    TASK_ID = "pbcoretools.tasks.bam2fasta_nofilter"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
-
-
-@skip_unless_bam2fastx
 class TestBam2Fastq(TestBam2Fasta):
     TASK_ID = "pbcoretools.tasks.bam2fastq"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
@@ -197,30 +207,20 @@ class TestBam2Fastq(TestBam2Fasta):
 
 
 @skip_unless_bam2fastx
-class TestBam2FastqFiltered(TestBam2Fastq):
-    TASK_OPTIONS = {"pbcoretools.task_options.min_subread_length": 1000}
-    RESOLVED_TASK_OPTIONS = {"pbcoretools.task_options.min_subread_length": 1000}
-
-    def run_after(self, rtc, output_dir):
-        n_expected, n_actual = self._get_counts(rtc)
-        self.assertTrue(0 < n_actual < n_expected,
-            "FAILED: 0 < {a} < {e}".format(a=n_actual, e=n_expected))
+class TestBam2FastqFiltered(TestBam2FastaFiltered):
+    TASK_ID = "pbcoretools.tasks.bam2fastq"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    READER_CLASS = FastqReader
+    NRECORDS_EXPECTED = 13
 
 
 @skip_unless_bam2fastx
 class TestBam2FastaArchive(TestBam2Fasta):
     TASK_ID = "pbcoretools.tasks.bam2fasta_archive"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
-    TASK_OPTIONS = {"pbcoretools.task_options.min_subread_length": 1000}
-    RESOLVED_TASK_OPTIONS = {"pbcoretools.task_options.min_subread_length": 1000}
 
     def _get_output_file(self, rtc):
         return gzip.open(rtc.task.output_files[0])
-
-    def run_after(self, rtc, output_dir):
-        n_expected, n_actual = self._get_counts(rtc)
-        self.assertTrue(0 < n_actual < n_expected,
-            "FAILED: 0 < {a} < {e}".format(a=n_actual, e=n_expected))
 
 
 @skip_unless_bam2fastx
@@ -238,6 +238,7 @@ class TestBam2FastaCCS(TestBam2FastqArchive):
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     INPUT_FILES = [get_temp_file(".consensusreadset.xml")]
     READER_CLASS = FastaReader
+    NRECORDS_EXPECTED = None
 
     @classmethod
     def setUpClass(cls):
@@ -250,6 +251,7 @@ class TestBam2FastqCCS(TestBam2FastaCCS):
     TASK_ID = "pbcoretools.tasks.bam2fastq_ccs"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     READER_CLASS = FastqReader
+    NRECORDS_EXPECTED = None
 
 
 @skip_unless_bam2fastx
