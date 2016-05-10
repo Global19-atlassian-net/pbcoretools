@@ -7,6 +7,7 @@ import re
 from collections import defaultdict
 from pbcore.io import DataSet, ContigSet, openDataSet, openDataFile
 from pbcore.io.dataset import InvalidDataSetIOError
+from pbcore.io.dataset.utils import _swapPath
 from pbcore.io.dataset.DataSetMembers import Filters, OPMAP
 from pbcore.io.dataset.DataSetValidator import validateFile
 import logging
@@ -15,11 +16,20 @@ log = logging.getLogger(__name__)
 
 def summarizeXml(args):
     dset = openDataSet(args.infile, strict=args.strict)
+
+    # check to see if there was an error updating the dataset length:
+    numFlag = ""
+    if dset.numRecords == 0:
+        dset.updateCounts()
+        if not dset._countsUpdated:
+            numFlag = " Unable to update counts!"
     print "DataSet Type          : {f}".format(f=dset.datasetType)
     print "Name                  : {f}".format(f=dset.name)
     print "Id                    : {f}".format(f=dset.uuid)
-    print "Number of records     : {r}".format(r=dset.numRecords)
-    print "Total number of bases : {r}".format(r=dset.totalLength)
+    print "Number of records     : {r}{f}".format(r=dset.numRecords,
+                                                  f=numFlag)
+    print "Total number of bases : {r}{f}".format(r=dset.totalLength,
+                                                  f=numFlag)
     print "# of Resources        : {r}".format(r=len(dset.toExternalFiles()))
     print "Filters               : {r}".format(r=str(dset.filters) if
                                                dset.filters else "None")
@@ -236,6 +246,34 @@ def merge_options(parser):
                         help="The XML files to merge")
     parser.set_defaults(func=mergeXml)
 
+def copyToXml(args):
+    dss = openDataSet(args.infile, strict=args.strict)
+    outfn = args.outdir
+    if os.path.isdir(args.outdir):
+        outfn = _swapPath(args.outdir, args.infile)
+    dss.copyTo(outfn)
+    return 0
+
+def copyTo_options(parser):
+    parser.description = 'Copy a dataset and resources to a new location'
+    parser.add_argument("infile", type=str,
+                        help="The XML file to copy")
+    parser.add_argument("outdir", type=str,
+                        help="The copy to directory")
+    parser.set_defaults(func=copyToXml)
+
+def newUuidXml(args):
+    dss = openDataSet(args.infile, strict=args.strict)
+    dss.newUuid()
+    dss.write(args.infile)
+    return 0
+
+def newUniqueId_options(parser):
+    parser.description = "Refresh a DataSet's UniqueId"
+    parser.add_argument("infile", type=str,
+                        help="The XML file to refresh")
+    parser.set_defaults(func=newUuidXml)
+
 def loadStatsXml(args):
     dset = openDataSet(args.infile, strict=args.strict)
     if len(dset.externalResources) > 1:
@@ -257,6 +295,25 @@ def loadStatsXml_options(parser):
     parser.add_argument("--outfile", type=str, default=None,
                         help="The XML file to output")
     parser.set_defaults(func=loadStatsXml)
+
+def loadMetadataXml(args):
+    dset = openDataSet(args.infile, strict=args.strict)
+    dset.loadMetadata(args.metadata)
+    if args.outfile:
+        dset.write(args.outfile, validate=False)
+    else:
+        dset.write(args.infile, validate=False)
+    return 0
+
+def loadMetadataXml_options(parser):
+    parser.description = 'Load an .run.metadata.xml file into a DataSet XML file'
+    parser.add_argument("infile", type=str,
+                        help="The XML file to modify")
+    parser.add_argument("metadata", type=str,
+                        help="The .run.metadata.xml file to load")
+    parser.add_argument("--outfile", type=str, default=None,
+                        help="The XML file to output")
+    parser.set_defaults(func=loadMetadataXml)
 
 def validateXml(args):
     validateFile(args.infile, args.skipFiles)
