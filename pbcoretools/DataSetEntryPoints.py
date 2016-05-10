@@ -251,7 +251,8 @@ def copyToXml(args):
     outfn = args.outdir
     if os.path.isdir(args.outdir):
         outfn = _swapPath(args.outdir, args.infile)
-    dss.copyTo(outfn)
+    dss.copyTo(os.path.split(outfn)[0])
+    dss.write(outfn, relPaths=args.relative)
     return 0
 
 def copyTo_options(parser):
@@ -260,6 +261,9 @@ def copyTo_options(parser):
                         help="The XML file to copy")
     parser.add_argument("outdir", type=str,
                         help="The copy to directory")
+    parser.add_argument("--relative", action='store_true', default=False,
+                        help=("Make the included paths relative instead of "
+                              "absolute"))
     parser.set_defaults(func=copyToXml)
 
 def newUuidXml(args):
