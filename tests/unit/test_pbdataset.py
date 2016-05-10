@@ -74,6 +74,58 @@ class TestDataSet(unittest.TestCase):
 
     @unittest.skipIf(not _check_constools(),
                      "bamtools or pbindex not found, skipping")
+    def test_copyTo_cli(self):
+        fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
+        cmd = "dataset copyto {i} {o}".format(i=data.getXml(8), o=fn)
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(fn))
+        sset = AlignmentSet(fn, strict=True)
+
+    @unittest.skipIf(not _check_constools(),
+                     "bamtools or pbindex not found, skipping")
+    def test_newUuid_cli(self):
+        fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
+        aln = AlignmentSet(data.getXml(8))
+        aln.copyTo(fn)
+        pre_uuid = AlignmentSet(fn).uuid
+        cmd = "dataset newuuid {d}".format(d=fn)
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        post_uuid = AlignmentSet(fn).uuid
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(fn))
+        self.assertNotEqual(pre_uuid, post_uuid)
+
+    @unittest.skipIf(not _check_constools(),
+                     "bamtools or pbindex not found, skipping")
+    def test_loadmetadata_cli(self):
+        fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
+
+        aln = AlignmentSet(data.getXml(8))
+        aln.metadata.collections = None
+        aln.copyTo(fn)
+        aln.close()
+        del aln
+        self.assertTrue(os.path.exists(fn))
+
+        aln = AlignmentSet(fn)
+        self.assertFalse(aln.metadata.collections)
+
+        cmd = "dataset loadmetadata {i} {m}".format(
+            i=fn,
+            m=("/pbi/dept/secondary/siv/testdata/"
+               "SA3-Sequel/lambda/roche_SAT/"
+               "m54013_151205_032353.run.metadata.xml"))
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        self.assertEqual(r, 0, m)
+        aln = AlignmentSet(fn)
+        self.assertTrue(aln.metadata.collections)
+
+    @unittest.skipIf(not _check_constools(),
+                     "bamtools or pbindex not found, skipping")
     def test_contigset_split_cli(self):
         outdir = tempfile.mkdtemp(suffix="dataset-unittest")
         cmd = "dataset split --outdir {o} --chunks 2 {d}".format(

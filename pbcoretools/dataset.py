@@ -17,9 +17,13 @@ def get_subparsers():
            ('merge', EntryPoints.merge_options),
            ('split', EntryPoints.split_options),
            ('validate', EntryPoints.validate_options),
-           ('loadstats', EntryPoints.loadStatsXml_options),
            ('summarize', EntryPoints.summarize_options),
-           ('consolidate', EntryPoints.consolidate_options)]
+           ('consolidate', EntryPoints.consolidate_options),
+           ('loadstats', EntryPoints.loadStatsXml_options),
+           ('newuuid', EntryPoints.newUniqueId_options),
+           ('loadmetadata', EntryPoints.loadMetadataXml_options),
+           ('copyto', EntryPoints.copyTo_options),
+          ]
     return sps
 
 def add_subparsers(parser, sps):
