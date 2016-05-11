@@ -246,6 +246,29 @@ def merge_options(parser):
                         help="The XML files to merge")
     parser.set_defaults(func=mergeXml)
 
+
+def relativizeXml(args):
+    dss = openDataSet(args.infile, strict=args.strict)
+    dss.write(args.infile, relPaths=True)
+    return 0
+
+def relativize_options(parser):
+    parser.description = 'Make the paths in an XML file relative'
+    parser.add_argument("infile", type=str,
+                        help="The XML file to relativize")
+    parser.set_defaults(func=relativizeXml)
+
+def absolutizeXml(args):
+    dss = openDataSet(args.infile, strict=args.strict)
+    dss.write(args.infile, relPaths=False)
+    return 0
+
+def absolutize_options(parser):
+    parser.description = 'Make the paths in an XML file absolute'
+    parser.add_argument("infile", type=str,
+                        help="The XML file to absolutize")
+    parser.set_defaults(func=absolutizeXml)
+
 def copyToXml(args):
     dss = openDataSet(args.infile, strict=args.strict)
     outfn = args.outdir
