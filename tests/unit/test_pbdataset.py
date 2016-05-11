@@ -23,8 +23,15 @@ from pbcore.io.dataset.DataSetValidator import validateFile
 from pbcore.util.Process import backticks
 import pbcore.data.datasets as data
 import pbcore.data as upstreamdata
+import xml.etree.cElementTree as ET
 
 log = logging.getLogger(__name__)
+
+def _is_relative(xmlfile):
+    for event, element in ET.iterparse(xmlfile, events=("start",)):
+        if element.get("ResourceId", "noop").startswith(os.sep):
+            return False
+    return True
 
 def _check_constools():
     cmd = "dataset"
@@ -52,7 +59,6 @@ def _internal_data():
         return True
     return False
 
-
 class TestDataSet(unittest.TestCase):
     """Unit and integrationt tests for the DataSet class and \
     associated module functions"""
@@ -72,9 +78,12 @@ class TestDataSet(unittest.TestCase):
         self.assertTrue(os.path.exists(
             os.path.join(outdir, 'pbalchemysim0.chunk1.alignmentset.xml')))
 
+
     @unittest.skipIf(not _check_constools(),
                      "bamtools or pbindex not found, skipping")
     def test_copyTo_cli(self):
+        # To a fname:
+        # absolute:
         fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
         cmd = "dataset copyto {i} {o}".format(i=data.getXml(8), o=fn)
         log.debug(cmd)
@@ -82,6 +91,41 @@ class TestDataSet(unittest.TestCase):
         self.assertEqual(r, 0)
         self.assertTrue(os.path.exists(fn))
         sset = AlignmentSet(fn, strict=True)
+        self.assertFalse(_is_relative(fn))
+
+        # relative:
+        fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
+        cmd = "dataset copyto --relative {i} {o}".format(i=data.getXml(8), o=fn)
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(fn))
+        sset = AlignmentSet(fn, strict=True)
+        self.assertTrue(_is_relative(fn))
+
+        # to a directory:
+        # absolute:
+        outdir = tempfile.mkdtemp(suffix="dataset-unittest")
+        fn = os.path.join(outdir, os.path.split(data.getXml(8))[1])
+        cmd = "dataset copyto {i} {o}".format(i=data.getXml(8), o=outdir)
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(fn))
+        sset = AlignmentSet(fn, strict=True)
+        self.assertFalse(_is_relative(fn))
+
+        # relative:
+        outdir = tempfile.mkdtemp(suffix="dataset-unittest")
+        fn = os.path.join(outdir, os.path.split(data.getXml(8))[1])
+        cmd = "dataset copyto --relative {i} {o}".format(i=data.getXml(8),
+                                                         o=outdir)
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(fn))
+        sset = AlignmentSet(fn, strict=True)
+        self.assertTrue(_is_relative(fn))
 
     @unittest.skipIf(not _check_constools(),
                      "bamtools or pbindex not found, skipping")
@@ -97,6 +141,34 @@ class TestDataSet(unittest.TestCase):
         self.assertEqual(r, 0)
         self.assertTrue(os.path.exists(fn))
         self.assertNotEqual(pre_uuid, post_uuid)
+
+    @unittest.skipIf(not _check_constools(),
+                     "bamtools or pbindex not found, skipping")
+    def test_relativize_cli(self):
+        fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
+        aln = AlignmentSet(data.getXml(8))
+        aln.copyTo(fn)
+        self.assertFalse(_is_relative(fn))
+        cmd = "dataset relativize {d}".format(d=fn)
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(fn))
+        self.assertTrue(_is_relative(fn))
+
+    @unittest.skipIf(not _check_constools(),
+                     "bamtools or pbindex not found, skipping")
+    def test_absolutize_cli(self):
+        fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
+        aln = AlignmentSet(data.getXml(8))
+        aln.copyTo(fn, relative=True)
+        self.assertTrue(_is_relative(fn))
+        cmd = "dataset absolutize {d}".format(d=fn)
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(fn))
+        self.assertFalse(_is_relative(fn))
 
     @unittest.skipIf(not _check_constools(),
                      "bamtools or pbindex not found, skipping")

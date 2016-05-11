@@ -23,6 +23,8 @@ def get_subparsers():
            ('newuuid', EntryPoints.newUniqueId_options),
            ('loadmetadata', EntryPoints.loadMetadataXml_options),
            ('copyto', EntryPoints.copyTo_options),
+           ('absolutize', EntryPoints.absolutize_options),
+           ('relativize', EntryPoints.relativize_options),
           ]
     return sps
 
