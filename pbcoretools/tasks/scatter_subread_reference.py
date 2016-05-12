@@ -67,8 +67,9 @@ def run_main(chunk_output_json, subread_xml, reference_set_xml, max_nchunks, out
 
 
 def _args_run_to_random_fasta_file(args):
-    return run_main(args.chunk_report_json, args.subreadset,
-                    args.ds_reference, args.max_total_chunks, args.output_dir)
+    output_dir = os.path.dirname(args.cjson_out)
+    return run_main(args.cjson_out, args.subreads,
+                    args.ds_reference, args.max_nchunks, output_dir)
 
 
 def _rtc_runner(rtc):
