@@ -317,3 +317,19 @@ class TestFastaToReference(PbTestApp):
             validate_index=True,
             strict=True)
         self.assertEqual(len(e), 0, str(e))
+
+
+class TestFasta2Fofn(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.fasta2fofn"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [pbcore.data.getLambdaFasta()]
+    IS_DISTRIBUTED = False
+    RESOLVED_IS_DISTRIBUTED = False
+
+
+class TestFasta2ReferenceSet(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.fasta2referenceset"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [pbcore.data.getLambdaFasta()]
