@@ -253,6 +253,8 @@ def relativizeXml(args):
     return 0
 
 def relativize_options(parser):
+    # doesn't make sense to have an outdir, that would screw with the relative
+    # paths...
     parser.description = 'Make the paths in an XML file relative'
     parser.add_argument("infile", type=str,
                         help="The XML file to relativize")
@@ -260,13 +262,21 @@ def relativize_options(parser):
 
 def absolutizeXml(args):
     dss = openDataSet(args.infile, strict=args.strict)
-    dss.write(args.infile, relPaths=False)
+    outfn = args.infile
+    if args.outdir:
+        if os.path.isdir(args.outdir):
+            outfn = _swapPath(args.outdir, args.infile)
+        else:
+            outfn = args.outdir
+    dss.write(outfn, relPaths=False)
     return 0
 
 def absolutize_options(parser):
     parser.description = 'Make the paths in an XML file absolute'
     parser.add_argument("infile", type=str,
                         help="The XML file to absolutize")
+    parser.add_argument("--outdir", default=None, type=str,
+                        help="Specify an optional output directory")
     parser.set_defaults(func=absolutizeXml)
 
 def copyToXml(args):

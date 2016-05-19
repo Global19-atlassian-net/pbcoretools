@@ -170,6 +170,35 @@ class TestDataSet(unittest.TestCase):
         self.assertTrue(os.path.exists(fn))
         self.assertFalse(_is_relative(fn))
 
+        fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
+        outfn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
+        aln = AlignmentSet(data.getXml(8))
+        aln.copyTo(fn, relative=True)
+        self.assertTrue(_is_relative(fn))
+        cmd = "dataset absolutize {d} --outdir {o}".format(d=fn, o=outfn)
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(fn))
+        self.assertTrue(os.path.exists(outfn))
+        self.assertTrue(_is_relative(fn))
+        self.assertFalse(_is_relative(outfn))
+
+        fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
+        outdir = tempfile.mkdtemp(suffix="dataset-unittest")
+        outfn = os.path.join(outdir, os.path.split(fn)[1])
+        aln = AlignmentSet(data.getXml(8))
+        aln.copyTo(fn, relative=True)
+        self.assertTrue(_is_relative(fn))
+        cmd = "dataset absolutize {d} --outdir {o}".format(d=fn, o=outdir)
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(fn))
+        self.assertTrue(os.path.exists(outfn))
+        self.assertTrue(_is_relative(fn))
+        self.assertFalse(_is_relative(outfn))
+
     @unittest.skipIf(not _check_constools(),
                      "bamtools or pbindex not found, skipping")
     def test_loadmetadata_cli(self):
