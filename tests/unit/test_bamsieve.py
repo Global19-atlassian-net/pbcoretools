@@ -6,7 +6,7 @@ import shutil
 import os.path as op
 import os
 
-from pbcore.io import openDataFile, openDataSet, IndexedBamReader
+from pbcore.io import openDataFile, openDataSet, BamReader
 import pbcore.data
 
 from pbcoretools import bamSieve
@@ -34,7 +34,7 @@ class TestBamSieve(unittest.TestCase):
                 output_bam=ofn,
                 whitelist=wl)
             self.assertEqual(rc, 0)
-            with IndexedBamReader(ofn) as bam_out:
+            with BamReader(ofn) as bam_out:
                 have_zmws = set([rec.HoleNumber for rec in bam_out])
                 self.assertEqual(have_zmws, WHITELIST)
         _run_with_whitelist(WHITELIST)
@@ -48,7 +48,7 @@ class TestBamSieve(unittest.TestCase):
             input_bam=SUBREADS3,
             output_bam=ofn,
             whitelist=SUBREADS4)
-        with IndexedBamReader(ofn) as bam_out:
+        with BamReader(ofn) as bam_out:
             self.assertEqual(117, len([rec for rec in bam_out]))
 
     def test_dataset_io(self):
@@ -103,8 +103,8 @@ class TestBamSieve(unittest.TestCase):
             whitelist=set([24962]),
             anonymize=True)
         self.assertEqual(rc, 0)
-        with IndexedBamReader(ofn1) as bam1:
-            with IndexedBamReader(ofn2) as bam2:
+        with openDataFile(ofn1) as bam1:
+            with openDataFile(ofn2) as bam2:
                 for rec1, rec2 in zip(bam1, bam2):
                     self.assertEqual(rec1.qName, rec2.qName)
                     self.assertNotEqual(rec1.peer.seq, rec2.peer.seq)
@@ -118,7 +118,7 @@ class TestBamSieve(unittest.TestCase):
                 output_bam=ofn,
                 blacklist=bl)
             self.assertEqual(rc, 0)
-            with IndexedBamReader(ofn) as bam_out:
+            with BamReader(ofn) as bam_out:
                 have_zmws = set([rec.HoleNumber for rec in bam_out])
                 self.assertEqual(have_zmws, set([9]))
         _run_with_blacklist(set([8]))
@@ -135,7 +135,7 @@ class TestBamSieve(unittest.TestCase):
             output_bam=ofn,
             whitelist=[0],
             use_barcodes=True)
-        with IndexedBamReader(ofn) as bam_out:
+        with BamReader(ofn) as bam_out:
             zmws = set([rec.HoleNumber for rec in bam_out])
             self.assertEqual(len(zmws), 1)
             self.assertTrue(74056024 in zmws)
@@ -151,7 +151,7 @@ class TestBamSieve(unittest.TestCase):
             with openDataSet(ofn, strict=False) as ds_out:
                 ext_res = ds_out.externalResources[0]
                 for bam_file in [ext_res.bam, ext_res.scraps]:
-                    with IndexedBamReader(bam_file) as bam:
+                    with BamReader(bam_file) as bam:
                         zmws = set([rec.HoleNumber for rec in bam])
                         self.assertEqual(len(zmws), 1)
                         self.assertTrue(74056024 in zmws)
@@ -170,7 +170,7 @@ class TestBamSieve(unittest.TestCase):
             percentage=50,
             seed=12345)
         self.assertEqual(rc, 0)
-        with IndexedBamReader(ofn) as bam_out:
+        with BamReader(ofn) as bam_out:
             zmws = set([rec.HoleNumber for rec in bam_out])
             self.assertEqual(len(zmws), 24)
 
@@ -182,7 +182,7 @@ class TestBamSieve(unittest.TestCase):
             count=1,
             seed=12345)
         self.assertEqual(rc, 0)
-        with IndexedBamReader(ofn) as bam_out:
+        with BamReader(ofn) as bam_out:
             zmws = set([rec.HoleNumber for rec in bam_out])
             self.assertEqual(len(zmws), 1)
 
@@ -235,7 +235,7 @@ class TestBamSieve(unittest.TestCase):
         ]
         rc = subprocess.call(args)
         self.assertEqual(rc, 0)
-        with IndexedBamReader(ofn) as bam_out:
+        with BamReader(ofn) as bam_out:
             have_zmws = set([rec.HoleNumber for rec in bam_out])
             self.assertEqual(have_zmws, set([8]))
 
