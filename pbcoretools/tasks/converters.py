@@ -401,7 +401,7 @@ def run_fasta2referenceset(rtc):
 
 
 @registry("fasta_to_reference", "0.1.0",
-          FileTypes.DS_CONTIG,
+          FileTypes.FASTA,
           ref_file_type, is_distributed=True, nproc=1,
           options={
                 "organism": "",
