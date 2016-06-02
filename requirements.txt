@@ -1,4 +1,5 @@
 cython
+pbcore >= 1.2.10
 numpy >= 1.7.1
 h5py >= 2.0.1
 pysam >= 0.9.0
