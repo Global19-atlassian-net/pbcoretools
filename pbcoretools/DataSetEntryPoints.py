@@ -301,7 +301,7 @@ def copyTo_options(parser):
 
 def newUuidXml(args):
     dss = openDataSet(args.infile, strict=args.strict)
-    dss.newUuid()
+    dss.newUuid(random=args.random)
     dss.write(args.infile)
     return 0
 
@@ -309,6 +309,8 @@ def newUniqueId_options(parser):
     parser.description = "Refresh a DataSet's UniqueId"
     parser.add_argument("infile", type=str,
                         help="The XML file to refresh")
+    parser.add_argument("--random", action='store_true', default=False,
+                        help=("Generate a random UUID, instead of a hash"))
     parser.set_defaults(func=newUuidXml)
 
 def loadStatsXml(args):
