@@ -142,6 +142,70 @@ class TestDataSet(unittest.TestCase):
         self.assertTrue(os.path.exists(fn))
         self.assertNotEqual(pre_uuid, post_uuid)
 
+    def test_newUuid_clone_cli(self):
+        fn_orig = data.getXml(8)
+        outdir = tempfile.mkdtemp(suffix="dataset-unittest")
+        fn = os.path.join(outdir, 'fn.alignmentset.xml')
+        fn2 = os.path.join(outdir, 'fn2.alignmentset.xml')
+        with AlignmentSet(fn_orig) as aln:
+            aln.copyTo(fn)
+            shutil.copy(fn, fn2)
+
+        pre_uuid = AlignmentSet(fn).uuid
+        pre_uuid2 = AlignmentSet(fn2).uuid
+        self.assertEqual(pre_uuid, pre_uuid2)
+
+        cmd = "dataset newuuid {d}".format(d=fn)
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(fn))
+
+        cmd = "dataset newuuid {d}".format(d=fn2)
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(fn2))
+
+        post_uuid = AlignmentSet(fn).uuid
+        post_uuid2 = AlignmentSet(fn2).uuid
+        self.assertNotEqual(pre_uuid, post_uuid)
+        self.assertNotEqual(pre_uuid2, post_uuid2)
+        # HASH, THEREFORE THESE ARE EQUAL:
+        self.assertEqual(post_uuid, post_uuid2)
+
+    def test_newUuid_random_cli(self):
+        fn_orig = data.getXml(8)
+        outdir = tempfile.mkdtemp(suffix="dataset-unittest")
+        fn = os.path.join(outdir, 'fn.alignmentset.xml')
+        fn2 = os.path.join(outdir, 'fn2.alignmentset.xml')
+        with AlignmentSet(fn_orig) as aln:
+            aln.copyTo(fn)
+            shutil.copy(fn, fn2)
+
+        pre_uuid = AlignmentSet(fn).uuid
+        pre_uuid2 = AlignmentSet(fn2).uuid
+        self.assertEqual(pre_uuid, pre_uuid2)
+
+        cmd = "dataset newuuid --random {d}".format(d=fn)
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(fn))
+
+        cmd = "dataset newuuid --random {d}".format(d=fn2)
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(fn2))
+
+        post_uuid = AlignmentSet(fn).uuid
+        post_uuid2 = AlignmentSet(fn2).uuid
+        self.assertNotEqual(pre_uuid, post_uuid)
+        self.assertNotEqual(pre_uuid2, post_uuid2)
+        # RANDOM, THEREFORE THESE ARE NOT EQUAL:
+        self.assertNotEqual(post_uuid, post_uuid2)
+
     @unittest.skipIf(not _check_constools(),
                      "bamtools or pbindex not found, skipping")
     def test_relativize_cli(self):
