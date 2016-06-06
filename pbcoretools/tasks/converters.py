@@ -98,7 +98,7 @@ def add_subread_resources(self, subreads, scraps=None, barcodes=None):
             ext_res_scraps.addIndices([scraps + ".pbi"])
             ext_res_inner.append(ext_res_scraps)
         if barcodes is not None:
-            assert barcodes.endswith(".barcodeset.xml"), barcodes
+            ds_tmp = BarcodeSet(barcodes) # sanity check
             ext_res_barcode = ExternalResource()
             ext_res_barcode.resourceId = barcodes
             ext_res_barcode.metaType = "PacBio.DataSet.BarcodeSet"
