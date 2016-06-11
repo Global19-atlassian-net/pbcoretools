@@ -267,6 +267,7 @@ class TestDataSet(unittest.TestCase):
                      "bamtools or pbindex not found, skipping")
     def test_loadmetadata_cli(self):
         fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
+        log.debug(fn)
 
         aln = AlignmentSet(data.getXml(8))
         aln.metadata.collections = None
@@ -287,6 +288,62 @@ class TestDataSet(unittest.TestCase):
         o, r, m = backticks(cmd)
         self.assertEqual(r, 0, m)
         aln = AlignmentSet(fn)
+        self.assertTrue(aln.metadata.collections)
+
+    @unittest.skipIf(not _check_constools(),
+                     "bamtools or pbindex not found, skipping")
+    def test_loadmetadata_from_dataset_cli(self):
+        fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
+        log.debug(fn)
+
+        aln = AlignmentSet(data.getXml(8))
+        aln.metadata.collections = None
+        aln.copyTo(fn)
+        aln.close()
+        del aln
+        self.assertTrue(os.path.exists(fn))
+
+        aln = AlignmentSet(fn)
+        self.assertFalse(aln.metadata.collections)
+
+        cmd = "dataset loadmetadata {i} {m}".format(
+            i=fn,
+            m=("/pbi/dept/secondary/siv/testdata/"
+               "SA3-Sequel/lambda/roche_SAT/"
+               "m54013_151205_032353.subreadset.xml"))
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        self.assertEqual(r, 0, m)
+        aln = AlignmentSet(fn)
+        self.assertTrue(aln.metadata.collections)
+
+    @unittest.skipIf(not _check_constools(),
+                     "bamtools or pbindex not found, skipping")
+    def test_loadmetadata_from_dataset_create_cli(self):
+        fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
+        fn2 = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
+        log.debug(fn)
+
+        aln = AlignmentSet(data.getXml(8))
+        aln.metadata.collections = None
+        aln.copyTo(fn)
+        aln.close()
+        del aln
+        self.assertTrue(os.path.exists(fn))
+
+        aln = AlignmentSet(fn)
+        self.assertFalse(aln.metadata.collections)
+
+        cmd = "dataset create --metadata {m} {o} {i}".format(
+            o=fn2,
+            i=fn,
+            m=("/pbi/dept/secondary/siv/testdata/"
+               "SA3-Sequel/lambda/roche_SAT/"
+               "m54013_151205_032353.subreadset.xml"))
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        self.assertEqual(r, 0, m)
+        aln = AlignmentSet(fn2)
         self.assertTrue(aln.metadata.collections)
 
     @unittest.skipIf(not _check_constools(),
