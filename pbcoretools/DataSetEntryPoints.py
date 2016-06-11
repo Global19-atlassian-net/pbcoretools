@@ -60,6 +60,8 @@ def createXml(args):
                                     skipCounts=args.skipCounts)
     if args.dsName != '':
         dset.name = args.dsName
+    if args.metadata:
+        dset.loadMetadata(args.metadata)
     log.debug("Dataset created")
     dset.write(args.outfile, validate=args.novalidate, modPaths=True,
                relPaths=args.relative)
@@ -82,6 +84,9 @@ def create_options(parser):
                         dest='dsName', help="The name of the new DataSet")
     parser.add_argument("--generateIndices", action='store_true',
                         default=False, help="The type of XML to create")
+    parser.add_argument("--metadata", type=str, default=None,
+                        help=("A metadata.xml file (or DataSet) to supply "
+                              "metadata"))
     parser.add_argument("--novalidate", action='store_false', default=True,
                         help=("Don't validate the resulting XML, don't touch "
                               "paths"))
@@ -345,11 +350,12 @@ def loadMetadataXml(args):
     return 0
 
 def loadMetadataXml_options(parser):
-    parser.description = 'Load an .run.metadata.xml file into a DataSet XML file'
+    parser.description = 'Load an .metadata.xml file into a DataSet XML file'
     parser.add_argument("infile", type=str,
                         help="The XML file to modify")
     parser.add_argument("metadata", type=str,
-                        help="The .run.metadata.xml file to load")
+                        help=("The .metadata.xml file to load (or DataSet "
+                              "to borrow from)"))
     parser.add_argument("--outfile", type=str, default=None,
                         help="The XML file to output")
     parser.set_defaults(func=loadMetadataXml)
