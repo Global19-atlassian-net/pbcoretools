@@ -9,8 +9,13 @@ import random
 import shutil
 import os.path as op
 import re
+import sys
 
 import pysam
+try :
+    import pyBigWig
+except ImportError:
+    pyBigWig = None
 
 from pbcommand.pb_io.common import load_pipeline_chunks_from_json, \
     write_pipeline_chunks
@@ -22,15 +27,17 @@ from pbcore.io import SubreadSet, ContigSet, FastaReader, FastqReader, \
     ReferenceSet, BarcodeSet
 import pbcore.data
 
-
 from base import get_temp_file
 from mock import write_random_report, \
     write_random_fasta_records, write_random_fastq_records
+
 
 DATA = op.join(op.dirname(op.dirname(__file__)), "data")
 MNT_DATA = "/pbi/dept/secondary/siv/testdata"
 skip_if_missing_testdata = unittest.skipUnless(op.isdir(MNT_DATA),
     "Missing {d}".format(d=MNT_DATA))
+skip_if_no_pybigwig = unittest.skipUnless(pyBigWig is not None,
+    "pyBigWig is not installed")
 
 
 def _write_fasta_or_contigset(file_name, make_faidx=False, n_records=251,
@@ -649,3 +656,43 @@ class TestGatherTxt(_SetupGatherApp):
         with open(fn, "w") as f:
             f.write("Output text {i}".format(i=i))
         return fn
+
+
+@skip_if_no_pybigwig
+class TestGatherBigwig(_SetupGatherApp):
+    DRIVER_BASE = "python -m pbcoretools.tasks.gather_bigwig"
+    NCHUNKS = 2
+
+    def _generate_chunk_output_file(self, i=None):
+        records = [
+            ("chr1", 1, 2, 1.5),
+            ("chr1", 2, 3, 4.5),
+            ("chr1", 3, 4, 1.9),
+            ("chr1", 4, 5, 0.45),
+            ("chr2", 1, 2, 1.0),
+            ("chr2", 2, 3, 6.7)
+        ]
+        fn = tempfile.NamedTemporaryFile(suffix=".bw").name
+        _records = records[(i*3):(i*3)+3]
+        assert len(_records) == 3
+        ranges = {}
+        for rec in _records:
+            seqid = rec[0]
+            pos = rec[1]
+            ranges.setdefault(seqid, (sys.maxint, 0))
+            ranges[seqid] = (min(ranges[seqid][0], pos),
+                             max(ranges[seqid][1], pos))
+        bw = pyBigWig.open(fn, "w")
+        regions = [ (s, ranges[s][1]+1) for s in sorted(ranges.keys()) ]
+        bw.addHeader(regions)
+        bw.addEntries([rec[0] for rec in _records],
+                      [rec[1] for rec in _records],
+                      ends=[rec[2] for rec in _records],
+                      values=[rec[3] for rec in _records])
+        bw.close()
+        return fn
+
+    def run_after(self, rtc, output_dir):
+        bw = pyBigWig.open(rtc.task.output_files[0])
+        nrec = bw.header()["nBasesCovered"]
+        self.assertEqual(nrec, 6, "{n} != 6".format(n=nrec))

@@ -1,10 +1,11 @@
 
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from functools import partial as P
 import argparse
 import logging
 import shutil
 import json
+import math
 import os.path as op
 import sys
 
@@ -254,6 +255,42 @@ gather_ccsset = P(__gather_readset, ConsensusReadSet)
 gather_ccs_alignmentset = P(__gather_readset, ConsensusAlignmentSet)
 
 
+def gather_bigwig(input_files, output_file):
+    import pyBigWig
+    chr_lengths = {}
+    FileInfo = namedtuple("FileInfo", ("file_name", "seqid", "length"))
+    files_info = []
+    for file_name in input_files:
+        log.info("Reading header info from {f}...".format(f=file_name))
+        bw_chunk = pyBigWig.open(file_name)
+        for (seqid, length) in bw_chunk.chroms().iteritems():
+            chr_lengths.setdefault(seqid, 0)
+            chr_lengths[seqid] = max(length, chr_lengths[seqid])
+        seqid_min = sorted(bw_chunk.chroms().keys())[0]
+        files_info.append(FileInfo(file_name, seqid, bw_chunk.chroms()[seqid]))
+        bw_chunk.close()
+    files_info.sort(lambda a,b: cmp((a.seqid, a.length), (b.seqid, b.length)))
+    bw = pyBigWig.open(output_file, "w")
+    regions = [ (s, chr_lengths[s]) for s in sorted(chr_lengths.keys())]
+    bw.addHeader(regions)
+    for file_info in files_info:
+        log.info("Reading values from {f}...".format(f=file_info.file_name))
+        bw_chunk = pyBigWig.open(file_info.file_name)
+        for seqid in sorted(bw_chunk.chroms().keys()):
+            seqids, starts, ends, values = [], [], [], []
+            chr_max = bw_chunk.chroms()[seqid]
+            for i, val in enumerate(bw_chunk.values(seqid, 1, chr_max)):
+                if not math.isnan(val):
+                    seqids.append(seqid)
+                    starts.append(i+1)
+                    ends.append(i+2)
+                    values.append(val)
+            bw.addEntries(seqids, starts, ends=ends, values=values)
+        bw_chunk.close()
+    bw.close()
+    return output_file
+
+
 def __add_chunk_key_option(default_chunk_key):
     def _add_chunk_key_option(p):
         p.add_argument('--chunk-key', type=str, default=default_chunk_key,
@@ -275,6 +312,7 @@ add_chunk_key_ccs_alignmentset = __add_chunk_key_option(
 # TODO: change this to contigset_id once quiver emits contigsets
 add_chunk_key_contigset = __add_chunk_key_option('$chunk.fasta_id')
 add_chunk_key_report = __add_chunk_key_option('$chunk.json_id')
+add_chunk_key_bigwig = __add_chunk_key_option('$chunk.bw_id')
 
 
 def __gather_options(output_file_message, input_files_message, input_validate_func, add_chunk_key_func_):
@@ -320,6 +358,7 @@ _gather_ccs_alignmentset_options = __add_gather_options("Output ConsensusAlignme
 _gather_contigset_options = __add_gather_options("Output ContigSet XML file",
                                                  "Chunk input JSON file",
                                                  add_chunk_key_contigset)
+_gather_bigwig_options = __add_gather_options("Output BigWig file", "input BigWig file", add_chunk_key_bigwig)
 
 
 def __gather_runner(func, chunk_input_json, output_file, chunk_key, **kwargs):
@@ -359,6 +398,7 @@ _args_runner_gather_contigset = P(__args_gather_runner, gather_contigset)
 _args_runner_gather_csv = P(__args_gather_runner, gather_csv)
 _args_runner_gather_txt = P(__args_gather_runner, gather_txt)
 _args_runner_gather_report = P(__args_gather_runner, gather_report)
+_args_runner_gather_bigwig = P(__args_gather_runner, gather_bigwig)
 
 # (chunk.json, output_file, chunk_key)
 run_main_gather_fasta = P(__gather_runner, gather_fasta)
@@ -373,6 +413,7 @@ run_main_gather_subreadset = P(__gather_runner, gather_subreadset)
 run_main_gather_contigset = P(__gather_runner, gather_contigset)
 run_main_gather_ccsset = P(__gather_runner, gather_ccsset)
 run_main_gather_ccs_alignmentset = P(__gather_runner, gather_ccs_alignmentset)
+run_main_gather_bigwig = P(__gather_runner, gather_bigwig)
 
 
 def get_main_runner(gather_func):
