@@ -669,8 +669,8 @@ class TestGatherBigwig(_SetupGatherApp):
             ("chr1", 2, 3, 4.5),
             ("chr1", 3, 4, 1.9),
             ("chr1", 4, 5, 0.45),
-            ("chr2", 1, 2, 1.0),
-            ("chr2", 2, 3, 6.7)
+            ("chr2", 8, 9, 1.0),
+            ("chr2", 9, 10, 6.7)
         ]
         fn = tempfile.NamedTemporaryFile(suffix=".bw").name
         _records = records[(i*3):(i*3)+3]
@@ -696,3 +696,5 @@ class TestGatherBigwig(_SetupGatherApp):
         bw = pyBigWig.open(rtc.task.output_files[0])
         nrec = bw.header()["nBasesCovered"]
         self.assertEqual(nrec, 6, "{n} != 6".format(n=nrec))
+        self.assertAlmostEqual(bw.stats("chr1", 3, 4)[0], 1.9, places=5)
+        self.assertAlmostEqual(bw.stats("chr2", 8, 9)[0], 1.0, places=5)
