@@ -8,6 +8,8 @@ import os
 
 from pbcore.io import openDataFile, openDataSet, BamReader
 
+import pbtestdata
+
 from pbcoretools import bamSieve
 
 DATA_DIR = op.join(op.dirname(op.dirname(__file__)), "data")
