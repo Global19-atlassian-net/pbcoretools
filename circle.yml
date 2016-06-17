@@ -11,7 +11,7 @@ dependencies:
   pre:
     - curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
     - sudo apt-get install git-lfs=1.1.0
-    - git clone http://github.com/PacificBiosciences/PacBioTestData.git
+    - git clone https://github.com/PacificBiosciences/PacBioTestData.git
     - (cd PacBioTestData && git lfs pull && make python)
     - (cd .circleci && bash installHDF5.sh)
     - HDF5_DIR=$PWD/.circleci/prefix pip install -r requirements-ci.txt
