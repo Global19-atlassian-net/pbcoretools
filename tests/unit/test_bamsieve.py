@@ -20,8 +20,8 @@ DS2 = op.join(DATA_DIR, "tst_3.subreadset.xml")
 SUBREADS3 = pbtestdata.get_file("subreads-bam")
 SUBREADS4 = pbtestdata.get_file("aligned-bam")
 CCS = pbtestdata.get_file("ccs-bam")
-BARCODED = op.join(DATA_DIR, "barcoded.subreads.bam")
-BARCODED_DS = op.join(DATA_DIR, "barcoded.subreadset.xml")
+BARCODED = pbtestdata.get_file("barcoded-subreads-bam")
+BARCODED_DS = pbtestdata.get_file("barcoded-subreadset")
 
 class TestBamSieve(unittest.TestCase):
 
