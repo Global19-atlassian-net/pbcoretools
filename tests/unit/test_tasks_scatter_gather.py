@@ -25,7 +25,8 @@ import pbcommand.testkit.core
 from pbcore.io import SubreadSet, ContigSet, FastaReader, FastqReader, \
     ConsensusReadSet, AlignmentSet, ConsensusAlignmentSet, HdfSubreadSet, \
     ReferenceSet, BarcodeSet
-import pbcore.data
+
+import pbtestdata
 
 from base import get_temp_file
 from mock import write_random_report, \
@@ -161,9 +162,7 @@ class TestScatterCCSZMWs(CompareScatteredRecordsBase,
     READER_CLASS = ConsensusReadSet
     READER_KWARGS = {'strict': True}
     DRIVER_BASE = "python -m pbcoretools.tasks.scatter_ccs_zmws"
-    INPUT_FILES = [
-        make_tmp_dataset_xml(READER_CLASS, pbcore.data.getCCSBAM())
-    ]
+    INPUT_FILES = [pbtestdata.get_file("rsii-ccs")]
     MAX_NCHUNKS = 6
     RESOLVED_MAX_NCHUNKS = 6
     CHUNK_KEYS = ("$chunk.ccsset_id",)
@@ -192,10 +191,8 @@ class TestScatterAlignmentsReference(pbcommand.testkit.core.PbTestScatterApp):
     READER_CLASS = AlignmentSet
     READER_KWARGS = {}
     DRIVER_BASE = "python -m pbcoretools.tasks.scatter_alignments_reference"
-    INPUT_FILES = [
-        pbcore.data.getBamAndCmpH5()[0],
-        pbcore.data.getLambdaFasta()
-    ]
+    INPUT_FILES = [pbtestdata.get_file("aligned-xml"),
+                   pbtestdata.get_file("lambdaNEB")]
     MAX_NCHUNKS = 2
     RESOLVED_MAX_NCHUNKS = 2
     CHUNK_KEYS = ("$chunk.alignmentset_id", "$chunk.reference_id")
@@ -221,10 +218,8 @@ class TestScatterAlignmentsReferenceBasemods(TestScatterAlignmentsReference):
 
 class TestScatterSubreadReference(pbcommand.testkit.core.PbTestScatterApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.scatter_subread_reference"
-    INPUT_FILES = [
-        pbcore.data.getUnalignedBam(),
-        pbcore.data.getLambdaFasta()
-    ]
+    INPUT_FILES = [pbtestdata.get_file("subreads-xml"),
+                   pbtestdata.get_file("lambdaNEB")]
     MAX_NCHUNKS = 3
     RESOLVED_MAX_NCHUNKS = 3
     CHUNK_KEYS = ("$chunk.subreadset_id", "$chunk.reference_id")
@@ -232,10 +227,8 @@ class TestScatterSubreadReference(pbcommand.testkit.core.PbTestScatterApp):
 
 class TestScatterCCSReference(pbcommand.testkit.core.PbTestScatterApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.scatter_ccs_reference"
-    INPUT_FILES = [
-        make_tmp_dataset_xml(ConsensusReadSet, pbcore.data.getCCSBAM()),
-        make_tmp_dataset_xml(ReferenceSet, pbcore.data.getLambdaFasta())
-    ]
+    INPUT_FILES = [pbtestdata.get_file("rsii-ccs"),
+                   pbtestdata.get_file("lambdaNEB")]
     MAX_NCHUNKS = 8
     RESOLVED_MAX_NCHUNKS = 8
     CHUNK_KEYS = ("$chunk.ccsset_id", "$chunk.reference_id")
@@ -267,9 +260,10 @@ class TestScatterSubreadBAMs(pbcommand.testkit.core.PbTestScatterApp):
     @classmethod
     def setUpClass(cls):
         tmp_bam = tempfile.NamedTemporaryFile(suffix=".subreads.bam").name
-        shutil.copyfile(pbcore.data.getUnalignedBam(), tmp_bam)
-        shutil.copyfile(pbcore.data.getUnalignedBam()+".pbi", tmp_bam+".pbi")
-        ds = SubreadSet(tmp_bam, pbcore.data.getUnalignedBam(), strict=True)
+        src_bam = pbtestdata.get_file("subreads-bam")
+        shutil.copyfile(src_bam, tmp_bam)
+        shutil.copyfile(src_bam+".pbi", tmp_bam+".pbi")
+        ds = SubreadSet(tmp_bam, src_bam, strict=True)
         ds.write(cls.INPUT_FILES[0])
         _write_fasta_or_contigset(cls.INPUT_FILES[1], make_faidx=True,
                                   ds_class=BarcodeSet)
@@ -351,7 +345,7 @@ class TestGatherSubreads(_SetupGatherApp):
     CHUNK_KEY = "$chunk.subreadset_id"
 
     def _generate_chunk_output_file(self, i=None):
-        return self._copy_mock_output_file(pbcore.data.getUnalignedBam())
+        return self._copy_mock_output_file(pbtestdata.get_file("subreads-bam"))
 
 
 class TestGatherWrongType(_SetupGatherApp):
@@ -364,7 +358,7 @@ class TestGatherWrongType(_SetupGatherApp):
     CHUNK_KEY = "$chunk.consensusreadset_id"
 
     def _generate_chunk_output_file(self, i=None):
-        return self._copy_mock_output_file(pbcore.data.getUnalignedBam())
+        return self._copy_mock_output_file(pbtestdata.get_file("subreads-bam"))
 
     def _make_dataset_file(self, file_name):
         return make_tmp_dataset_xml(SubreadSet, file_name)
@@ -384,7 +378,7 @@ class TestGatherAlignmentSet(_SetupGatherApp):
     CHUNK_KEY = "$chunk.alignmentset_id"
 
     def _generate_chunk_output_file(self, i=None):
-        return self._copy_mock_output_file(pbcore.data.getBamAndCmpH5()[0])
+        return self._copy_mock_output_file(pbtestdata.get_file("aligned-bam"))
 
     def run_after(self, rtc, output_dir):
         super(TestGatherAlignmentSet, self).run_after(rtc,
@@ -408,7 +402,7 @@ class TestGatherCCS(_SetupGatherApp):
     CHUNK_KEY = "$chunk.ccsset_id"
 
     def _generate_chunk_output_file(self, i=None):
-        return self._copy_mock_output_file(pbcore.data.getCCSBAM())
+        return self._copy_mock_output_file(pbtestdata.get_file("ccs-bam"))
 
 
 # FIXME

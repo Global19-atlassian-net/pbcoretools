@@ -20,7 +20,7 @@ from pbcommand.common_options import (add_log_quiet_option,
 from pbcommand.cli import (pacbio_args_runner,
     get_default_argparser_with_base_opts)
 from pbcommand.utils import setup_log
-from pbcore.io import openDataFile, openDataSet, IndexedBamReader
+from pbcore.io import openDataFile, openDataSet, IndexedBamReader, ReadSet
 
 VERSION = "0.1.1"
 
@@ -142,6 +142,9 @@ def filter_reads(input_bam,
     have_zmws = set()
     scraps_bam = barcode_set = None
     with openDataFile(input_bam) as ds_in:
+        if not isinstance(ds_in, ReadSet):
+            raise TypeError("{t} is not an allowed dataset type".format(
+                            t=type(ds_in).__name__))
         # TODO(nechols)(2016-03-11): refactor this to enable propagation of
         # filtered scraps
         if not ds_in.isIndexed:

@@ -22,7 +22,6 @@ from pbcore.io.dataset.DataSetWriter import toXml
 from pbcore.io.dataset.DataSetValidator import validateFile
 from pbcore.util.Process import backticks
 import pbcore.data.datasets as data
-import pbcore.data as upstreamdata
 import xml.etree.cElementTree as ET
 
 log = logging.getLogger(__name__)
