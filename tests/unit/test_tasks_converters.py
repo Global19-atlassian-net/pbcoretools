@@ -20,9 +20,6 @@ from base import get_temp_file
 
 log = logging.getLogger(__name__)
 
-DATA = op.join(op.dirname(op.dirname(__file__)), "data")
-BARCODED_SUBREAD_SET = op.join(DATA, "barcoded.subreadset.xml")
-
 
 class Constants(object):
     BAX2BAM = "bax2bam"
@@ -143,6 +140,7 @@ class _BaseTestBam2Fasta(PbTestApp):
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
     INPUT_FILES = [get_temp_file(suffix=".subreadset.xml")]
+    SRC_FILE = None # used to generate INPUT_FILES[0]
     MAX_NPROC = 24
     RESOLVED_NPROC = 1
     IS_DISTRIBUTED = True
@@ -170,10 +168,11 @@ class _BaseTestBam2Fasta(PbTestApp):
 @skip_unless_bam2fastx
 class TestBam2Fasta(_BaseTestBam2Fasta):
     NRECORDS_EXPECTED = 117
+    SRC_FILE = pbtestdata.get_file("subreads-xml")
 
     @classmethod
     def setUpClass(cls):
-        ds = SubreadSet(pbtestdata.get_file("subreads-xml"), strict=True)
+        ds = SubreadSet(cls.SRC_FILE, strict=True)
         ds.write(cls.INPUT_FILES[0])
         super(TestBam2Fasta, cls).setUpClass()
 
@@ -181,22 +180,24 @@ class TestBam2Fasta(_BaseTestBam2Fasta):
 @skip_unless_bam2fastx
 class TestBam2FastaFiltered(_BaseTestBam2Fasta):
     NRECORDS_EXPECTED = 13
+    SRC_FILE = pbtestdata.get_file("subreads-xml")
 
     @classmethod
     def setUpClass(cls):
-        ds = SubreadSet(pbtestdata.get_file("subreads-xml"), strict=True)
+        ds = SubreadSet(cls.SRC_FILE, strict=True)
         ds.filters.addRequirement(length=[('>=', 1000)])
         ds.write(cls.INPUT_FILES[0])
         super(TestBam2FastaFiltered, cls).setUpClass()
 
 
 @skip_unless_bam2fastx
-class TestBam2FastaIgnoreBarcodes(_BaseTestBam2Fasta):
+class TestBam2FastaIgnoreBarcodes(TestBam2Fasta):
     """
     Make sure the base bam2fasta task always outputs a single FASTA file
     even when barcoding is present.
     """
-    INPUT_FILES = [BARCODED_SUBREAD_SET]
+    SRC_FILE = pbtestdata.get_file("barcoded-subreadset")
+    NRECORDS_EXPECTED = 2
 
 
 @skip_unless_bam2fastx
@@ -233,7 +234,7 @@ class TestBam2FastqArchive(TestBam2Fastq):
 
 
 @skip_unless_bam2fastx
-class TestBam2FastaCCS(TestBam2FastqArchive):
+class TestBam2FastaCCS(_BaseTestBam2Fasta):
     TASK_ID = "pbcoretools.tasks.bam2fasta_ccs"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     INPUT_FILES = [pbtestdata.get_file("rsii-ccs")]
@@ -254,7 +255,7 @@ class TestBam2FastaBarcoded(PbTestApp):
     TASK_ID = "pbcoretools.tasks.bam2fasta_archive"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
-    INPUT_FILES = [BARCODED_SUBREAD_SET]
+    INPUT_FILES = [pbtestdata.get_file("barcoded-subreadset")]
     MAX_NPROC = 24
     RESOLVED_NPROC = 1
     IS_DISTRIBUTED = True
