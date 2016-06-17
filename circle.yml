@@ -6,13 +6,11 @@ dependencies:
   # We need to manually build (and cache) a more modern libhdf5 than
   # ubuntu precise makes available via apt---there are bugs that
   # affect us, in libhdf5 1.8.4
-  override:
-    # Install git-lfs
-    - curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
-    - sudo apt-get install git-lfs=1.1.0
   cache_directories:
     - .circleci/prefix
   pre:
+    - curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
+    - sudo apt-get install git-lfs=1.1.0
     - git clone http://github.com/PacificBiosciences/PacBioTestData.git
     - (cd PacBioTestData && git lfs pull && make python)
     - (cd .circleci && bash installHDF5.sh)
