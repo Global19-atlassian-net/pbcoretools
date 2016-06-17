@@ -9,9 +9,10 @@ import os
 
 from pbcore.io import (FastaReader, FastqReader, openDataSet, HdfSubreadSet,
                        SubreadSet, ConsensusReadSet)
-import pbcore.data
 from pbcommand.testkit import PbTestApp
 from pbcommand.utils import which
+
+import pbtestdata
 
 from pbcoretools import pbvalidate
 
@@ -68,8 +69,7 @@ def _get_bax2bam_inputs():
         hdf_subread_xml = tempfile.NamedTemporaryFile(suffix=".hdfsubreadset.xml").name
 
         bax_files = (SIV_DATA_DIR + "/SA3-RS/lambda/2372215/0007_tiny/Analysis_Results/m150404_101626_42267_c100807920800000001823174110291514_s1_p0.1.bax.h5",
-                     pbcore.data.getBaxH5_v23()[0])
-
+                     pbtestdata.get_file("rsii-bax-h5"))
         ds = HdfSubreadSet(*bax_files)
         ds.name = "lambda_rsii"
         assert len(set([f.movieName for f in ds.resourceReaders()])) == 2
@@ -173,7 +173,7 @@ class TestBam2Fasta(_BaseTestBam2Fasta):
 
     @classmethod
     def setUpClass(cls):
-        ds = SubreadSet(pbcore.data.getUnalignedBam(), strict=True)
+        ds = SubreadSet(pbtestdata.get_file("subreads-xml"), strict=True)
         ds.write(cls.INPUT_FILES[0])
         super(TestBam2Fasta, cls).setUpClass()
 
@@ -184,7 +184,7 @@ class TestBam2FastaFiltered(_BaseTestBam2Fasta):
 
     @classmethod
     def setUpClass(cls):
-        ds = SubreadSet(pbcore.data.getUnalignedBam(), strict=True)
+        ds = SubreadSet(pbtestdata.get_file("subreads-xml"), strict=True)
         ds.filters.addRequirement(length=[('>=', 1000)])
         ds.write(cls.INPUT_FILES[0])
         super(TestBam2FastaFiltered, cls).setUpClass()
@@ -236,14 +236,9 @@ class TestBam2FastqArchive(TestBam2Fastq):
 class TestBam2FastaCCS(TestBam2FastqArchive):
     TASK_ID = "pbcoretools.tasks.bam2fasta_ccs"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
-    INPUT_FILES = [get_temp_file(".consensusreadset.xml")]
+    INPUT_FILES = [pbtestdata.get_file("rsii-ccs")]
     READER_CLASS = FastaReader
     NRECORDS_EXPECTED = None
-
-    @classmethod
-    def setUpClass(cls):
-        ds = ConsensusReadSet(pbcore.data.getCCSBAM(), strict=True)
-        ds.write(cls.INPUT_FILES[0])
 
 
 @skip_unless_bam2fastx
@@ -323,7 +318,7 @@ class TestFasta2Fofn(PbTestApp):
     TASK_ID = "pbcoretools.tasks.fasta2fofn"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
-    INPUT_FILES = [pbcore.data.getLambdaFasta()]
+    INPUT_FILES = [pbtestdata.get_file("lambda-fasta")]
     IS_DISTRIBUTED = False
     RESOLVED_IS_DISTRIBUTED = False
 
@@ -332,4 +327,4 @@ class TestFasta2ReferenceSet(PbTestApp):
     TASK_ID = "pbcoretools.tasks.fasta2referenceset"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
-    INPUT_FILES = [pbcore.data.getLambdaFasta()]
+    INPUT_FILES = [pbtestdata.get_file("lambda-fasta")]

@@ -14,7 +14,6 @@ from pbcore.io import (DataSet, SubreadSet, ConsensusReadSet,
                        FastaReader, FastaWriter, IndexedFastaReader,
                        HdfSubreadSet, ConsensusAlignmentSet,
                        openDataFile, FastaWriter)
-import pbcore.data as upstreamData
 import pbcore.data.datasets as data
 from pbcore.io.dataset.DataSetValidator import validateXml
 import xml.etree.ElementTree as ET

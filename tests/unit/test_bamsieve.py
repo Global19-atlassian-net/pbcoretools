@@ -7,7 +7,6 @@ import os.path as op
 import os
 
 from pbcore.io import openDataFile, openDataSet, BamReader
-import pbcore.data
 
 from pbcoretools import bamSieve
 
@@ -16,9 +15,9 @@ SUBREADS1 = op.join(DATA_DIR, "tst_1_subreads.bam")
 DS1 = op.join(DATA_DIR, "tst_1.subreadset.xml")
 SUBREADS2 = op.join(DATA_DIR, "tst_3_subreads.bam")
 DS2 = op.join(DATA_DIR, "tst_3.subreadset.xml")
-SUBREADS3 = pbcore.data.getUnalignedBam()
-SUBREADS4 = pbcore.data.getBamAndCmpH5()[0]
-CCS = pbcore.data.getCCSBAM()
+SUBREADS3 = pbtestdata.get_file("subreads-bam")
+SUBREADS4 = pbtestdata.get_file("aligned-bam")
+CCS = pbtestdata.get_file("ccs-bam")
 BARCODED = op.join(DATA_DIR, "barcoded.subreads.bam")
 BARCODED_DS = op.join(DATA_DIR, "barcoded.subreadset.xml")
 
