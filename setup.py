@@ -52,4 +52,5 @@ setup(
         'pbvalidate = pbcoretools.pbvalidate.main:main',
         'bamSieve = pbcoretools.bamSieve:main',
     ]},
-    install_requires=_get_local_requirements(REQUIREMENTS_TXT))
+    install_requires=_get_local_requirements(REQUIREMENTS_TXT),
+    test_requires=("pbtestdata",))
