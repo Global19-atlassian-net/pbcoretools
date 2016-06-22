@@ -26,6 +26,7 @@ class Constants(object):
     BAM2FASTA = "bam2fasta"
     BAM2BAM = "bam2bam"
     FASTA2REF = "fasta-to-reference"
+    FASTA2GMAP = "fasta-to-gmap-reference"
 
 
 SIV_DATA_DIR = "/pbi/dept/secondary/siv/testdata"
@@ -39,6 +40,7 @@ HAVE_BAX2BAM = which(Constants.BAX2BAM) is not None
 HAVE_BAM2BAM = which(Constants.BAM2BAM) is not None
 HAVE_BAM2FASTX = which(Constants.BAM2FASTA) is not None
 HAVE_FASTA2REF = which(Constants.FASTA2REF) is not None
+HAVE_FASTA2GMAP = which(Constants.FASTA2GMAP) is not None
 HAVE_DATA_DIR = op.isdir(SIV_DATA_DIR)
 HAVE_DATA_AND_BAX2BAM = HAVE_BAX2BAM and HAVE_DATA_DIR
 HAVE_DATA_AND_BAM2BAM = HAVE_BAM2BAM and HAVE_DATA_DIR
@@ -47,11 +49,13 @@ SKIP_MSG_BAX2BAM = _to_skip_msg(Constants.BAX2BAM)
 SKIP_MSG_BAM2FX = _to_skip_msg(Constants.BAM2FASTA)
 SKIP_MSG_BAM2BAM = _to_skip_msg(Constants.BAM2BAM)
 SKIP_MSG_FASTA2REF = _to_skip_msg(Constants.FASTA2REF)
+SKIP_MSG_FASTA2GMAP = _to_skip_msg(Constants.FASTA2GMAP)
 
 skip_unless_bax2bam = unittest.skipUnless(HAVE_DATA_AND_BAX2BAM, SKIP_MSG_BAX2BAM)
 skip_unless_bam2fastx = unittest.skipUnless(HAVE_BAM2FASTX, SKIP_MSG_BAM2FX)
 skip_unless_bam2bam = unittest.skipUnless(HAVE_DATA_AND_BAM2BAM, SKIP_MSG_BAM2BAM)
 skip_unless_fasta2ref = unittest.skipUnless(HAVE_FASTA2REF, SKIP_MSG_FASTA2REF)
+skip_unless_fasta2gmap = unittest.skipUnless(HAVE_FASTA2GMAP, SKIP_MSG_FASTA2GMAP)
 
 
 def _get_bax2bam_inputs():
@@ -299,6 +303,7 @@ class TestFastaToReference(PbTestApp):
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
     INPUT_FILES = [tempfile.NamedTemporaryFile(suffix=".fasta").name]
+    DATASET_TYPE = "ReferenceSet"
 
     @classmethod
     def setUpClass(cls):
@@ -309,10 +314,17 @@ class TestFastaToReference(PbTestApp):
         from pbcoretools.pbvalidate import validate_dataset
         e, m = validate_dataset(
             file_name=rtc.task.output_files[0],
-            dataset_type="ReferenceSet",
+            dataset_type=self.DATASET_TYPE,
             validate_index=True,
             strict=True)
         self.assertEqual(len(e), 0, str(e))
+
+
+@skip_unless_fasta2gmap
+class TestFastaToGmapReference(TestFastaToReference):
+    TASK_ID = "pbcoretools.tasks.fasta_to_gmap_reference"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DATASET_TYPE = "GmapReferenceSet"
 
 
 class TestFasta2Fofn(PbTestApp):
