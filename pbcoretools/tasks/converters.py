@@ -15,7 +15,8 @@ import sys
 
 from pbcore.io import (SubreadSet, HdfSubreadSet, FastaReader, FastaWriter,
                        FastqReader, FastqWriter, BarcodeSet, ExternalResource,
-                       ExternalResources, openDataSet, ContigSet, ReferenceSet)
+                       ExternalResources, openDataSet, ContigSet, ReferenceSet,
+                       GmapReferenceSet)
 from pbcommand.engine import run_cmd
 from pbcommand.cli import registry_builder, registry_runner, QuickOpt
 from pbcommand.models import FileTypes, SymbolTypes, OutputFileType
@@ -268,9 +269,10 @@ def run_fasta_to_referenceset(input_file_name, output_file_name):
     return result.exit_code
 
 
-def run_fasta_to_reference(input_file_name, output_file_name,
-                           organism=None, reference_name=None,
-                           ploidy="haploid"):
+def __run_fasta_to_reference(program_name, dataset_class,
+                             input_file_name, output_file_name,
+                             organism=None, reference_name=None,
+                             ploidy="haploid"):
     if reference_name is None or reference_name == "":
         reference_name = op.splitext(op.basename(input_file_name))[0]
     ds_in = ContigSet(input_file_name)
@@ -279,7 +281,7 @@ def run_fasta_to_reference(input_file_name, output_file_name,
     fasta_file_name = ds_in.externalResources[0].resourceId
     output_dir_name = op.dirname(output_file_name)
     args = [
-        "fasta-to-reference",
+        program_name,
         "--organism", str(organism) if organism != "" else "unknown",
         "--ploidy", str(ploidy) if ploidy != "" else "unknown",
         "--debug",
@@ -291,13 +293,21 @@ def run_fasta_to_reference(input_file_name, output_file_name,
     result = run_cmd(" ".join(args), stdout_fh=sys.stdout, stderr_fh=sys.stderr)
     if result.exit_code != 0:
         return result.exit_code
-    ref_file = op.join(output_dir_name, reference_name, "referenceset.xml")
-    assert op.isfile(ref_file)
-    with ReferenceSet(ref_file, strict=True) as ds_ref:
+    ref_file = op.join(output_dir_name, reference_name,
+                       "{t}.xml".format(t=dataset_class.__name__.lower()))
+    assert op.isfile(ref_file), ref_file
+    with dataset_class(ref_file, strict=True) as ds_ref:
         ds_ref.makePathsAbsolute()
-        log.info("saving final ReferenceSet to {f}".format(f=output_file_name))
+        log.info("saving final {t} to {f}".format(
+                 f=output_file_name, t=dataset_class.__name__))
         ds_ref.write(output_file_name)
     return 0
+
+
+run_fasta_to_reference = functools.partial(__run_fasta_to_reference,
+    "fasta-to-reference", ReferenceSet)
+run_fasta_to_gmap_reference = functools.partial(__run_fasta_to_reference,
+    "fasta-to-gmap-reference", GmapReferenceSet)
 
 
 run_bam_to_fasta = functools.partial(_run_bam_to_fastx, "bam2fasta",
@@ -410,6 +420,27 @@ def run_fasta2referenceset(rtc):
           })
 def run_fasta_to_reference_pbscala(rtc):
     return run_fasta_to_reference(
+        rtc.task.input_files[0],
+        rtc.task.output_files[0],
+        reference_name=rtc.task.options["pbcoretools.task_options.reference_name"],
+        organism=rtc.task.options["pbcoretools.task_options.organism"],
+        ploidy=rtc.task.options["pbcoretools.task_options.ploidy"])
+
+
+gmap_ref_file_type = OutputFileType(FileTypes.DS_GMAP_REF.file_type_id, "GmapReferenceSet",
+                               "GmapReferenceSet XML",
+                               "PacBio GMAP Reference DataSet XML", "reference")
+
+@registry("fasta_to_gmap_reference", "0.1.0",
+          FileTypes.FASTA,
+          gmap_ref_file_type, is_distributed=True, nproc=1,
+          options={
+                "organism": "",
+                "ploidy": "haploid",
+                "reference_name":""
+          })
+def _run_fasta_to_gmap_reference(rtc):
+    return run_fasta_to_gmap_reference(
         rtc.task.input_files[0],
         rtc.task.output_files[0],
         reference_name=rtc.task.options["pbcoretools.task_options.reference_name"],
