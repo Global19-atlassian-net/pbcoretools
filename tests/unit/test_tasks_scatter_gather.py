@@ -700,9 +700,9 @@ class TestGatherLAAJson(_SetupGatherApp):
     NCHUNKS = 2
 
     def _generate_chunk_output_file(self, i=None):
-        d = {str(i+1): { "movie/{z}/1_100".format(z=(i*3+1)): 1,
-                         "movie/{z}/201_300".format(z=(i*3+2)): 0,
-                         "movie/{z}/2_201".format(z=(i*3+3)): 1 }}
+        d = {str(i+1): { "movie/{z}".format(z=(i*3+1)): {"c1": 1},
+                         "movie/{z}".format(z=(i*3+2)): {"c1": 1},
+                         "movie/{z}".format(z=(i*3+3)): {"c1": 1 }}}
         fn = tempfile.NamedTemporaryFile(suffix=".json").name
         with open(fn, "w") as json_out:
             json.dump(d, json_out)
@@ -711,9 +711,9 @@ class TestGatherLAAJson(_SetupGatherApp):
     def run_after(self, rtc, output_dir):
         with open(rtc.task.output_files[0]) as json_in:
             d = json.load(json_in)
-            self.assertEqual(d, {'1': {'movie/2/201_300': 0,
-                                       'movie/1/1_100': 1,
-                                       'movie/3/2_201': 1},
-                                 '2': {'movie/4/1_100': 1,
-                                       'movie/5/201_300': 0,
-                                       'movie/6/2_201': 1}})
+            self.assertEqual(d, {'1': {'movie/2': {"c1": 1},
+                                       'movie/1': {"c1": 1},
+                                       'movie/3': {"c1": 1}},
+                                 '2': {'movie/4': {"c1": 1},
+                                       'movie/5': {"c1": 1},
+                                       'movie/6': {"c1": 1}}})
