@@ -262,6 +262,8 @@ def gather_bigwig(input_files, output_file):
     files_info = []
     for file_name in input_files:
         log.info("Reading header info from {f}...".format(f=file_name))
+        if op.getsize(file_name) == 0:
+            continue
         bw_chunk = pyBigWig.open(file_name)
         for (seqid, length) in bw_chunk.chroms().iteritems():
             chr_lengths.setdefault(seqid, 0)
@@ -269,6 +271,9 @@ def gather_bigwig(input_files, output_file):
         seqid_min = sorted(bw_chunk.chroms().keys())[0]
         files_info.append(FileInfo(file_name, seqid, bw_chunk.chroms()[seqid]))
         bw_chunk.close()
+    if len(files_info) == 0:
+        with open(output_file, "wb") as f:
+            return output_file
     files_info.sort(lambda a,b: cmp((a.seqid, a.length), (b.seqid, b.length)))
     bw = pyBigWig.open(output_file, "w")
     regions = [ (s, chr_lengths[s]) for s in sorted(chr_lengths.keys())]
