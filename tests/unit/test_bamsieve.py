@@ -160,6 +160,12 @@ class TestBamSieve(unittest.TestCase):
         rc = bamSieve.filter_reads(
             input_bam=BARCODED_DS,
             output_bam=ofn,
+            count=1,
+            seed=12345)
+        _verify()
+        rc = bamSieve.filter_reads(
+            input_bam=BARCODED_DS,
+            output_bam=ofn,
             blacklist=[28901719])
         self.assertEqual(rc, 0)
 
