@@ -7,6 +7,7 @@ hole numbers or a percentage of reads to be randomly selected.
 from __future__ import division
 from collections import defaultdict
 import subprocess
+import warnings
 import logging
 import random
 import os.path as op
@@ -55,6 +56,30 @@ def _anonymize_sequence(rec):
     rseq = "".join(["ACTG"[i] for i in rseq_])
     rec.query_sequence = rseq
     return rec
+
+
+def _create_whitelist(ds_in, percentage=None, count=None):
+    zmws = set()
+    movies = set()
+    for i_file, bam in enumerate(ds_in.resourceReaders()):
+        movies.update(set([rg["MovieName"] for rg in bam.readGroupTable]))
+        zmws.update(set(bam.pbi.holeNumber))
+    if len(movies) > 1:
+        warnings.warn("The input BAM/dataset contains multiple movies, "+
+                      "which may have overlapping ZMWs.")
+    if percentage is not None:
+        count = int(len(zmws) * percentage / 100.0)
+    zmws = list(zmws)
+    have_zmws = set()
+    whitelist = set()
+    k = 0
+    while k < count:
+        i_zmw = random.randint(0, len(zmws) - 1)
+        if not zmws[i_zmw] in have_zmws:
+            whitelist.add(zmws[i_zmw])
+            have_zmws.add(zmws[i_zmw])
+            k += 1
+    return whitelist
 
 
 def _process_bam_whitelist(bam_in, bam_out, whitelist, blacklist,
@@ -156,73 +181,44 @@ def filter_reads(input_bam,
                 barcode_set = barcode_set
         f1 = ds_in.resourceReaders()[0]
         if percentage is not None or count is not None:
-            with AlignmentFile(output_bam, 'wb', template=f1.peer) as bam_out:
-                zmw_dict = defaultdict(list)
-                for i_file, bam in enumerate(ds_in.resourceReaders()):
-                    for i_read, zmw in enumerate(bam.holeNumber):
-                        movie = bam.readGroupInfo(bam.qId[i_read]).MovieName
-                        zmw_dict[(movie, zmw, i_file)].append(i_read)
-                zmws = zmw_dict.keys()
-                n_zmws_start = len(zmws)
-                n_zmws_out = count
-                if percentage is not None:
-                    n_zmws_out = int(n_zmws_start * percentage / 100.0)
-                log.info("Will random select {n} / {d} ZMWs".format(
-                    n=n_zmws_out, d=n_zmws_start))
-                have_reads = set()
-                while True:
-                    i_zmw = random.randint(0, len(zmws) - 1)
-                    if not zmws[i_zmw] in have_zmws:
-                        movie, zmw, i_file = zmws[i_zmw]
-                        bam = ds_in.resourceReaders()[i_file]
-                        for i_read in zmw_dict[zmws[i_zmw]]:
-                            assert not (i_file, i_read) in have_reads
-                            if anonymize:
-                                _anonymize_sequence(bam[i_read].peer)
-                            bam_out.write(bam[i_read].peer)
-                            have_reads.add((i_file, i_read))
-                            n_file_reads += 1
-                        have_zmws.add(zmws[i_zmw])
-                    if len(have_zmws) == n_zmws_out:
-                        break
-        else:
-            # convert these to Python sets
-            _whitelist = _process_zmw_list(whitelist)
-            _blacklist = _process_zmw_list(blacklist)
-            scraps_in = None
-            if output_ds is not None and output_ds.endswith(".subreadset.xml"):
+            whitelist = _create_whitelist(ds_in, percentage, count)
+        # convert these to Python sets
+        _whitelist = _process_zmw_list(whitelist)
+        _blacklist = _process_zmw_list(blacklist)
+        scraps_in = None
+        if output_ds is not None and output_ds.endswith(".subreadset.xml"):
+            for ext_res in ds_in.externalResources:
+                if ext_res.scraps is not None:
+                    if use_barcodes:
+                        log.warn("Scraps BAM is present but lacks "+
+                                 "barcodes - will not be propagated "+
+                                 "to output SubreadSet")
+                    else:
+                        scraps_in = IndexedBamReader(ext_res.scraps)
+                    break
+        with AlignmentFile(output_bam, 'wb',
+                           template=f1.peer) as bam_out:
+            for bam_in in ds_in.resourceReaders():
+                n_records, have_zmws_ =_process_bam_whitelist(
+                    bam_in, bam_out,
+                    whitelist=_whitelist,
+                    blacklist=_blacklist,
+                    use_barcodes=use_barcodes,
+                    anonymize=anonymize)
+                n_file_reads += n_records
+                have_zmws.update(have_zmws_)
+        if scraps_in is not None:
+            scraps_bam = re.sub("subreads.bam$", "scraps.bam", output_bam)
+            with AlignmentFile(scraps_bam, 'wb',
+                               template=scraps_in.peer) as scraps_out:
                 for ext_res in ds_in.externalResources:
                     if ext_res.scraps is not None:
-                        if use_barcodes:
-                            log.warn("Scraps BAM is present but lacks "+
-                                     "barcodes - will not be propagated "+
-                                     "to output SubreadSet")
-                        else:
-                            scraps_in = IndexedBamReader(ext_res.scraps)
-                        break
-            with AlignmentFile(output_bam, 'wb',
-                               template=f1.peer) as bam_out:
-                for bam_in in ds_in.resourceReaders():
-                    n_records, have_zmws_ =_process_bam_whitelist(
-                        bam_in, bam_out,
-                        whitelist=_whitelist,
-                        blacklist=_blacklist,
-                        use_barcodes=use_barcodes,
-                        anonymize=anonymize)
-                    n_file_reads += n_records
-                    have_zmws.update(have_zmws_)
-            if scraps_in is not None:
-                scraps_bam = re.sub("subreads.bam$", "scraps.bam", output_bam)
-                with AlignmentFile(scraps_bam, 'wb',
-                                   template=scraps_in.peer) as scraps_out:
-                    for ext_res in ds_in.externalResources:
-                        if ext_res.scraps is not None:
-                            scraps_in_ = IndexedBamReader(ext_res.scraps)
-                            n_records, have_zmws_ =_process_bam_whitelist(
-                                scraps_in_, scraps_out, _whitelist, _blacklist,
-                                use_barcodes=use_barcodes,
-                                anonymize=anonymize)
-                            have_zmws.update(have_zmws_)
+                        scraps_in_ = IndexedBamReader(ext_res.scraps)
+                        n_records, have_zmws_ =_process_bam_whitelist(
+                            scraps_in_, scraps_out, _whitelist, _blacklist,
+                            use_barcodes=use_barcodes,
+                            anonymize=anonymize)
+                        have_zmws.update(have_zmws_)
     if n_file_reads == 0:
         log.error("No reads written")
         return 1

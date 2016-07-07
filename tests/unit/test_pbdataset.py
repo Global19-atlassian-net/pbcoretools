@@ -16,7 +16,7 @@ from pbcore.io.dataset.utils import BamtoolsVersion
 from pbcore.io import (DataSet, SubreadSet, ReferenceSet, AlignmentSet,
                        openDataSet, DataSetMetaTypes, HdfSubreadSet,
                        ConsensusReadSet, ConsensusAlignmentSet)
-from pbcore.io.dataset.DataSetIO import _dsIdToSuffix
+from pbcore.io.dataset.DataSetIO import dsIdToSuffix
 from pbcore.io.dataset.DataSetMembers import ExternalResource, Filters
 from pbcore.io.dataset.DataSetWriter import toXml
 from pbcore.io.dataset.DataSetValidator import validateFile
