@@ -539,12 +539,16 @@ class TextRecordsGatherBase(object):
             with open(file_name, 'w') as f:
                 if cls.RECORD_HEADER is not None:
                     f.write(cls.RECORD_HEADER)
-                f.write("\n".join(cls.RECORDS[i * 2:(i + 1) * 2]))
+                f.write("\n".join(cls._get_chunk_records(i)))
                 f.write("\n")  # XXX we need this for CSV gather
             d = {cls.CHUNK_KEY: op.abspath(file_name)}
             c = PipelineChunk("%s_%i" % (cls.EXTENSION, i + 1), **d)
             chunks.append(c)
         write_pipeline_chunks(chunks, json_file, None)
+
+    @classmethod
+    def _get_chunk_records(cls, i_chunk):
+        return cls.RECORDS[i_chunk * 2:(i_chunk + 1) * 2]
 
     def run_after(self, rtc, output_dir):
         gathered_file = rtc.task.output_files[0]
@@ -580,6 +584,11 @@ class TestGatherGFF(TextRecordsGatherBase,
         get_temp_file(suffix=".chunks.json")
     ]
     CHUNK_KEY = "$chunk.gff_id"
+
+    @classmethod
+    def _get_chunk_records(cls, i_chunk):
+        if i_chunk == 0: return cls.RECORDS[2:]
+        else: return cls.RECORDS[0:2]
 
     def _get_lines(self, lines):
         return [l.strip() for l in lines if l[0] != '#']
