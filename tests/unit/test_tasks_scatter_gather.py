@@ -681,8 +681,8 @@ class TestGatherBigwig(_SetupGatherApp):
         regions = [ (s, ranges[s][1]+1) for s in sorted(ranges.keys()) ]
         bw.addHeader(regions)
         bw.addEntries([rec[0] for rec in _records],
-                      [rec[1] for rec in _records],
-                      ends=[rec[2] for rec in _records],
+                      [rec[1]-1 for rec in _records],
+                      ends=[rec[2]-1 for rec in _records],
                       values=[rec[3] for rec in _records])
         bw.close()
         return fn
@@ -691,8 +691,8 @@ class TestGatherBigwig(_SetupGatherApp):
         bw = pyBigWig.open(rtc.task.output_files[0])
         nrec = bw.header()["nBasesCovered"]
         self.assertEqual(nrec, 6, "{n} != 6".format(n=nrec))
-        self.assertAlmostEqual(bw.stats("chr1", 3, 4)[0], 1.9, places=5)
-        self.assertAlmostEqual(bw.stats("chr2", 8, 9)[0], 1.0, places=5)
+        self.assertAlmostEqual(bw.stats("chr1", 2, 3)[0], 1.9, places=5)
+        self.assertAlmostEqual(bw.stats("chr2", 7, 8)[0], 1.0, places=5)
 
 
 class TestGatherLAAJson(_SetupGatherApp):
