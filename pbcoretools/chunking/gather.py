@@ -284,11 +284,11 @@ def gather_bigwig(input_files, output_file):
         for seqid in sorted(bw_chunk.chroms().keys()):
             seqids, starts, ends, values = [], [], [], []
             chr_max = bw_chunk.chroms()[seqid]
-            for i, val in enumerate(bw_chunk.values(seqid, 1, chr_max)):
+            for i, val in enumerate(bw_chunk.values(seqid, 0, chr_max)):
                 if not math.isnan(val):
                     seqids.append(seqid)
-                    starts.append(i+1)
-                    ends.append(i+2)
+                    starts.append(i)
+                    ends.append(i+1)
                     values.append(val)
             bw.addEntries(seqids, starts, ends=ends, values=values)
         bw_chunk.close()
