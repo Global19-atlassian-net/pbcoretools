@@ -6,14 +6,16 @@ import logging
 import gzip
 import os.path as op
 import os
+import sys
 
 from pbcore.io import (FastaReader, FastqReader, openDataSet, HdfSubreadSet,
-                       SubreadSet, ConsensusReadSet)
+                       SubreadSet, ConsensusReadSet, FastqWriter, FastqRecord)
 from pbcommand.testkit import PbTestApp
 from pbcommand.utils import which
 
 import pbtestdata
 
+from pbcoretools.tasks.converters import split_laa_fastq, split_laa_fastq_archived
 from pbcoretools import pbvalidate
 
 from base import get_temp_file
@@ -341,3 +343,89 @@ class TestFasta2ReferenceSet(PbTestApp):
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
     INPUT_FILES = [pbtestdata.get_file("lambda-fasta")]
+
+
+
+def _get_fastq_records():
+    return [
+        FastqRecord("Barcode1--1_Cluster0_Phase0_NumReads91",
+                    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                    qualityString="~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"),
+        FastqRecord("Barcode1--1_Cluster0_Phase1_NumReads90",
+                    "AAAAAAAGAAAAAAAAAAAAAAATAAAAAAAAAAAAAA",
+                    qualityString="~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"),
+        FastqRecord("Barcode2--2_Cluster0_Phase0_NumReads91",
+                    "TAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAT",
+                    qualityString="~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"),
+        FastqRecord("Barcode2--2_Cluster0_Phase1_NumReads90",
+                    "CAAAAAAGAAAAAAAAAAAAAAATAAAAAAAAAAAAAC",
+                    qualityString="~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    ]
+
+def _get_chimera_records():
+    return [
+        FastqRecord("Barcode3--3_Cluster0_Phase0_NumReads10",
+                    "AAAAAAAAAAAAACCCCCCCCCCCCCCCCCCCCCCCCC",
+                    qualityString="&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"),
+        FastqRecord("Barcode4--4_Cluster0_Phase0_NumReads11",
+                    "AAAAAAAAAAAAATTTTTTTTTTTTTTTTTTTTTTTTT",
+                    qualityString="&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
+    ]
+
+
+def _make_fastq_inputs(records, ofn=None):
+    if ofn is None:
+        ofn = tempfile.NamedTemporaryFile(suffix=".fastq").name
+    with FastqWriter(ofn) as fastq_out:
+        for rec in records:
+            fastq_out.writeRecord(rec)
+    return ofn
+
+
+class TestSplitLAA(unittest.TestCase):
+    """
+    Unit tests for LAA FASTQ splitter.
+    """
+
+    def setUp(self):
+        # FIXME workaround for 'nose' stupidity
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+        self._records = _get_fastq_records()
+        self.input_file_name = _make_fastq_inputs(self._records)
+
+    def test_split_laa_fastq(self):
+        ifn = self.input_file_name
+        ofb = tempfile.NamedTemporaryFile().name
+        ofs = split_laa_fastq(ifn, ofb)
+        self.assertEqual(len(ofs), 2)
+        for i, ofn in enumerate(ofs):
+            with FastqReader(ofn) as fastq_in:
+                recs = [rec for rec in fastq_in]
+                for j in range(2):
+                    self.assertEqual(str(recs[j]), str(self._records[(i*2)+j]))
+
+    def test_split_laa_fastq_archived(self):
+        ifn = self.input_file_name
+        ofn = tempfile.NamedTemporaryFile(suffix=".gz").name
+        rc = split_laa_fastq_archived(ifn, ofn)
+        self.assertEqual(rc, 0)
+        # now with a different extension
+        ofn = tempfile.NamedTemporaryFile(suffix=".tar.gz").name
+        rc = split_laa_fastq_archived(ifn, ofn)
+        self.assertEqual(rc, 0)
+
+
+class TestSplitLAATask(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.split_laa_fastq"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [
+        tempfile.NamedTemporaryFile(suffix=".fastq").name,
+        tempfile.NamedTemporaryFile(suffix=".fastq").name
+    ]
+
+    @classmethod
+    def setUpClass(cls):
+        _make_fastq_inputs(_get_fastq_records(), cls.INPUT_FILES[0])
+        _make_fastq_inputs(_get_chimera_records(), cls.INPUT_FILES[1])

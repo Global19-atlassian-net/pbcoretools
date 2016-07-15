@@ -3,6 +3,7 @@
 Tool contract wrappers for miscellaneous quick functions.
 """
 
+from collections import defaultdict
 import functools
 import tempfile
 import logging
@@ -170,6 +171,36 @@ def _unzip_fastx(gzip_file_name, fastx_file_name):
             fastx_out.write(gz_in.read())
 
 
+def archive_files(input_file_names, output_file_name, remove_path=True):
+    """
+    Create a gzipped tarball from a list of input files.
+
+    :param remove_path: if True, the directory will be removed from the input
+                        file names before archiving.  All inputs and the output
+                        file must be in the same directory for this to work.
+    """
+    if remove_path:
+        input_file_names = [op.basename(fn) for fn in input_file_names]
+    args = ["tar", "-czf", output_file_name] + input_file_names
+    log.info("Running '{a}'".format(a=" ".join(args)))
+    _cwd = os.getcwd()
+    try:
+        # we want the files to have no leading path
+        os.chdir(op.dirname(output_file_name))
+        result = run_cmd(" ".join(args),
+                         stdout_fh=sys.stdout,
+                         stderr_fh=sys.stderr)
+    except Exception:
+        raise
+    else:
+        if result.exit_code != 0:
+            return result.exit_code
+    finally:
+        os.chdir(_cwd)
+    assert op.isfile(output_file_name)
+    return 0
+
+
 def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                      input_file_name, output_file_name):
     assert isinstance(program_name, basestring)
@@ -219,28 +250,42 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                     fn_out = re.sub(".gz$", suffix2, output_file_name)
                     fastx_out = op.join(tc_out_dir, fn_out)
                     _unzip_fastx(fn, fastx_out)
-                    barcoded_file_names.append(op.basename(fn_out))
+                    barcoded_file_names.append(fn_out)
                     os.remove(fn)
             assert len(barcoded_file_names) > 0
-            # now make a gzipped tarball
-            args = ["tar", "-czf", output_file_name] + barcoded_file_names
-            log.info("Running '{a}'".format(a=" ".join(args)))
-            _cwd = os.getcwd()
-            try:
-                # we want the files to have no leading path
-                os.chdir(op.dirname(output_file_name))
-                result = run_cmd(" ".join(args),
-                                 stdout_fh=sys.stdout,
-                                 stderr_fh=sys.stderr)
-            except Exception:
-                raise
-            else:
-                if result.exit_code != 0:
-                    return result.exit_code
-            finally:
-                os.chdir(_cwd)
-            assert op.isfile(output_file_name)
+            return archive_files(barcoded_file_names, output_file_name)
     return 0
+
+
+def split_laa_fastq(input_file_name, output_file_base):
+    """
+    Split an LAA FASTQ file into one file per barcode.
+    """
+    records = defaultdict(list)
+    with FastqReader(input_file_name) as fastq_in:
+        for rec in fastq_in:
+            bc_id = rec.id.split("_")[0]
+            records[bc_id].append(rec)
+    outputs = []
+    for bc_id in sorted(records.keys()):
+        ofn = "{b}.{i}.fastq".format(b=output_file_base, i=bc_id)
+        with FastqWriter(ofn) as fastq_out:
+            for rec in records[bc_id]:
+                fastq_out.writeRecord(rec)
+        outputs.append(ofn)
+    return outputs
+
+
+def split_laa_fastq_archived(input_file_name, output_file_name):
+    """
+    Split an LAA FASTQ file into one file per barcode and package as tar.gz.
+    """
+    base, ext = op.splitext(output_file_name)
+    assert (ext == ".gz")
+    if base.endswith(".tar"):
+        base, ext2 = op.splitext(base)
+    fastq_files = [op.basename(fn) for fn in split_laa_fastq(input_file_name, base)]
+    return archive_files(fastq_files, output_file_name)
 
 
 def run_fasta_to_fofn(input_file_name, output_file_name):
@@ -466,6 +511,29 @@ def run_bam2fasta_ccs(rtc):
     Duplicate of run_bam2fasta, but with ConsensusReadSet as input.
     """
     return run_bam_to_fasta(rtc.task.input_files[0], rtc.task.output_files[0])
+
+
+consensus_gz_ftype = OutputFileType(FileTypes.GZIP.file_type_id,
+                                    "fastq_split_gz",
+                                    "Consensus FASTQ archive",
+                                    "Tar-gzipped FASTQ files split by barcode",
+                                    "consensus_fastq")
+chimera_gz_ftype = OutputFileType(FileTypes.GZIP.file_type_id,
+                                  "fastq_split_gz",
+                                  "Chimera/noise FASTQ archive",
+                                  "Tar-gzipped FASTQ files split by barcode",
+                                  "chimera_fastq")
+
+@registry("split_laa_fastq", "0.1.0",
+          (FileTypes.FASTQ, FileTypes.FASTQ),
+          (consensus_gz_ftype, chimera_gz_ftype),
+          is_distributed=True, nproc=1)
+def _run_split_laa_fastq(rtc):
+    # XXX a bit of a hack to support unique file names for the FASTQ tarballs
+    return max(split_laa_fastq_archived(rtc.task.input_files[0],
+                                        rtc.task.output_files[0]),
+               split_laa_fastq_archived(rtc.task.input_files[1],
+                                        rtc.task.output_files[1]))
 
 
 if __name__ == '__main__':
