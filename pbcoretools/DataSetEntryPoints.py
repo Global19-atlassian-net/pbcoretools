@@ -83,7 +83,7 @@ def create_options(parser):
     parser.add_argument("--name", type=str, default='',
                         dest='dsName', help="The name of the new DataSet")
     parser.add_argument("--generateIndices", action='store_true',
-                        default=False, help="The type of XML to create")
+                        default=False, help="Generate index files (.pbi and .bai for BAM, .fai for FASTA).  Requires samtools/pysam and pbindex.")
     parser.add_argument("--metadata", type=str, default=None,
                         help=("A metadata.xml file (or DataSet) to supply "
                               "metadata"))
