@@ -261,6 +261,8 @@ def split_laa_fastq(input_file_name, output_file_base):
     """
     Split an LAA FASTQ file into one file per barcode.
     """
+    if op.getsize(input_file_name) == 0:
+        return []
     records = defaultdict(list)
     with FastqReader(input_file_name) as fastq_in:
         for rec in fastq_in:
@@ -285,6 +287,9 @@ def split_laa_fastq_archived(input_file_name, output_file_name):
     if base.endswith(".tar"):
         base, ext2 = op.splitext(base)
     fastq_files = [op.basename(fn) for fn in split_laa_fastq(input_file_name, base)]
+    if len(fastq_files) == 0: # workaround for empty input
+        with open(output_file_name, "wb") as tar_out:
+            return 0
     return archive_files(fastq_files, output_file_name)
 
 
