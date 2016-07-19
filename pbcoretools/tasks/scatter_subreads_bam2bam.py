@@ -1,6 +1,6 @@
 
 """
-Scatter subreads by BAM file, used for bam2bam barcoding.
+Scatter subreads by ZMW, used for bam2bam barcoding.
 """
 
 import functools
@@ -19,9 +19,9 @@ log = logging.getLogger(__name__)
 
 
 class Constants(object):
-    TOOL_ID = "pbcoretools.tasks.subreadset_bam_scatter"
+    TOOL_ID = "pbcoretools.tasks.scatter_subreads_bam2bam"
     DEFAULT_NCHUNKS = 5
-    DRIVER_EXE = "python -m pbcoretools.tasks.scatter_subread_bams --resolved-tool-contract "
+    DRIVER_EXE = "python -m pbcoretools.tasks.scatter_subreads_bam2bam --resolved-tool-contract "
     DATASET_TYPE = FileTypes.DS_SUBREADS
     CHUNK_KEYS = ("$chunk.subreadset_id", )
     READ_TYPE = "Subread"
@@ -29,8 +29,8 @@ class Constants(object):
 
 def get_contract_parser_impl(C):
     p = get_scatter_pbparser(C.TOOL_ID, "0.1.3",
-        "%sSet BAM scatter" % C.READ_TYPE,
-        "Scatter %s DataSet by BAM file" % C.READ_TYPE, C.DRIVER_EXE,
+        "%sSet ZMW scatter" % C.READ_TYPE,
+        "Scatter %s DataSet for barcoding" % C.READ_TYPE, C.DRIVER_EXE,
         C.CHUNK_KEYS, is_distributed=False)
 
     p.add_input_file_type(C.DATASET_TYPE,
@@ -61,7 +61,7 @@ get_contract_parser = functools.partial(get_contract_parser_impl, Constants)
 
 def run_main(chunk_output_json, dataset_xml, barcode_xml, max_nchunks,
              output_dir):
-    return CU.write_subreadset_bam_chunks_to_file(
+    return CU.write_subreadset_zmw_chunks_to_file(
         chunk_file=chunk_output_json,
         dataset_path=dataset_xml,
         max_total_chunks=max_nchunks,
