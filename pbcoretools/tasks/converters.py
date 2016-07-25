@@ -84,31 +84,6 @@ def run_bax_to_bam(input_file_name, output_file_name):
     return 0
 
 
-def add_subread_resources(self, subreads, scraps=None, barcodes=None):
-    assert subreads.endswith(".subreads.bam")
-    ext_res_new = ExternalResource()
-    ext_res_new.resourceId = subreads
-    ext_res_new.metaType = 'PacBio.SubreadFile.SubreadBamFile'
-    ext_res_new.addIndices([subreads + ".pbi"])
-    if scraps is not None or barcodes is not None:
-        ext_res_inner = ExternalResources()
-        if scraps is not None:
-            assert scraps.endswith(".scraps.bam")
-            ext_res_scraps = ExternalResource()
-            ext_res_scraps.resourceId = scraps
-            ext_res_scraps.metaType = 'PacBio.SubreadFile.ScrapsBamFile'
-            ext_res_scraps.addIndices([scraps + ".pbi"])
-            ext_res_inner.append(ext_res_scraps)
-        if barcodes is not None:
-            ds_tmp = BarcodeSet(barcodes) # sanity check
-            ext_res_barcode = ExternalResource()
-            ext_res_barcode.resourceId = barcodes
-            ext_res_barcode.metaType = "PacBio.DataSet.BarcodeSet"
-            ext_res_inner.append(ext_res_barcode)
-            ext_res_new.append(ext_res_inner)
-    self.externalResources.append(ext_res_new)
-
-
 def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
                    nproc=1, score_mode="symmetric"):
     if not score_mode in ["asymmetric", "symmetric"]:
@@ -116,52 +91,33 @@ def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
     bc = BarcodeSet(barcode_set_file)
     if len(bc.resourceReaders()) > 1:
         raise NotImplementedError("Multi-FASTA BarcodeSet input is not supported.")
-    barcode_fasta = bc.toExternalFiles()[0]
-    with SubreadSet(subread_set_file) as ds:
-        ds_new = SubreadSet(strict=True)
-        for ext_res in ds.externalResources:
-            subreads_bam = ext_res.bam
-            scraps_bam = ext_res.scraps
-            assert subreads_bam is not None
-            if scraps_bam is None:
-                raise TypeError("The input SubreadSet must include scraps.")
-            new_prefix = op.join(op.dirname(output_file_name),
-                re.sub(".subreads.bam", "_barcoded", op.basename(subreads_bam)))
-            if not op.isabs(subreads_bam):
-                subreads_bam = op.join(op.dirname(subread_set_file),
-                    subreads_bam)
-            if not op.isabs(scraps_bam):
-                scraps_bam = op.join(op.dirname(subread_set_file), scraps_bam)
-            args = [
-                "bam2bam",
-                "-j", str(nproc),
-                "-b", str(nproc),
-                "-o", new_prefix,
-                "--barcodes", barcode_fasta,
-                "--scoreMode", score_mode,
-                subreads_bam, scraps_bam
-            ]
-            log.info(" ".join(args))
-            result = run_cmd(" ".join(args),
-                             stdout_fh=sys.stdout,
-                             stderr_fh=sys.stderr)
-            if result.exit_code != 0:
-                return result.exit_code
-            subreads_bam = new_prefix + ".subreads.bam"
-            scraps_bam = new_prefix + ".scraps.bam"
-            assert op.isfile(subreads_bam), "Missing {f}".format(f=subreads_bam)
-            add_subread_resources(ds_new,
-                subreads=subreads_bam,
-                scraps=scraps_bam,
-                barcodes=barcode_set_file)
-        ds._filters.clearCallbacks()
-        ds_new._filters = ds._filters
-        ds_new._populateMetaTypes()
-        ds_new.metadata = ds.metadata
-        ds_new.name = ds.name + " (barcoded)"
-        ds_new.updateCounts()
-        ds_new.newUuid()
-        ds_new.write(output_file_name)
+    new_prefix = re.sub(".subreadset.xml$", "", output_file_name)
+    args = [
+        "bam2bam",
+        "-j", str(nproc),
+        "-b", str(nproc),
+        "-o", new_prefix,
+        "--barcodes", barcode_set_file,
+        "--scoreMode", score_mode,
+        subread_set_file
+    ]
+    log.info(" ".join(args))
+    result = run_cmd(" ".join(args),
+                     stdout_fh=sys.stdout,
+                     stderr_fh=sys.stderr)
+    if result.exit_code != 0:
+        return result.exit_code
+    assert op.isfile(output_file_name)
+    tmp_out = op.join(op.dirname(output_file_name),
+                      "tmp_" + op.basename(output_file_name))
+    shutil.move(output_file_name, tmp_out)
+    with SubreadSet(tmp_out, strict=True) as ds:
+        with SubreadSet(subread_set_file) as ds_in:
+            ds.metadata = ds_in.metadata
+            ds.name = ds_in.name + " (barcoded)"
+        ds.updateCounts()
+        ds.newUuid()
+        ds.write(output_file_name)
     return 0
 
 

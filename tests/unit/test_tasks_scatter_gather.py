@@ -235,40 +235,25 @@ class TestScatterCCSReference(pbcommand.testkit.core.PbTestScatterApp):
     CHUNK_KEYS = ("$chunk.ccsset_id", "$chunk.reference_id")
 
 
-# FIXME
-@skip_if_missing_testdata
 class TestScatterSubreadBarcodes(pbcommand.testkit.core.PbTestScatterApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.scatter_subread_barcodes"
-    INPUT_FILES = [
-        "/pbi/dept/secondary/siv/testdata/pblaa-unittest/P6-C4/HLA_ClassI/m150724_012016_sherri_c100820352550000001823172911031521_s1_p0.class_I.haploid.bam",
-    ]
+    INPUT_FILES = [pbtestdata.get_file("barcoded-subreadset")]
     MAX_NCHUNKS = 8
     RESOLVED_MAX_NCHUNKS = 8
     CHUNK_KEYS = ("$chunk.subreadset_id", )
 
 
-class TestScatterSubreadBAMs(pbcommand.testkit.core.PbTestScatterApp):
-    DRIVER_BASE = "python -m pbcoretools.tasks.scatter_subread_bams"
+class TestScatterSubreadsBarcoding(pbcommand.testkit.core.PbTestScatterApp):
+    DRIVER_BASE = "python -m pbcoretools.tasks.scatter_subreads_bam2bam"
     INPUT_FILES = [
-        tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name,
-        tempfile.NamedTemporaryFile(suffix=".barcodeset.xml").name
+        # XXX not actually barcoded data, but it doesn't matter here
+        pbtestdata.get_file("subreads-bam"),
+        pbtestdata.get_file("barcodeset")
     ]
     MAX_NCHUNKS = 8
     RESOLVED_MAX_NCHUNKS = 8
     NCHUNKS_EXPECTED = 2
-    CHUNK_KEYS = ("$chunk.ccsset_id", "$chunk.reference_id")
-
-    @classmethod
-    def setUpClass(cls):
-        tmp_bam = tempfile.NamedTemporaryFile(suffix=".subreads.bam").name
-        src_bam = pbtestdata.get_file("subreads-bam")
-        shutil.copyfile(src_bam, tmp_bam)
-        shutil.copyfile(src_bam+".pbi", tmp_bam+".pbi")
-        ds = SubreadSet(tmp_bam, src_bam, strict=True)
-        ds.write(cls.INPUT_FILES[0])
-        _write_fasta_or_contigset(cls.INPUT_FILES[1], make_faidx=True,
-                                  ds_class=BarcodeSet)
-        super(TestScatterSubreadBAMs, cls).setUpClass()
+    CHUNK_KEYS = ("$chunk.subreadset_id", "$chunk.barcodeset_id")
 
 
 ########################################################################
@@ -406,21 +391,17 @@ class TestGatherCCS(_SetupGatherApp):
         return self._copy_mock_output_file(pbtestdata.get_file("ccs-bam"))
 
 
-# FIXME
-@skip_if_missing_testdata
-class TestGatherCCSAlignmentSet(CompareGatheredRecordsBase,
-                                pbcommand.testkit.core.PbTestGatherApp):
-
+class TestGatherCCSAlignmentSet(_SetupGatherApp):
     """
     Test pbcoretools.tasks.gather_ccs_alignments
     """
     READER_CLASS = ConsensusAlignmentSet
     READER_KWARGS = {'strict': True}
     DRIVER_BASE = "python -m pbcoretools.tasks.gather_ccs_alignments"
-    INPUT_FILES = [
-        "/pbi/dept/secondary/siv/testdata/pbsmrtpipe-unittest/data/chunk/consensusalignmentset_gather.chunks.json"
-    ]
     CHUNK_KEY = "$chunk.ccs_alignmentset_id"
+
+    def _generate_chunk_output_file(self, i=None):
+        return self._copy_mock_output_file(pbtestdata.get_file("ccs-bam-aligned"))
 
 
 class TestGatherReport(_SetupGatherApp):
