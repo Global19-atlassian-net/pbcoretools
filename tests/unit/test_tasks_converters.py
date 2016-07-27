@@ -346,7 +346,8 @@ class TestFastaToReference(PbTestApp):
     @classmethod
     def setUpClass(cls):
         with open(cls.INPUT_FILES[0], "w") as fasta:
-            fasta.write(">chr1\nacgtacgtacgt")
+            fasta.write(">chr1\n")
+            fasta.write("\n".join(["".join(["acgta"]*12)]*4))
 
     def run_after(self, rtc, output_dir):
         from pbcoretools.pbvalidate import validate_dataset
