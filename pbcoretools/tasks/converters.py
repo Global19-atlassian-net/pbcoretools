@@ -202,13 +202,13 @@ def archive_files(input_file_names, output_file_name, remove_path=True):
 
 
 def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
-                     input_file_name, output_file_name):
+                     input_file_name, output_file_name, tmp_dir=None):
     assert isinstance(program_name, basestring)
     barcode_mode = False
     if output_file_name.endswith(".gz"):
         with openDataSet(input_file_name) as ds_in:
             barcode_mode = ds_in.isBarcoded
-    tmp_out_prefix = tempfile.NamedTemporaryFile().name
+    tmp_out_prefix = tempfile.NamedTemporaryFile(dir=tmp_dir).name
     args = [
         program_name,
         "-o", tmp_out_prefix,
@@ -415,13 +415,6 @@ fastq_gzip_file_type = OutputFileType(FileTypes.GZIP.file_type_id, "GZIPed FASTQ
           fastq_file_type, is_distributed=True, nproc=1)
 def run_bam2fastq(rtc):
     return run_bam_to_fastq(rtc.task.input_files[0], rtc.task.output_files[0])
-
-
-@registry("bam2fasta", "0.1.0",
-          FileTypes.DS_SUBREADS,
-          fasta_file_type, is_distributed=True, nproc=1)
-def run_bam2fasta(rtc):
-    return run_bam_to_fasta(rtc.task.input_files[0], rtc.task.output_files[0])
 
 
 @registry("bam2fasta_archive", "0.1.0",
