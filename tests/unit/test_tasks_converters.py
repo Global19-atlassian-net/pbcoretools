@@ -142,7 +142,7 @@ class TestBam2Bam(PbTestApp):
 
 
 class _BaseTestBam2Fasta(PbTestApp):
-    TASK_ID = "pbcoretools.tasks.bam2fasta"
+    TASK_ID = None # XXX override in subclasses
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
     INPUT_FILES = [get_temp_file(suffix=".subreadset.xml")]
@@ -173,7 +173,10 @@ class _BaseTestBam2Fasta(PbTestApp):
 
 @skip_unless_bam2fastx
 class TestBam2Fasta(_BaseTestBam2Fasta):
+    TASK_ID = "pbcoretools.tasks.bam2fasta"
     NRECORDS_EXPECTED = 117
+    DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fasta --emit-tool-contract"
+    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fasta --resolved-tool-contract"
     SRC_FILE = pbtestdata.get_file("subreads-xml")
 
     @classmethod
@@ -186,6 +189,8 @@ class TestBam2Fasta(_BaseTestBam2Fasta):
 @skip_unless_bam2fastx
 class TestBam2FastaFiltered(_BaseTestBam2Fasta):
     NRECORDS_EXPECTED = 13
+    DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fasta --emit-tool-contract"
+    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fasta --resolved-tool-contract"
     SRC_FILE = pbtestdata.get_file("subreads-xml")
 
     @classmethod
@@ -197,34 +202,65 @@ class TestBam2FastaFiltered(_BaseTestBam2Fasta):
 
 
 @skip_unless_bam2fastx
-class TestBam2FastaIgnoreBarcodes(TestBam2Fasta):
+class TestBam2FastaIgnoreBarcodes(_BaseTestBam2Fasta):
     """
     Make sure the base bam2fasta task always outputs a single FASTA file
     even when barcoding is present.
     """
+    DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fasta --emit-tool-contract"
+    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fasta --resolved-tool-contract"
     SRC_FILE = pbtestdata.get_file("barcoded-subreadset")
     NRECORDS_EXPECTED = 2
 
+    @classmethod
+    def setUpClass(cls):
+        ds = SubreadSet(cls.SRC_FILE, strict=True)
+        ds.write(cls.INPUT_FILES[0])
+        super(TestBam2FastaIgnoreBarcodes, cls).setUpClass()
+
 
 @skip_unless_bam2fastx
-class TestBam2Fastq(TestBam2Fasta):
+class TestBam2Fastq(_BaseTestBam2Fasta):
     TASK_ID = "pbcoretools.tasks.bam2fastq"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     READER_CLASS = FastqReader
+    NRECORDS_EXPECTED = 117
+    SRC_FILE = pbtestdata.get_file("subreads-xml")
+
+    @classmethod
+    def setUpClass(cls):
+        ds = SubreadSet(cls.SRC_FILE, strict=True)
+        ds.write(cls.INPUT_FILES[0])
+        super(TestBam2Fastq, cls).setUpClass()
 
 
 @skip_unless_bam2fastx
-class TestBam2FastqFiltered(TestBam2FastaFiltered):
+class TestBam2FastqFiltered(_BaseTestBam2Fasta):
     TASK_ID = "pbcoretools.tasks.bam2fastq"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     READER_CLASS = FastqReader
     NRECORDS_EXPECTED = 13
 
+    @classmethod
+    def setUpClass(cls):
+        ds = SubreadSet(cls.SRC_FILE, strict=True)
+        ds.filters.addRequirement(length=[('>=', 1000)])
+        ds.write(cls.INPUT_FILES[0])
+        super(TestBam2FastqFiltered, cls).setUpClass()
+
 
 @skip_unless_bam2fastx
-class TestBam2FastaArchive(TestBam2Fasta):
+class TestBam2FastaArchive(_BaseTestBam2Fasta):
     TASK_ID = "pbcoretools.tasks.bam2fasta_archive"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    NRECORDS_EXPECTED = 117
+    SRC_FILE = pbtestdata.get_file("subreads-xml")
+
+    @classmethod
+    def setUpClass(cls):
+        ds = SubreadSet(cls.SRC_FILE, strict=True)
+        ds.write(cls.INPUT_FILES[0])
+        super(TestBam2FastaArchive, cls).setUpClass()
 
     def _get_output_file(self, rtc):
         return gzip.open(rtc.task.output_files[0])
