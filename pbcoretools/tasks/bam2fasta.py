@@ -33,7 +33,7 @@ def get_parser():
                           "Input SubreadSet XML")
     p.add_output_file_type(FileTypes.FASTA,
                            "fasta_out",
-                           "FASTA",
+                           "FASTA subreads",
                            description="Exported FASTA",
                            default_name="subreads")
     return p
