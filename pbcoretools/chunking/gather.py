@@ -21,7 +21,7 @@ from pbcore.io import (SubreadSet, ContigSet, AlignmentSet, ConsensusReadSet,
                        ConsensusAlignmentSet)
 from pbcore.io.FastaIO import FastaReader, FastaWriter
 from pbcore.io.FastqIO import FastqReader, FastqWriter
-from pbcore.io.GffIO import merge_gffs
+from pbcore.io.GffIO import merge_gffs_sorted
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ def __gather_fastx(fastx_reader, fastx_writer, fastx_files, output_file):
 
 gather_fasta = P(__gather_fastx, FastaReader, FastaWriter)
 gather_fastq = P(__gather_fastx, FastqReader, FastqWriter)
-gather_gff = merge_gffs
+gather_gff = merge_gffs_sorted
 
 
 def _read_header(csv_file):
