@@ -21,7 +21,7 @@ def get_parser():
                             "Dev SubreadSet Gather",
                             "General Chunk SubreadSet Gather",
                             Constants.DRIVER,
-                            is_distributed=False)
+                            is_distributed=True)
 
     p.add_input_file_type(FileTypes.CHUNK, "cjson_in", "GCHUNK Json",
                           "Gathered CHUNK Json with SubreadSet chunk key")

@@ -34,7 +34,7 @@ def get_contract_parser_impl(C):
     p = get_scatter_pbparser(C.TOOL_ID, "0.1.3",
         "%sSet barcode scatter" % C.READ_TYPE,
         "Scatter %s DataSet by barcodess" % C.READ_TYPE, C.DRIVER_EXE,
-        C.CHUNK_KEYS, is_distributed=False)
+        C.CHUNK_KEYS, is_distributed=True)
 
     p.add_input_file_type(C.DATASET_TYPE,
                           "dataset",
