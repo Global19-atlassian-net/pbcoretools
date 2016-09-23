@@ -25,7 +25,7 @@ def get_contract_parser():
                              "Scatter Hdf5 Subread DataSet",
                              Constants.DRIVER,
                              Constants.CHUNK_KEYS,
-                             is_distributed=False,
+                             is_distributed=True,
                              nchunks=SymbolTypes.MAX_NCHUNKS)
 
     p.add_input_file_type(FileTypes.DS_SUBREADS_H5, "h5_subreads", "HdfSubreadSet",
