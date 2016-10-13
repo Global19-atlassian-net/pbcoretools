@@ -323,12 +323,12 @@ run_bam_to_fastq = functools.partial(_run_bam_to_fastx, "bam2fastq",
 
 
 subreads_from_h5_file_type = OutputFileType(FileTypes.DS_SUBREADS.file_type_id,
-                                            "SubreadSet", "SubreadSet",
+                                            "Subreads", "Subread data in XML dataset",
                                             "Imported SubreadSet", "subreads")
 subreads_barcoded_file_type = OutputFileType(FileTypes.DS_SUBREADS.file_type_id,
                                              "SubreadSet",
-                                             "Barcoded SubreadSet",
-                                             "Barcoded SubreadSet",
+                                             "Barcoded Subreads",
+                                             "Barcoded Subreads DataSet XML",
                                              "subreads_barcoded")
 
 @registry("h5_subreads_to_subread", "0.1.0",
@@ -353,17 +353,17 @@ def run_bam2bam(rtc):
         score_mode=rtc.task.options["pbcoretools.task_options.score_mode"])
 
 
-fasta_file_type = OutputFileType(FileTypes.FASTA.file_type_id, "FASTA file", "FASTA file",
+fasta_file_type = OutputFileType(FileTypes.FASTA.file_type_id, "fasta", "FASTA file",
                                  "Reads in FASTA format", "reads")
-fastq_file_type = OutputFileType(FileTypes.FASTQ.file_type_id, "FASTQ file", "FASTQ file",
+fastq_file_type = OutputFileType(FileTypes.FASTQ.file_type_id, "fastq", "FASTQ file",
                                  "Reads in FASTQ format", "reads")
-fasta_gzip_file_type = OutputFileType(FileTypes.GZIP.file_type_id, "GZIPed FASTA file(s)",
-                                      "GZIPed FASTA file(s)",
-                                      "Reads in compressed FASTA format",
+fasta_gzip_file_type = OutputFileType(FileTypes.GZIP.file_type_id, "fasta_gz",
+                                      "FASTA file(s)",
+                                      "Seqeunce data converted to FASTA Format",
                                       "reads.fasta") # yuck - could be .tar !
-fastq_gzip_file_type = OutputFileType(FileTypes.GZIP.file_type_id, "GZIPed FASTQ file(s)",
-                                      "GZIPed FASTQ file(s)",
-                                      "Reads in compressed FASTQ format",
+fastq_gzip_file_type = OutputFileType(FileTypes.GZIP.file_type_id, "fastq",
+                                      "FASTQ file(s)",
+                                      "Sequence data converted to FASTQ format",
                                       "reads.fastq")
 
 @registry("bam2fastq", "0.1.0",
@@ -447,9 +447,18 @@ def _run_fasta_to_gmap_reference(rtc):
         ploidy=rtc.task.options["pbcoretools.task_options.ploidy"])
 
 
+fasta_ccs_file_type = OutputFileType(FileTypes.GZIP.file_type_id, "fasta_gz",
+                                     "Consensus Sequences",
+                                     "Consensus sequences generated from CCS2",
+                                     "ccs.fasta")
+fastq_ccs_file_type = OutputFileType(FileTypes.GZIP.file_type_id, "fastq_gz",
+                                     "Consensus Sequences",
+                                     "Consensus sequences generated from CCS2",
+                                     "ccs.fastq")
+
 @registry("bam2fastq_ccs", "0.1.0",
           FileTypes.DS_CCS,
-          fastq_gzip_file_type, is_distributed=True, nproc=1)
+          fastq_ccs_file_type, is_distributed=True, nproc=1)
 def run_bam2fastq_ccs(rtc):
     """
     Duplicate of run_bam2fastq, but with ConsensusReadSet as input.
@@ -459,7 +468,7 @@ def run_bam2fastq_ccs(rtc):
 
 @registry("bam2fasta_ccs", "0.1.0",
           FileTypes.DS_CCS,
-          fasta_gzip_file_type, is_distributed=True, nproc=1)
+          fasta_ccs_file_type, is_distributed=True, nproc=1)
 def run_bam2fasta_ccs(rtc):
     """
     Duplicate of run_bam2fasta, but with ConsensusReadSet as input.
@@ -469,13 +478,13 @@ def run_bam2fasta_ccs(rtc):
 
 consensus_gz_ftype = OutputFileType(FileTypes.GZIP.file_type_id,
                                     "fastq_split_gz",
-                                    "Consensus FASTQ archive",
-                                    "Tar-gzipped FASTQ files split by barcode",
+                                    "Consensus Amplicons",
+                                    "Consensus amplicons in FASTQ format, split by barcode",
                                     "consensus_fastq")
 chimera_gz_ftype = OutputFileType(FileTypes.GZIP.file_type_id,
                                   "fastq_split_gz",
-                                  "Chimera/noise FASTQ archive",
-                                  "Tar-gzipped FASTQ files split by barcode",
+                                  "Chimeric/Noise Sequences by barcode",
+                                  "Chimeric and noise sequences in FASTQ format, split by barcode",
                                   "chimera_fastq")
 
 @registry("split_laa_fastq", "0.1.0",
