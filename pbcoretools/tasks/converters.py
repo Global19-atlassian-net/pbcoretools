@@ -398,7 +398,7 @@ def run_fasta2fofn(rtc):
 
 
 ref_file_type = OutputFileType(FileTypes.DS_REF.file_type_id, "ReferenceSet",
-                               "ReferenceSet XML",
+                               "Reference Dataset",
                                "PacBio Reference DataSet XML", "reference")
 
 @registry("fasta2referenceset", "0.1.0",
@@ -448,11 +448,11 @@ def _run_fasta_to_gmap_reference(rtc):
 
 
 fasta_ccs_file_type = OutputFileType(FileTypes.GZIP.file_type_id, "fasta_gz",
-                                     "Consensus Sequences",
+                                     "Consensus Sequences (FASTA)",
                                      "Consensus sequences generated from CCS2",
                                      "ccs.fasta")
 fastq_ccs_file_type = OutputFileType(FileTypes.GZIP.file_type_id, "fastq_gz",
-                                     "Consensus Sequences",
+                                     "Consensus Sequences (FASTQ)",
                                      "Consensus sequences generated from CCS2",
                                      "ccs.fastq")
 
