@@ -466,3 +466,10 @@ class TestSplitLAATask(PbTestApp):
     def setUpClass(cls):
         _make_fastq_inputs(_get_fastq_records(), cls.INPUT_FILES[0])
         _make_fastq_inputs(_get_chimera_records(), cls.INPUT_FILES[1])
+
+
+class TestContigSet2Fasta(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.contigset2fasta"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [pbtestdata.get_file("contigset")]
