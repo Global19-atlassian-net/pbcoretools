@@ -499,5 +499,19 @@ def _run_split_laa_fastq(rtc):
                                         rtc.task.output_files[1]))
 
 
+@registry("contigset2fasta", "0.1.0",
+          FileTypes.DS_CONTIG,
+          FileTypes.FASTA,
+          is_distributed=True, nproc=1)
+def contigset_to_fasta(rtc):
+    with ContigSet(rtc.task.input_files[0]) as ds_in:
+        if len(ds_in.externalResources) != 1:
+            raise ValueError("This task assumes that the ContigSet contains "+
+                             "only a single FASTA file.")
+        file_name = ds_in.externalResources[0].resourceId
+        os.symlink(file_name, rtc.task.output_files[0])
+    return 0
+
+
 if __name__ == '__main__':
     sys.exit(registry_runner(registry, sys.argv[1:]))
