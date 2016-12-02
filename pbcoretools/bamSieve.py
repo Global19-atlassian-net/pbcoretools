@@ -255,17 +255,29 @@ def filter_reads(input_bam,
     return 0
 
 
+def _iter_bam_files(input_file):
+    if input_file.endswith(".xml"):
+        with openDataFile(input_file) as ds_in:
+            if not ds_in.isIndexed:
+                log.warning("Unindexed file(s), this may be very slow")
+            for rr in ds_in.resourceReaders():
+                yield rr
+    else:
+        if op.exists(input_file + ".pbi"):
+            with IndexedBamReader(input_file) as bam_in:
+                yield bam_in
+        else:
+            with BamReader(input_file) as bam_in:
+                yield bam_in
+
+
 def show_zmws(input_file):
     zmws = []
-    with openDataFile(input_file) as ds_in:
-        is_indexed = ds_in.isIndexed
-        if not is_indexed:
-            log.warning("Unindexed file(s), this may be very slow")
-        for rr in ds_in.resourceReaders():
-            if is_indexed:
-                zmws.extend(list([int(x) for x in rr.holeNumber]))
-            else:
-                zmws.extend([int(rec.HoleNumber) for rec in rr])
+    for rr in _iter_bam_files(input_file):
+        if isinstance(rr, IndexedBamReader):
+            zmws.extend(list([int(x) for x in rr.holeNumber]))
+        else:
+            zmws.extend([int(rec.HoleNumber) for rec in rr])
     print "\n".join([str(x) for x in sorted(list(set(zmws)))])
 
 
