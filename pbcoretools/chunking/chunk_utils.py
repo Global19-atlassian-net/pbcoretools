@@ -41,7 +41,7 @@ def _to_grouped_items_by_max_total_chunks(items, max_total_chunks):
     """Group items by the max total number of chunks to be created"""
     nitems = len(items)
 
-    max_total_chunks = min(nitems, max_total_chunks)
+    max_total_chunks = max(1, min(nitems, max_total_chunks))
 
     grouped_items = []
 
@@ -92,7 +92,7 @@ def write_chunked_csv(chunk_key, csv_path, max_total_nchunks, dir_name, base_nam
         field_names = reader.fieldnames
         nrecords = __get_nrecords_from_reader(reader)
 
-    max_total_nchunks = min(nrecords, max_total_nchunks)
+    max_total_nchunks = max(1, min(nrecords, max_total_nchunks))
 
     n = int(math.ceil(float(nrecords)) / max_total_nchunks)
 
@@ -176,12 +176,11 @@ def __to_chunked_fastx_files(write_records_func, pbcore_reader_class, pbcore_wri
 
 
     """
-
     # grab the number of records so we can chunk it
     with pbcore_reader_class(input_file) as f:
         nrecords = __get_nrecords_from_reader(f)
 
-    max_total_nchunks = min(nrecords, max_total_nchunks)
+    max_total_nchunks = max(1, min(nrecords, max_total_nchunks))
 
     n_per_chunk = int(math.ceil(float(nrecords) / max_total_nchunks))
 
@@ -199,7 +198,7 @@ def __to_chunked_fastx_files(write_records_func, pbcore_reader_class, pbcore_wri
 
             if i != max_total_nchunks:
                 n_left = nrecords - (n_per_chunk * i)
-                if n_left <= 0:
+                if n_left < 0 or (n_left == 0 and nchunks != 1):
                     break
                 for _ in xrange(min(n_per_chunk, n_left)):
                     records.append(it.next())
