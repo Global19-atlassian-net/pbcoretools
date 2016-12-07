@@ -58,10 +58,10 @@ def _anonymize_sequence(rec):
     return rec
 
 
-def _create_whitelist(ds_in, percentage=None, count=None):
+def _create_whitelist(bam_readers, percentage=None, count=None):
     zmws = set()
     movies = set()
-    for i_file, bam in enumerate(ds_in.resourceReaders()):
+    for i_file, bam in enumerate(bam_readers):
         movies.update(set([rg["MovieName"] for rg in bam.readGroupTable]))
         zmws.update(set(bam.pbi.holeNumber))
     if len(movies) > 1:
@@ -120,7 +120,8 @@ def filter_reads(input_bam,
                  ignore_metadata=False,
                  relative=None,
                  anonymize=False,
-                 use_barcodes=False):
+                 use_barcodes=False,
+                 sample_scraps=False):
     if output_bam is None:
         log.error("Must specify output file")
         return 1
@@ -181,7 +182,13 @@ def filter_reads(input_bam,
                 barcode_set = barcode_set
         f1 = ds_in.resourceReaders()[0]
         if percentage is not None or count is not None:
-            whitelist = _create_whitelist(ds_in, percentage, count)
+            bam_readers = list(ds_in.resourceReaders())
+            if sample_scraps:
+                for ext_res in ds_in.externalResources:
+                    if ext_res.scraps is not None:
+                        scraps_in = IndexedBamReader(ext_res.scraps)
+                        bam_readers.append(scraps_in)
+            whitelist = _create_whitelist(bam_readers, percentage, count)
         # convert these to Python sets
         _whitelist = _process_zmw_list(whitelist)
         _blacklist = _process_zmw_list(blacklist)
@@ -298,7 +305,8 @@ def run(args):
         ignore_metadata=args.ignore_metadata,
         relative=args.relative,
         anonymize=args.anonymize,
-        use_barcodes=args.barcodes)
+        use_barcodes=args.barcodes,
+        sample_scraps=args.sample_scraps)
 
 
 def get_parser():
@@ -336,6 +344,11 @@ def get_parser():
     p.add_argument("--barcodes", action="store_true",
                    help="Indicates that the whitelist or blacklist contains "+
                         "barcode indices instead of ZMW numbers")
+    p.add_argument("--sample-scraps", action="store_true",
+                   help="If enabled, --percentage and --count will include "+
+                        "hole numbers from scraps BAM files when picking a "+
+                        "random sample (default is to sample only ZMWs "+
+                        "present in subreads BAM).")
     return p
 
 
