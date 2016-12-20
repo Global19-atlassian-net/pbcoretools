@@ -12,7 +12,6 @@ from unittest.case import SkipTest
 
 from pbcore.io import PacBioBamIndex, IndexedBamReader
 from pbcore.io import openIndexedAlignmentFile
-from pbcore.io.dataset.utils import BamtoolsVersion
 from pbcore.io import (DataSet, SubreadSet, ReferenceSet, AlignmentSet,
                        openDataSet, DataSetMetaTypes, HdfSubreadSet,
                        ConsensusReadSet, ConsensusAlignmentSet)
@@ -36,10 +35,6 @@ def _check_constools():
     cmd = "dataset"
     o, r, m = backticks(cmd)
     if r != 2:
-        return False
-
-    if not BamtoolsVersion().good:
-        log.warn("Bamtools not found or out of date")
         return False
 
     cmd = "pbindex"

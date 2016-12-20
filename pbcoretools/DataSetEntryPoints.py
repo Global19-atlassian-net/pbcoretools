@@ -63,8 +63,7 @@ def createXml(args):
     if args.metadata:
         dset.loadMetadata(args.metadata)
     log.debug("Dataset created")
-    dset.write(args.outfile, validate=args.novalidate, modPaths=True,
-               relPaths=args.relative)
+    dset.write(args.outfile, validate=args.novalidate, relPaths=args.relative)
     log.debug("Dataset written")
     return 0
 
@@ -307,7 +306,7 @@ def copyTo_options(parser):
 def newUuidXml(args):
     dss = openDataSet(args.infile, strict=args.strict)
     dss.newUuid(random=args.random)
-    dss.write(args.infile)
+    dss.write(args.infile, validate=False)
     return 0
 
 def newUniqueId_options(parser):
