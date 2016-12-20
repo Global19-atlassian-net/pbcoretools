@@ -7,8 +7,7 @@ import os
 import itertools
 
 from pbcore.util.Process import backticks
-from pbcore.io.dataset.utils import (consolidateBams, _infixFname,
-                                    BamtoolsVersion)
+from pbcore.io.dataset.utils import _infixFname
 from pbcore.io import (DataSet, SubreadSet, ConsensusReadSet,
                        ReferenceSet, ContigSet, AlignmentSet,
                        FastaReader, FastaWriter, IndexedFastaReader,
@@ -21,13 +20,14 @@ import xml.etree.ElementTree as ET
 log = logging.getLogger(__name__)
 
 def _check_constools():
-    cmd = "dataset"
+    cmd = "pbmerge"
     o, r, m = backticks(cmd)
     if r != 2:
         return False
 
-    if not BamtoolsVersion().good:
-        log.warn("Bamtools not found or out of date")
+    cmd = "dataset"
+    o, r, m = backticks(cmd)
+    if r != 2:
         return False
 
     cmd = "pbindex"
@@ -51,20 +51,8 @@ class TestDataSet(unittest.TestCase):
     associated module functions"""
 
     @unittest.skipIf(not _check_constools(),
-                     "bamtools or pbindex not found, skipping")
+                     "pbmerge or pbindex not found, skipping")
     def test_alignmentset_consolidate(self):
-        log.debug("Test methods directly")
-        aln = AlignmentSet(data.getXml(12))
-        self.assertEqual(len(aln.toExternalFiles()), 2)
-        outdir = tempfile.mkdtemp(suffix="dataset-unittest")
-        outfn = os.path.join(outdir, 'merged.bam')
-        consolidateBams(aln.toExternalFiles(), outfn, filterDset=aln)
-        self.assertTrue(os.path.exists(outfn))
-        consAln = AlignmentSet(outfn)
-        self.assertEqual(len(consAln.toExternalFiles()), 1)
-        for read1, read2 in zip(sorted(list(aln)), sorted(list(consAln))):
-            self.assertEqual(read1, read2)
-        self.assertEqual(len(aln), len(consAln))
 
         log.debug("Test through API")
         aln = AlignmentSet(data.getXml(12))
@@ -156,7 +144,7 @@ class TestDataSet(unittest.TestCase):
         self.assertEqual(r, 0)
 
     @unittest.skipIf(not _check_constools() or not _internal_data(),
-                     "bamtools, pbindex or data not found, skipping")
+                     "pbmerge, pbindex or data not found, skipping")
     def test_alignmentset_partial_consolidate(self):
         testFile = ("/pbi/dept/secondary/siv/testdata/SA3-DS/"
                     "lambda/2372215/0007_tiny/Alignment_"
