@@ -1,5 +1,6 @@
 cython
 numpy
+pysam
 h5py
 jinja2
 networkx
@@ -8,6 +9,3 @@ xmlbuilder
 functools32
 pyxb==1.2.4
 pyBigWig
-# Install from github
--e git://github.com/PacificBiosciences/pbcore.git@master#egg=pbcore
--e git://github.com/PacificBiosciences/pbcommand.git#egg=pbcommand
