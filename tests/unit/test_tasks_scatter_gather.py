@@ -213,6 +213,34 @@ class TestScatterAlignmentsReference(pbcommand.testkit.core.PbTestScatterApp):
         ])
 
 
+class TestScatterAlignmentsReferenceByZMW(pbcommand.testkit.core.PbTestScatterApp):
+    READER_CLASS = AlignmentSet
+    READER_KWARGS = {}    
+    DRIVER_BASE = "python -m pbcoretools.tasks.scatter_alignments_reference_arrow"
+    INPUT_FILES = [pbtestdata.get_file("aligned-xml"),
+                   pbtestdata.get_file("lambdaNEB")]
+    MAX_NCHUNKS = 2
+    RESOLVED_MAX_NCHUNKS = 2
+    CHUNK_KEYS = ("$chunk.alignmentset_id", "$chunk.reference_id")
+
+    def run_after(self, rtc, output_dir):
+        json_file = rtc.task.output_files[0]
+        chunks = load_pipeline_chunks_from_json(json_file)
+        windows = []
+        for chunk in chunks:
+            d = chunk.chunk_d
+            chunked = d[self.CHUNK_KEYS[0]]
+            with self.READER_CLASS(chunked, **self.READER_KWARGS) as ds:
+                windows.append(ds.zmwRanges)
+        # This just verifies the chunking, nothing sacred about the particular intervals checked
+        # Note: that there are +1/-1 adjustments to the ranges displayed that make the min/max ZMW
+        # ranges slightly different than that seen in the alignmentset XML file.
+        self.assertEqual(windows, [
+            [('m140905_042212_sidney_c100564852550000001823085912221377_s1_X0', 1650, 32328)],
+            [('m140905_042212_sidney_c100564852550000001823085912221377_s1_X0', 32560, 54396)]                                    
+        ])
+
+
 class TestScatterAlignmentsReferenceBasemods(TestScatterAlignmentsReference):
     DRIVER_BASE = "python -m pbcoretools.tasks.scatter_alignments_reference_basemods"
 
