@@ -253,24 +253,25 @@ def write_contigset_chunks_to_file(chunk_file, dataset_path, max_total_chunks, d
 
 def write_alignmentset_chunks_to_file(chunk_file, alignmentset_path,
                                       reference_path, max_total_chunks,
-                                      dir_name, chunk_base_name, chunk_ext):
+                                      dir_name, chunk_base_name, chunk_ext, by_zmw = False):
     chunks = list(to_chunked_alignmentset_files(alignmentset_path,
                                                 reference_path,
                                                 max_total_chunks,
                                                 Constants.CHUNK_KEY_ALNSET,
                                                 dir_name, chunk_base_name,
-                                                chunk_ext))
+                                                chunk_ext, by_zmw = by_zmw))
     write_chunks_to_json(chunks, chunk_file)
     return 0
 
-
 def to_chunked_alignmentset_files(alignmentset_path, reference_path,
                                   max_total_nchunks, chunk_key, dir_name,
-                                  base_name, ext):
+                                  base_name, ext, by_zmw):
     dset = AlignmentSet(alignmentset_path, strict=True)
-    dset_chunks = dset.split(contigs=True, maxChunks=max_total_nchunks,
-                             breakContigs=True)
-
+    if by_zmw:
+        dset_chunks = dset.split(zmws=True, maxChunks=max_total_nchunks)
+    else:
+        dset_chunks = dset.split(contigs=True, maxChunks=max_total_nchunks,
+                                         breakContigs=True)
     # sanity checking
     reference_set = ReferenceSet(reference_path, strict=True)
     d = {}
