@@ -1,6 +1,7 @@
 
 from collections import defaultdict, namedtuple
 from functools import partial as P
+import itertools
 import argparse
 import logging
 import shutil
@@ -258,40 +259,66 @@ gather_ccs_alignmentset = P(__gather_readset, ConsensusAlignmentSet)
 def gather_bigwig(input_files, output_file):
     import pyBigWig
     chr_lengths = {}
-    FileInfo = namedtuple("FileInfo", ("file_name", "seqid", "length"))
+    FileInfo = namedtuple("FileInfo", ("file_name", "file_id", "seqids"))
     files_info = []
-    for file_name in input_files:
+    for i, file_name in enumerate(input_files):
         log.info("Reading header info from {f}...".format(f=file_name))
         if op.getsize(file_name) == 0:
             continue
+        try:
+            file_id = int(op.dirname(file_name).split("-")[-1])
+        except ValueError:
+            file_id = i
         bw_chunk = pyBigWig.open(file_name)
+        seqids = []
         for (seqid, length) in bw_chunk.chroms().iteritems():
             chr_lengths.setdefault(seqid, 0)
             chr_lengths[seqid] = max(length, chr_lengths[seqid])
-        seqid_min = sorted(bw_chunk.chroms().keys())[0]
-        files_info.append(FileInfo(file_name, seqid, bw_chunk.chroms()[seqid]))
+            seqids.append(seqid)
+        files_info.append(FileInfo(file_name, file_id, seqids))
         bw_chunk.close()
     if len(files_info) == 0:
         with open(output_file, "wb") as f:
             return output_file
-    files_info.sort(lambda a,b: cmp((a.seqid, a.length), (b.seqid, b.length)))
     bw = pyBigWig.open(output_file, "w")
-    regions = [ (s, chr_lengths[s]) for s in sorted(chr_lengths.keys())]
+    files_info.sort(lambda a,b: cmp(a.file_id, b.file_id))
+    have_seq = set([])
+    regions = []
+    seqid_files = defaultdict(list)
+    for f in files_info:
+        for seqid in f.seqids:
+            log.debug("{f} ({i}): {s} {l}".format(f=f.file_name, i=f.file_id, s=seqid, l=chr_lengths[seqid]))
+            if not seqid in have_seq:
+                regions.append((seqid, chr_lengths[seqid]))
+                have_seq.add(seqid)
+            seqid_files[seqid].append(f)
     bw.addHeader(regions)
-    for file_info in files_info:
-        log.info("Reading values from {f}...".format(f=file_info.file_name))
-        bw_chunk = pyBigWig.open(file_info.file_name)
-        for seqid in sorted(bw_chunk.chroms().keys()):
-            seqids, starts, ends, values = [], [], [], []
+    seq_chunk = namedtuple("SeqChunk", ("starts", "ends", "values"))
+    for (seqid, length) in regions:
+        log.info("Collecting values for {i}...".format(i=seqid))
+        chunks = []
+        k = 0
+        for file_info in seqid_files[seqid]:
+            log.info("Reading values from {f}".format(f=file_info.file_name))
+            bw_chunk = pyBigWig.open(file_info.file_name)
+            starts, ends, values = [], [], []
             chr_max = bw_chunk.chroms()[seqid]
             for i, val in enumerate(bw_chunk.values(seqid, 0, chr_max)):
                 if not math.isnan(val):
-                    seqids.append(seqid)
                     starts.append(i)
                     ends.append(i+1)
                     values.append(val)
-            bw.addEntries(seqids, starts, ends=ends, values=values)
-        bw_chunk.close()
+                    k += 1
+            chunks.append(seq_chunk(starts, ends, values))
+            bw_chunk.close()
+        chunks.sort(lambda a,b: cmp(a.starts[0], b.starts[0]))
+        starts = list(itertools.chain(*[x.starts for x in chunks]))
+        ends = list(itertools.chain(*[x.ends for x in chunks]))
+        values = list(itertools.chain(*[x.values for x in chunks]))
+        seqids = [seqid] * len(starts)
+        print starts, ends, values
+        log.info("Adding {i}:{s}-{e}".format(i=seqid, s=starts[0], e=ends[-1]))
+        bw.addEntries(seqids, starts, ends=ends, values=values)
     bw.close()
     return output_file
 
