@@ -1,5 +1,5 @@
 
-from collections import defaultdict, namedtuple
+from collections import defaultdict, namedtuple, OrderedDict
 from functools import partial as P
 import itertools
 import argparse
@@ -282,19 +282,16 @@ def gather_bigwig(input_files, output_file):
             return output_file
     bw = pyBigWig.open(output_file, "w")
     files_info.sort(lambda a,b: cmp(a.file_id, b.file_id))
-    have_seq = set([])
-    regions = []
+    regions = OrderedDict()
     seqid_files = defaultdict(list)
     for f in files_info:
         for seqid in f.seqids:
             log.debug("{f} ({i}): {s} {l}".format(f=f.file_name, i=f.file_id, s=seqid, l=chr_lengths[seqid]))
-            if not seqid in have_seq:
-                regions.append((seqid, chr_lengths[seqid]))
-                have_seq.add(seqid)
+            regions[seqid] = chr_lengths[seqid]
             seqid_files[seqid].append(f)
-    bw.addHeader(regions)
+    bw.addHeader([(k,v) for k,v in regions.iteritems()])
     seq_chunk = namedtuple("SeqChunk", ("starts", "ends", "values"))
-    for (seqid, length) in regions:
+    for (seqid, length) in regions.iteritems():
         log.info("Collecting values for {i}...".format(i=seqid))
         chunks = []
         k = 0
