@@ -21,7 +21,7 @@ from pbcommand.common_options import (add_log_quiet_option,
 from pbcommand.cli import (pacbio_args_runner,
     get_default_argparser_with_base_opts)
 from pbcommand.utils import setup_log
-from pbcore.io import openDataFile, openDataSet, IndexedBamReader, ReadSet
+from pbcore.io import openDataFile, openDataSet, BamReader, IndexedBamReader, ReadSet
 
 VERSION = "0.1.1"
 
@@ -263,19 +263,23 @@ def filter_reads(input_bam,
 
 
 def _iter_bam_files(input_file):
+    def __read_bam(fn):
+        if op.exists(fn + ".pbi"):
+            with IndexedBamReader(fn) as bam_in:
+               return bam_in
+        else:
+            with BamReader(fn) as bam_in:
+                return bam_in
     if input_file.endswith(".xml"):
         with openDataFile(input_file) as ds_in:
             if not ds_in.isIndexed:
                 log.warning("Unindexed file(s), this may be very slow")
-            for rr in ds_in.resourceReaders():
-                yield rr
+            for er in ds_in.externalResources:
+                for bam in [er.bam, er.scraps]:
+                    if bam is not None:
+                        yield __read_bam(bam)
     else:
-        if op.exists(input_file + ".pbi"):
-            with IndexedBamReader(input_file) as bam_in:
-                yield bam_in
-        else:
-            with BamReader(input_file) as bam_in:
-                yield bam_in
+        yield __read_bam(input_file)
 
 
 def show_zmws(input_file):
