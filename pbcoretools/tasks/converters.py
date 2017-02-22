@@ -550,7 +550,7 @@ def _run_slimbam(ext_res, nproc=1, exe="slimbam"):
                 log.info("Updated path: {o}".format(o=local_file))
     for er in ext_res.externalResources:
         if er.resourceId.endswith(".bam"):
-            _run_slimbam(er)
+            _run_slimbam(er, nproc=nproc, exe=exe)
     return ext_res
 
 
