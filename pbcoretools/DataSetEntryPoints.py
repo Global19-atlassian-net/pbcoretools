@@ -138,7 +138,10 @@ def filter_options(parser):
     pbiFilterOptions = set(Filters()._pbiMappedVecAccMap().keys())
     bamFilterOptions = set(Filters()._bamAccMap.keys())
     parser.description = ('Add filters to an XML file. Suggested fields: '
-                          '{f}. More expensive fields: {b}'.format(
+                          '{f}. More expensive fields: {b}.\nMultiple filters '
+                          'of different names will be ANDed together, '
+                          'multiple filters of the same name will be ORed '
+                          'together, duplicating existing requirements'.format(
         f=sorted(list(pbiFilterOptions)),
         b=sorted(list(bamFilterOptions - pbiFilterOptions))))
     #parser.add_argument("infile", type=validate_file,
