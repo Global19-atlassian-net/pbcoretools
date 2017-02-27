@@ -29,6 +29,7 @@ class Constants(object):
     BAM2BAM = "bam2bam"
     FASTA2REF = "fasta-to-reference"
     FASTA2GMAP = "fasta-to-gmap-reference"
+    SLIMBAM = "slimbam"
 
 
 SIV_DATA_DIR = "/pbi/dept/secondary/siv/testdata"
@@ -43,6 +44,7 @@ HAVE_BAM2BAM = which(Constants.BAM2BAM) is not None
 HAVE_BAM2FASTX = which(Constants.BAM2FASTA) is not None
 HAVE_FASTA2REF = which(Constants.FASTA2REF) is not None
 HAVE_FASTA2GMAP = which(Constants.FASTA2GMAP) is not None
+HAVE_SLIMBAM = which(Constants.SLIMBAM) is not None
 HAVE_DATA_DIR = op.isdir(SIV_DATA_DIR)
 HAVE_DATA_AND_BAX2BAM = HAVE_BAX2BAM and HAVE_DATA_DIR
 HAVE_DATA_AND_BAM2BAM = HAVE_BAM2BAM and HAVE_DATA_DIR
@@ -52,12 +54,14 @@ SKIP_MSG_BAM2FX = _to_skip_msg(Constants.BAM2FASTA)
 SKIP_MSG_BAM2BAM = _to_skip_msg(Constants.BAM2BAM)
 SKIP_MSG_FASTA2REF = _to_skip_msg(Constants.FASTA2REF)
 SKIP_MSG_FASTA2GMAP = _to_skip_msg(Constants.FASTA2GMAP)
+SKIP_MSG_SLIMBAM = _to_skip_msg(Constants.SLIMBAM)
 
 skip_unless_bax2bam = unittest.skipUnless(HAVE_DATA_AND_BAX2BAM, SKIP_MSG_BAX2BAM)
 skip_unless_bam2fastx = unittest.skipUnless(HAVE_BAM2FASTX, SKIP_MSG_BAM2FX)
 skip_unless_bam2bam = unittest.skipUnless(HAVE_DATA_AND_BAM2BAM, SKIP_MSG_BAM2BAM)
 skip_unless_fasta2ref = unittest.skipUnless(HAVE_FASTA2REF, SKIP_MSG_FASTA2REF)
 skip_unless_fasta2gmap = unittest.skipUnless(HAVE_FASTA2GMAP, SKIP_MSG_FASTA2GMAP)
+skip_unless_slimbam = unittest.skipUnless(HAVE_SLIMBAM, SKIP_MSG_SLIMBAM)
 
 
 def _get_bax2bam_inputs():
@@ -473,3 +477,32 @@ class TestContigSet2Fasta(PbTestApp):
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
     INPUT_FILES = [pbtestdata.get_file("contigset")]
+
+
+@skip_unless_slimbam
+class TestSlimbam(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.slimbam"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name]
+
+    @classmethod
+    def setUpClass(cls):
+        ds_start = pbtestdata.get_file("internal-subreads")
+        with SubreadSet(ds_start, strict=True) as ds_in:
+            ds_in.makePathsAbsolute()
+            ds_in.updateCounts()
+            ds_in.write(cls.INPUT_FILES[0])
+
+    def run_after(self, rtc, output_dir):
+        errors, metrics = pbvalidate.validate_dataset(rtc.task.output_files[0],
+            dataset_type="SubreadSet", validate_index=True, strict=True)
+        self.assertEqual(len(errors), 0)
+        with SubreadSet(rtc.task.input_files[0], strict=True) as ds_in:
+            with SubreadSet(rtc.task.output_files[0], strict=True) as ds_out:
+                self.assertEqual(ds_in.numRecords, ds_out.numRecords)
+                self.assertEqual(ds_in.totalLength, ds_out.totalLength)
+                bam_in = ds_in.externalResources[0].resourceId
+                bam_out = ds_out.externalResources[0].resourceId
+                factor = op.getsize(bam_in) / op.getsize(bam_out)
+                self.assertTrue(factor >= 3, "File size larger than expected")

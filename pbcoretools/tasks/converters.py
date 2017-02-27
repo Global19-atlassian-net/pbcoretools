@@ -4,6 +4,7 @@ Tool contract wrappers for miscellaneous quick functions.
 """
 
 from collections import defaultdict
+import subprocess
 import functools
 import tempfile
 import logging
@@ -510,6 +511,65 @@ def contigset_to_fasta(rtc):
                              "only a single FASTA file.")
         file_name = ds_in.externalResources[0].resourceId
         os.symlink(file_name, rtc.task.output_files[0])
+    return 0
+
+
+def _run_slimbam(ext_res, nproc=1, exe="slimbam"):
+    bam_in = ext_res.resourceId
+    base, ext = op.splitext(op.splitext(op.basename(bam_in))[0])
+    base_out = "{b}_slimmed".format(b=base)
+    bam_out = base_out + ext + ".bam"
+    args = [exe, "-o", base_out, "-j", str(nproc), bam_in]
+    log.debug("COMMAND: " + " ".join(args))
+    assert subprocess.call(args) == 0
+    assert op.isfile(bam_out)
+    ext_res.resourceId = bam_out
+    log.info("Updated path: {o}".format(o=bam_out))
+    for fi in ext_res.indices:
+        if fi.metaType == FileTypes.I_PBI.file_type_id:
+            args = ["pbindex", bam_out]
+            log.debug("COMMAND: " + " ".join(args))
+            assert subprocess.call(args) == 0
+            pbi_out = bam_out + ".pbi"
+            assert op.isfile(pbi_out)
+            fi.resourceId = pbi_out
+            log.info("Updated path: {o}".format(o=pbi_out))
+        elif fi.metaType == FileTypes.I_BAI.file_type_id:
+            args = ["samtools", "index", bam_out]
+            log.debug("COMMAND: " + " ".join(args))
+            assert subprocess.call(args) == 0
+            bai_out = bam_out + ".bai"
+            assert op.isfile(bai_out)
+            fi.resourceId = bai_out
+            log.info("Updated path: {o}".format(o=bai_out))
+        else:
+            local_file = op.basename(er.resourceId)
+            if not op.exists(local_file):
+                shutil.copyfile(ext_res.resourceId, local_file)
+                ext_res.resourceId = local_file
+                log.info("Updated path: {o}".format(o=local_file))
+    for er in ext_res.externalResources:
+        if er.resourceId.endswith(".bam"):
+            _run_slimbam(er, nproc=nproc, exe=exe)
+    return ext_res
+
+
+@registry("slimbam", "0.1.0",
+          FileTypes.DS_SUBREADS,
+          FileTypes.DS_SUBREADS,
+          is_distributed=True,
+          nproc=SymbolTypes.MAX_NPROC,
+          options={"slimbam_exe": "slimbam"})
+def run_slimbam(rtc):
+    log.warn("This task is for internal testing only; please do not use in customer-facing pipelines.")
+    os.chdir(op.dirname(rtc.task.output_files[0]))
+    with SubreadSet(rtc.task.input_files[0], strict=True) as ds:
+        for er in ds.externalResources:
+            if er.resourceId.endswith(".bam"):
+                _run_slimbam(er, nproc=rtc.task.nproc, exe=rtc.task.options['pbcoretools.task_options.slimbam_exe'])
+    ds.newUuid()
+    ds.updateCounts()
+    ds.write(rtc.task.output_files[0])
     return 0
 
 
