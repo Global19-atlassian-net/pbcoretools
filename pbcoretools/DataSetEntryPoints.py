@@ -38,7 +38,7 @@ def summarizeXml(args):
     return 0
 
 def summarize_options(parser):
-    parser.description = "Summarize a DataSet XML file"
+    parser.description = "Print basic information about a DataSet XML file"
     parser.add_argument("infile", type=str,
                         help="The xml file to summarize")
     parser.set_defaults(func=summarizeXml)
@@ -69,23 +69,22 @@ def createXml(args):
 
 
 def create_options(parser):
-    parser.description = ('Create an XML file from a fofn or bam. Possible '
-                          'types: SubreadSet, AlignmentSet, ReferenceSet, '
-                          'HdfSubreadSet, BarcodeSet, ConsensusAlignmentSet, '
-                          'ConsensusReadSet, ContigSet')
+    parser.description = 'Create an XML file from a fofn or bam.'
     parser.add_argument("outfile", type=str, help="The XML to create")
-    #parser.add_argument("infile", type=validate_file, nargs='+',
     parser.add_argument("infile", type=str, nargs='+',
                         help="The fofn or BAM file(s) to make into an XML")
-    parser.add_argument("--type", type=str, default=None,
-                        dest='dsType', help="The type of XML to create")
+    parser.add_argument("--type", type=str,
+                        dest='dsType',
+                        choices=DataSet.castableTypes(),
+                        help=("The type of XML to create (may be inferred "
+                              "if not provided). "))
     parser.add_argument("--name", type=str, default='',
                         dest='dsName', help="The name of the new DataSet")
     parser.add_argument("--generateIndices", action='store_true',
                         default=False, help="Generate index files (.pbi and .bai for BAM, .fai for FASTA).  Requires samtools/pysam and pbindex.")
     parser.add_argument("--metadata", type=str, default=None,
-                        help=("A metadata.xml file (or DataSet) to supply "
-                              "metadata"))
+                        help=("A Sequel metadata.xml file (or DataSet) to "
+                              "supply metadata"))
     parser.add_argument("--novalidate", action='store_false', default=True,
                         help=("Don't validate the resulting XML, don't touch "
                               "paths"))
@@ -245,7 +244,8 @@ def mergeXml(args):
     return 0
 
 def merge_options(parser):
-    parser.description = 'Combine XML files'
+    parser.description = ('Combine XML DataSet files without touching '
+                          'resource files (e.g. Bam, Fasta, etc.)')
     parser.add_argument("outfile", type=str,
                         help="The resulting XML file")
     #parser.add_argument("infiles", type=validate_file, nargs='+',
@@ -279,7 +279,9 @@ def absolutizeXml(args):
     return 0
 
 def absolutize_options(parser):
-    parser.description = 'Make the paths in an XML file absolute'
+    parser.description = ('Make the paths in an DataSet XML file absolute, '
+                          'optionally writing the new DataSet to a new '
+                          'location at the same time')
     parser.add_argument("infile", type=str,
                         help="The XML file to absolutize")
     parser.add_argument("--outdir", default=None, type=str,
@@ -296,7 +298,8 @@ def copyToXml(args):
     return 0
 
 def copyTo_options(parser):
-    parser.description = 'Copy a dataset and resources to a new location'
+    parser.description = ('Copy a DataSet XML and external resources to a new '
+                          'location')
     parser.add_argument("infile", type=str,
                         help="The XML file to copy")
     parser.add_argument("outdir", type=str,
@@ -333,13 +336,14 @@ def loadStatsXml(args):
     return 0
 
 def loadStatsXml_options(parser):
-    parser.description = 'Load an sts.xml file into a DataSet XML file'
+    parser.description = ("Add an sts.xml file external resource to a "
+                          "DataSet XML file")
     parser.add_argument("infile", type=str,
-                        help="The XML file to modify")
+                        help="The DataSet XML file to modify")
     parser.add_argument("statsfile", type=str,
-                        help="The .sts.xml file to load")
+                        help="The sts.xml file to load")
     parser.add_argument("--outfile", type=str, default=None,
-                        help="The XML file to output")
+                        help="The DataSet XML file to output")
     parser.set_defaults(func=loadStatsXml)
 
 def loadMetadataXml(args):
@@ -352,14 +356,15 @@ def loadMetadataXml(args):
     return 0
 
 def loadMetadataXml_options(parser):
-    parser.description = 'Load an .metadata.xml file into a DataSet XML file'
+    parser.description = ('Copy the contents of a metadata.xml file into a '
+                          'DataSet XML file')
     parser.add_argument("infile", type=str,
-                        help="The XML file to modify")
+                        help="The DataSet XML file to modify")
     parser.add_argument("metadata", type=str,
-                        help=("The .metadata.xml file to load (or DataSet "
+                        help=("The metadata.xml file to load (or DataSet XML"
                               "to borrow from)"))
     parser.add_argument("--outfile", type=str, default=None,
-                        help="The XML file to output")
+                        help="The DataSet XML file to output")
     parser.set_defaults(func=loadMetadataXml)
 
 def validateXml(args):
@@ -369,9 +374,10 @@ def validateXml(args):
     return 0
 
 def validate_options(parser):
-    parser.description = 'Validate XML and ResourceId files'
+    parser.description = ('Validate XML and ResourceId files (XML validation '
+                          'only available when PyXB is installed)')
     parser.add_argument("infile", type=str,
-                        help="The XML file to validate")
+                        help="The DataSet XML file to validate")
     parser.add_argument("--skipFiles",
                         default=False, action='store_true',
                         help="Skip validating external resources")
@@ -387,17 +393,21 @@ def consolidateXml(args):
     return 0
 
 def consolidate_options(parser):
-    parser.description = 'Consolidate the XML files'
+    parser.description = ('Combine the resource files (BAM, fasta, etc.) '
+                          'and apply the filters described in a DataSet XML '
+                          'file')
     #parser.add_argument("infile", type=validate_file,
     parser.add_argument("--numFiles", type=int, default=1,
-                        help="The number of data files to produce (1)")
+                        help="The number of data files to produce")
     parser.add_argument("--noTmp", default=False, action='store_true',
                         help="Don't copy to a tmp location to ensure local"
                              " disk use")
     parser.add_argument("infile", type=str,
-                        help="The XML file to consolidate")
+                        help="The DataSet XML file to consolidate")
     parser.add_argument("datafile", type=str,
-                        help="The resulting data file")
+                        help=("The resulting data file (name will be modified "
+                              "if more than one output data file is requested "
+                              "using numFiles)"))
     parser.add_argument("xmlfile", type=str,
-                        help="The resulting XML file")
+                        help="The resulting DataSet XML file")
     parser.set_defaults(func=consolidateXml)
