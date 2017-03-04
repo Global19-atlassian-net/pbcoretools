@@ -72,6 +72,22 @@ class TestDataSet(unittest.TestCase):
         self.assertTrue(os.path.exists(
             os.path.join(outdir, 'pbalchemysim0.chunk1.alignmentset.xml')))
 
+    @unittest.skipIf(not _check_constools(),
+                     "bamtools or pbindex not found, skipping")
+    def test_split_cli_targetsize(self):
+        outdir = tempfile.mkdtemp(suffix="dataset-unittest")
+        cmd = "dataset split --outdir {o} --zmws --targetSize 2 {d}".format(
+            o=outdir,
+            d=data.getXml(8))
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        self.assertEqual(r, 0)
+        for i in range(5):
+            self.assertTrue(os.path.exists(
+                os.path.join(
+                    outdir,
+                    'pbalchemysim0.chunk{}.alignmentset.xml'.format(i))))
+
 
     @unittest.skipIf(not _check_constools(),
                      "bamtools or pbindex not found, skipping")

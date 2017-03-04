@@ -13,38 +13,12 @@ from pbcore.io import (DataSet, SubreadSet, ConsensusReadSet,
                        FastaReader, FastaWriter, IndexedFastaReader,
                        HdfSubreadSet, ConsensusAlignmentSet,
                        openDataFile, FastaWriter)
+from utils import _check_constools, _internal_data
 import pbcore.data.datasets as data
 from pbcore.io.dataset.DataSetValidator import validateXml
 import xml.etree.ElementTree as ET
 
 log = logging.getLogger(__name__)
-
-def _check_constools():
-    cmd = "pbmerge"
-    o, r, m = backticks(cmd)
-    if r != 2:
-        return False
-
-    cmd = "dataset"
-    o, r, m = backticks(cmd)
-    if r != 2:
-        return False
-
-    cmd = "pbindex"
-    o, r, m = backticks(cmd)
-    if r != 1:
-        return False
-
-    cmd = "samtools"
-    o, r, m = backticks(cmd)
-    if r != 1:
-        return False
-    return True
-
-def _internal_data():
-    if os.path.exists("/pbi/dept/secondary/siv/testdata"):
-        return True
-    return False
 
 class TestDataSet(unittest.TestCase):
     """Unit and integrationt tests for the DataSet class and \
