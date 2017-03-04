@@ -356,8 +356,8 @@ def loadMetadataXml(args):
     return 0
 
 def loadMetadataXml_options(parser):
-    parser.description = ('Copy the contents of a metadata.xml file into a '
-                          'DataSet XML file')
+    parser.description = ('Copy the contents of a Sequel metadata.xml file '
+                          'into a DataSet XML file')
     parser.add_argument("infile", type=str,
                         help="The DataSet XML file to modify")
     parser.add_argument("metadata", type=str,
