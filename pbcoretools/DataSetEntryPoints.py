@@ -361,8 +361,8 @@ def loadMetadataXml_options(parser):
     parser.add_argument("infile", type=str,
                         help="The DataSet XML file to modify")
     parser.add_argument("metadata", type=str,
-                        help=("The metadata.xml file to load (or DataSet XML"
-                              "to borrow from)"))
+                        help=("The Sequel metadata.xml file to load (or "
+                              "DataSet XML to borrow from)"))
     parser.add_argument("--outfile", type=str, default=None,
                         help="The DataSet XML file to output")
     parser.set_defaults(func=loadMetadataXml)
