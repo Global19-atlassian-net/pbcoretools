@@ -72,9 +72,9 @@ def get_parser_tc():
         "subreads",
         name="SubreadSet",
         description="PacBio Subread DataSet XML")
-    p.tool_contract_parser.add_output_file_type(FileTypes.XML, "report",
-                           name="Report", description="Report",
-                           default_name="report")
+    p.tool_contract_parser.add_output_file_type(FileTypes.XML, "junit_report",
+                           name="JUnit Report", description="JUnit Report",
+                           default_name="tests_junit")
     get_parser(p.arg_parser.parser)
     return p
 
