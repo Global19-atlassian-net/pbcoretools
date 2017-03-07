@@ -67,7 +67,7 @@ def get_parser_tc():
     p = get_pbparser("pbcoretools.tasks.pbvalidate", "0.1.0", "pbvalidate",
                      "Run pbvalidate on SubreadSet",
                      "python -m pbcoretools.pbvalidate.main --resolved-tool-contract",
-                     is_distributed=True, nproc=1)
+                     is_distributed=True, nproc=1, default_level="WARN")
     p.tool_contract_parser.add_input_file_type(FileTypes.DS_SUBREADS,
         "subreads",
         name="SubreadSet",
