@@ -1,15 +1,26 @@
 
+import subprocess
 import unittest
 import os.path as op
 import os
 
+try:
+    import pyxb
+except ImportError:
+    pyxb = None
+
+import pbcommand.testkit
 import pbcore.data.datasets as data
 import pbcore.io
 
 from pbcoretools.pbvalidate.dataset import *
 
+import pbtestdata
+
 TESTDATA_DIR = op.join(op.dirname(op.dirname(__file__)), "data")
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+
+skip_if_no_pyxb = unittest.skipUnless(pyxb is not None, "pyxb not available")
 
 
 class TestCase (unittest.TestCase):
@@ -91,6 +102,7 @@ class TestCase (unittest.TestCase):
         file_name = os.path.join(TESTDATA_DIR, "tst_1c.subreadset.xml")
         self.assertFalse(ValidateEncoding().validate(file_name))
 
+    @skip_if_no_pyxb
     def test_validate_xml_pyxb(self):
         file_name = os.path.join(TESTDATA_DIR, "tst_1d.subreadset.xml")
         ds = pbcore.io.SubreadSet(file_name)
@@ -98,6 +110,27 @@ class TestCase (unittest.TestCase):
         self.assertFalse(v.validate(file_name))
         e = v.to_errors(file_name)
         self.assertTrue(str(e[0]).startswith("XML schema error:"))
+
+    def test_exit_code_0(self):
+        xml = pbtestdata.get_file("subreads-sequel")
+        rc = subprocess.call(["pbvalidate", xml])
+        self.assertEqual(rc, 0)
+
+
+class TestToolContract(pbcommand.testkit.PbTestApp):
+    DRIVER_BASE = "python -m pbcoretools.pbvalidate.main"
+    INPUT_FILES = [pbtestdata.get_file("subreads-sequel")]
+    REQUIRES_PBCORE = True
+
+
+class TestToolContractFailing(pbcommand.testkit.PbTestApp):
+    DRIVER_BASE = "python -m pbcoretools.pbvalidate.main"
+    INPUT_FILES = [os.path.join(TESTDATA_DIR, "tst_2_subreads.xml")]
+    REQUIRES_PBCORE = True
+
+    def test_run_e2e(self):
+        self.assertRaises(AssertionError,
+                          super(TestToolContractFailing, self).test_run_e2e)
 
 
 if __name__ == "__main__":

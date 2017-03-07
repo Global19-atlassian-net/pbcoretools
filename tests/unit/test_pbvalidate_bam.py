@@ -303,6 +303,16 @@ class TestCase (unittest.TestCase):
         errors3 = sorted([type(err).__name__ for err in e])
         self.assertEqual(errors3, errors1)
 
+    def test_exit_code_0(self):
+        file_name = op.join(DATA_DIR, "tst_1_subreads.bam")
+        rc = subprocess.call(["pbvalidate", file_name])
+        self.assertEqual(rc, 0)
+
+    def test_exit_code_1(self):
+        file_name = op.join(DATA_DIR, "tst_s_subreads.bam")
+        rc = subprocess.call(["pbvalidate", file_name])
+        self.assertEqual(rc, 1)
+
 
 if __name__ == "__main__":
     if "--make-files" in sys.argv:

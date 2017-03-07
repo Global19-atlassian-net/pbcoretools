@@ -1,4 +1,5 @@
 
+import subprocess
 import unittest
 import os.path as op
 import os
@@ -222,6 +223,14 @@ class TestCase (unittest.TestCase):
         self.assertEqual(len(e), 1)
         self.assertEqual(str(
             e[0]), "Inconsistent line wrapping for sequence 'ecoliK12_pbi_March2013_2955000_to_2980000'")
+
+    def test_exit_code_0(self):
+        rc = subprocess.call(["pbvalidate", "test_1.fa"])
+        self.assertEqual(rc, 0)
+
+    def test_exit_code_1(self):
+        rc = subprocess.call(["pbvalidate", "test_2.fa"])
+        self.assertEqual(rc, 1)
 
 
 if __name__ == "__main__":
