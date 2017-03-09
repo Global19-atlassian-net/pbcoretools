@@ -69,7 +69,7 @@ def to_chunked_ccsaln_files(alignments_path, reference_path, ccs_path,
                             max_total_nchunks, chunk_key, dir_name,
                             base_name, ext):
     dset = ConsensusAlignmentSet(alignments_path, strict=True)
-    dset_chunks = dset.split(barcodes=True, maxChunks=max_total_nchunks)
+    dset_chunks = dset.split(barcodes=True, chunks=max_total_nchunks)
     # sanity checking
     reference_set = ReferenceSet(reference_path, strict=True)
     ccs_set = ConsensusReadSet(ccs_path, strict=True)
