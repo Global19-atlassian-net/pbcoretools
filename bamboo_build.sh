@@ -1,7 +1,11 @@
 #!/bin/bash -ex
 
+source /mnt/software/Modules/current/init/bash
+module load hdf5-tools/1.8.16
+module load python/2.7.9
+
 mkdir -p tmp/bin
-/opt/python-2.7.9/bin/python /mnt/software/v/virtualenv/13.0.1/virtualenv.py tmp/venv
+python /mnt/software/v/virtualenv/13.0.1/virtualenv.py tmp/venv
 source tmp/venv/bin/activate
 # HACK to put binaries on path
 if [ ! -z "$PB_TOOLS_BIN" ]; then
@@ -18,8 +22,7 @@ fi
 
 (cd repos/PacBioTestData && make python)
 (cd repos/pbcommand && make install)
-(cd .circleci && bash installHDF5.sh)
-export HDF5_DIR=$PWD/.circleci/prefix
+pip install --no-cache-dir h5py
 pip install -r requirements-ci.txt
 (cd repos/pbcore && make install)
 pip install -r requirements-dev.txt
