@@ -21,6 +21,7 @@ class Constants(object):
     CHUNK_KEY_SUBSET = "$chunk.subreadset_id"
     CHUNK_KEY_CCSSET = "$chunk.ccsset_id"
     CHUNK_KEY_ALNSET = "$chunk.alignmentset_id"
+    CHUNK_KEY_REF = "$chunk.reference_id"
     CHUNK_KEY_CONTIGSET = "$chunk.contigset_id"
     CHUNK_KEY_CCS_ALNSET = "$chunk.ccs_alignmentset_id"
     CHUNK_KEY_FASTA = "$chunk.fasta_id"
