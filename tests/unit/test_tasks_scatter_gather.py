@@ -29,6 +29,8 @@ from pbcore.io import SubreadSet, ContigSet, FastaReader, FastqReader, \
 
 import pbtestdata
 
+import pbcoretools.chunking.chunk_utils as CU
+
 from base import get_temp_file
 from mock import write_random_report, \
     write_random_fasta_records, write_random_fastq_records
@@ -282,6 +284,23 @@ class TestScatterSubreadsBarcoding(pbcommand.testkit.core.PbTestScatterApp):
     RESOLVED_MAX_NCHUNKS = 8
     NCHUNKS_EXPECTED = 2
     CHUNK_KEYS = ("$chunk.subreadset_id", "$chunk.barcodeset_id")
+
+
+DATA_MV = "/pbi/dept/secondary/siv/testdata/minorseq-test"
+@unittest.skipUnless(op.isdir(DATA_MV), "Missing {d}".format(d=DATA_MV))
+class TestScatterMinorVariants(pbcommand.testkit.core.PbTestScatterApp):
+    DRIVER_BASE = "python -m pbcoretools.tasks.scatter_ccs_aligned_barcodes"
+    INPUT_FILES = [
+        op.join(DATA_MV, "barcoded", "aligned.consensusalignmentset.xml"),
+        op.join(DATA_MV, "hxb2.referenceset.xml"),
+        op.join(DATA_MV, "barcoded", "mix.consensusreadset.xml")
+    ]
+    MAX_NCHUNKS = 5
+    RESOLVED_MAX_NCHUNKS = 5
+    NCHUNKS_EXPECTED = 5
+    CHUNK_KEYS = (CU.Constants.CHUNK_KEY_CCS_ALNSET,
+                  CU.Constants.CHUNK_KEY_REF,
+                  CU.Constants.CHUNK_KEY_CCSSET)
 
 
 ########################################################################
