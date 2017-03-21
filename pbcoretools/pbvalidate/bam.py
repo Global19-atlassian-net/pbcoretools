@@ -435,7 +435,6 @@ class ValidateSorting (ValidateFileName):
                         last_aln.readType != Constants.READ_TYPE_SUBREAD):
                         return [MixedReadSortingError.from_args(
                                 file_obj, aln.readType, last_aln.readType)]
-                        pass
                     elif (last_aln.qName > aln.qName and not
                           (aln.readType == Constants.READ_TYPE_CCS and
                            last_aln.readType == Constants.READ_TYPE_SUBREAD)):
@@ -840,9 +839,8 @@ class ValidateReadBaseInfo (ValidateReadBase):
         # XXX should we do this without an index?
         if getattr(aln.bam, "pbi", None) is None:
             return None
-        if not re.match(Constants.REGEX_BASECALLS, aln.DeletionTag()):
-            return False
-        elif not re.match(Constants.REGEX_BASECALLS, aln.SubstitutionTag()):
+        if ((not re.match(Constants.REGEX_BASECALLS, aln.DeletionTag())) or
+            (not re.match(Constants.REGEX_BASECALLS, aln.SubstitutionTag()))):
             return False
         return True
 
