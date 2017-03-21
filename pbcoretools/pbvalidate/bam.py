@@ -1005,17 +1005,12 @@ def get_format_specific_args(parser):
                         default=None,
                         help="Path to optional reference FASTA file, used " +
                              "for additional validation of mapped BAM records")
-    parser.add_argument("--permissive-headers",
-                        dest="permissive_headers",
-                        action="store_true",
-                        help="Don't check chemistry/basecaller versions")
     return parser
 
 
 def get_validators(aligned=None, contents=None,
                    include_file_validators=True,
-                   validate_index=False,
-                   permissive_headers=False):
+                   validate_index=False):
     validators = []
     if include_file_validators:
         validators.extend([
@@ -1031,11 +1026,10 @@ def get_validators(aligned=None, contents=None,
         ValidateReadGroupPlatform(),
         ValidateReadGroupId(),
     ])
-    if not permissive_headers:
-        validators.extend([
-            ValidateReadGroupChemistry(),
-            ValidateReadGroupBasecaller(),
-        ])
+    validators.extend([
+        ValidateReadGroupChemistry(),
+        ValidateReadGroupBasecaller(),
+    ])
     validators.extend([
         ValidateReadGroupPulseManifest(),
         ValidateReadUnique(),
@@ -1089,8 +1083,7 @@ def validate_bam(file_name,
                  quick=False,
                  max_errors=None,
                  max_records=None,
-                 validate_index=False,
-                 permissive_headers=False):
+                 validate_index=False):
     """
     Main API entry point for running BAM validation.
 
@@ -1117,8 +1110,7 @@ def validate_bam(file_name,
         120
     """
     validators = get_validators(aligned=aligned, contents=contents,
-                                validate_index=validate_index,
-                                permissive_headers=permissive_headers)
+                                validate_index=validate_index)
     e, m = run_validators(
         context_class=get_context_class(
             quick=quick,

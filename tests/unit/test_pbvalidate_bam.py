@@ -266,12 +266,6 @@ class TestCase (unittest.TestCase):
                           'ReadGroupIdMismatchError', "ReadLengthError",
                           'TagValueError',
                           'UninitializedSNRError', 'UnsortedError'])
-        e, c = bam.validate_bam(file_name, validate_index=True,
-                                permissive_headers=True)
-        errors2 = set([type(err).__name__ for err in e])
-        self.assertEqual(len(errors2), len(errors) - 2)
-        self.assertFalse("ReadGroupChemistryError" in errors2)
-        self.assertFalse("BasecallerVersionError" in errors2)
 
     def test_3_unmapped(self):
         file_name = op.join(DATA_DIR, "tst_3_subreads.bam")

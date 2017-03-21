@@ -110,8 +110,7 @@ class run_validator (object):
                 quick=args.quick,
                 max_errors=args.max_errors,
                 max_records=args.max_records,
-                validate_index=args.validate_index,
-                permissive_headers=args.permissive_headers)
+                validate_index=args.validate_index)
         elif (args.file_type in ["AlignmentSet", "ReferenceSet", "SubreadSet"] or
               ext in [".xml"]):
             self.errors, self.metrics = dataset.validate_dataset(
@@ -124,8 +123,7 @@ class run_validator (object):
                 aligned=args.aligned,
                 contents=args.contents,
                 validate_index=args.validate_index,
-                strict=args.strict,
-                permissive_headers=args.permissive_headers)
+                strict=args.strict)
         else:
             raise NotImplementedError("No validator found for '%s'." % ext)
         self.t_end = time.time()

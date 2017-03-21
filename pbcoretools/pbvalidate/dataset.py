@@ -514,8 +514,7 @@ def validate_dataset(
         contents=None,
         aligned=None,
         validate_index=False,
-        strict=False,
-        permissive_headers=False):
+        strict=False):
     assert os.path.isfile(os.path.realpath(file_name))
     ds = None
     ReaderClass = getattr(pbcore.io, str(dataset_type), pbcore.io.openDataSet)
@@ -583,8 +582,7 @@ def validate_dataset(
     elif opened_class_name in DatasetTypes.BAM_DATASET:
         validators_ = bam.get_validators(aligned=aligned,
                                          contents=contents,
-                                         include_file_validators=False,
-                                         permissive_headers=permissive_headers)
+                                         include_file_validators=False)
         validators_.insert(0, ValidateSorting())
         validators_.insert(0, ValidateContents(aligned=aligned,
                                                content_type=contents))
