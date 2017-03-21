@@ -172,13 +172,13 @@ class ValidateRootTag(ValidateXML):
 
     def _get_errors(self, path):
         first = DataSet(path, strict=False)
-        dsId = first.objMetadata.get('MetaType')
+        ds_id = first.objMetadata.get('MetaType')
         xml_rt = xmlRootType(path)
-        ds_name = _dsIdToName(dsId)
+        ds_name = _dsIdToName(ds_id)
         if ds_name != xml_rt:
             if ds_name == "SubreadSet" and xml_rt == "HdfSubreadSet":
                 return []
-            return [RootTagError.from_args(path, xml_rt, _dsIdToName(dsId))]
+            return [RootTagError.from_args(path, xml_rt, _dsIdToName(ds_id))]
         return []
 
 
@@ -195,9 +195,9 @@ class ValidateEncoding(ValidateXML):
             p = xml.parsers.expat.ParserCreate()
 
             def handle_xml_decl(version, encoding, standalone):
-                if not self._has_xml_declaration:
-                    if encoding is None or encoding.lower() != "utf-8":
-                        e.append(MissingEncodingError.from_args(path))
+                if (not self._has_xml_declaration and
+                    (encoding is None or encoding.lower() != "utf-8")):
+                    e.append(MissingEncodingError.from_args(path))
                 self._has_xml_declaration = True
             p.XmlDeclHandler = handle_xml_decl
             p.Parse(xmlfile.read())
@@ -298,19 +298,18 @@ class ValidateDatasetType (ValidateResources):
         self.dataset_type = dataset_type
 
     def _get_errors(self, file_obj):
-        dType = _dataset_type(file_obj)
+        ds_type = _dataset_type(file_obj)
         if self.dataset_type is None or self.dataset_type == "any":
             return []
-        elif self.dataset_type != dType:
+        elif self.dataset_type != ds_type:
             # XXX see pbcore.io.dataset.DataSetIO:HdfSubreadSet - not sure
             # I understand what's going on here but I think it is a patch for
             # bug 27976
-            if self.dataset_type == "HdfSubreadSet" and dType == "SubreadSet":
+            if self.dataset_type == "HdfSubreadSet" and ts_type == "SubreadSet":
                 return []
             return [DatasetTypeError.from_args(
                 DatasetReader.get_dataset_object(file_obj),
-                self.dataset_type,
-                dType)]
+                self.dataset_type, ds_type)]
         return []
 
 
@@ -416,8 +415,8 @@ class ValidateFastaRaw (ValidateFileObject):
         self._errors = set([])
 
     def validate(self, file_obj):
-        for extRes in file_obj.externalResources:
-            path = urlparse(extRes.resourceId).path
+        for ext_res in file_obj.externalResources:
+            path = urlparse(ext_res.resourceId).path
             log.debug("Validating %s" % path)
             if not self._validator.validate(path):
                 errors_ = self._validator.to_errors(path)
@@ -545,12 +544,12 @@ def validate_dataset(
     log.debug("Dataset type: %s" % ds.__class__.__name__)
     actual_dataset_type = _dataset_type(ds)
     log.debug("Actual type:  %s" % actual_dataset_type)
-    if isinstance(ds, pbcore.io.SubreadSet) and contents is None:
+    subread_types = (pbcore.io.SubreadSet, pbcore.io.AlignmentSet)
+    ccs_types = (pbcore.io.ConsensusReadSet, pbcore.io.ConsensusAlignmentSet)
+    if isinstance(ds, subread_types) and contents is None:
         contents = "SUBREAD"
-    elif isinstance(ds, pbcore.io.ConsensusReadSet) and contents is None:
+    elif isinstance(ds, ccs_types) and contents is None:
         contents = "CCS"
-    elif isinstance(ds, pbcore.io.AlignmentSet):
-        pass
     validators = [
         ValidateEncoding(),
         ValidateRootTag(),

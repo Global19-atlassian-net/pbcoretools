@@ -378,13 +378,11 @@ class ValidateContents (ValidateFileName):
         elif self._aligned == False and file_obj.isMapped:
             errors.append(FileAlignedError.from_args(file_obj))
         if self._content_type is not None:
-            if ((file_obj.readType == Constants.READ_TYPE_SUBREAD_FILE and
-                 self._content_type == Constants.READ_TYPE_SUBREAD) or
+            if not ((file_obj.readType == Constants.READ_TYPE_SUBREAD_FILE and
+                     self._content_type == Constants.READ_TYPE_SUBREAD) or
                     (file_obj.readType == self._content_type)):
-                pass
-            else:
-                errors.append(FileContentMismatchError.from_args(file_obj,
-                                                                 self._content_type, file_obj.readType))
+                errors.append(FileContentMismatchError.from_args(
+                              file_obj, self._content_type, file_obj.readType))
         return errors
 
 
@@ -434,13 +432,13 @@ class ValidateSorting (ValidateFileName):
             for aln in file_obj:
                 if last_aln is not None:
                     if (aln.readType == Constants.READ_TYPE_SUBREAD and
-                            last_aln.readType != Constants.READ_TYPE_SUBREAD):
-                        return [MixedReadSortingError.from_args(file_obj,
-                                                                aln.readType, last_aln.readType)]
-                    elif (aln.readType == Constants.READ_TYPE_CCS and
-                          last_aln.readType == Constants.READ_TYPE_SUBREAD):
+                        last_aln.readType != Constants.READ_TYPE_SUBREAD):
+                        return [MixedReadSortingError.from_args(
+                                file_obj, aln.readType, last_aln.readType)]
                         pass
-                    elif last_aln.qName > aln.qName:
+                    elif (last_aln.qName > aln.qName and not
+                          (aln.readType == Constants.READ_TYPE_CCS and
+                           last_aln.readType == Constants.READ_TYPE_SUBREAD)):
                         return [BadSortingError.from_args(file_obj, aln.qName,
                                                           last_aln.qName)]
                     last_aln = aln
