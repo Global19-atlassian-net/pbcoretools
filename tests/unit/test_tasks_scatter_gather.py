@@ -13,10 +13,15 @@ import re
 import sys
 
 import pysam
-try :
+try:
     import pyBigWig
 except ImportError:
     pyBigWig = None
+try:
+    import h5py
+except ImportError:
+    h5py = None
+
 
 from pbcommand.pb_io.common import load_pipeline_chunks_from_json, \
     write_pipeline_chunks
@@ -42,6 +47,7 @@ skip_if_missing_testdata = unittest.skipUnless(op.isdir(MNT_DATA),
     "Missing {d}".format(d=MNT_DATA))
 skip_if_no_pybigwig = unittest.skipUnless(pyBigWig is not None,
     "pyBigWig is not installed")
+skip_if_no_h5py = unittest.skipUnless(h5py is not None, "h5py is not installed")
 
 
 def _write_fasta_or_contigset(file_name, make_faidx=False, n_records=251,
@@ -174,6 +180,7 @@ class TestScatterCCSZMWs(CompareScatteredRecordsBase,
 # XXX it would be better to use local files for this but it's the least
 # important test in this file
 @skip_if_missing_testdata
+@skip_if_no_h5py
 class TestScatterHdfSubreads(CompareScatteredRecordsBase,
                              pbcommand.testkit.core.PbTestScatterApp):
 
