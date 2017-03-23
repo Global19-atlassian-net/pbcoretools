@@ -1,7 +1,6 @@
 cython
 numpy
 pysam
-h5py
 jinja2
 networkx
 jsonschema
