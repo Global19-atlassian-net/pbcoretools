@@ -313,7 +313,6 @@ def gather_bigwig(input_files, output_file):
         ends = list(itertools.chain(*[x.ends for x in chunks]))
         values = list(itertools.chain(*[x.values for x in chunks]))
         seqids = [seqid] * len(starts)
-        print starts, ends, values
         log.info("Adding {i}:{s}-{e}".format(i=seqid, s=starts[0], e=ends[-1]))
         bw.addEntries(seqids, starts, ends=ends, values=values)
     bw.close()
