@@ -23,6 +23,7 @@ from pbcore.io import (SubreadSet, ContigSet, AlignmentSet, ConsensusReadSet,
 from pbcore.io.FastaIO import FastaReader, FastaWriter
 from pbcore.io.FastqIO import FastqReader, FastqWriter
 from pbcore.io.GffIO import merge_gffs_sorted
+from pbcore.io.VcfIO import merge_vcfs_sorted
 
 log = logging.getLogger(__name__)
 
@@ -50,6 +51,7 @@ def __gather_fastx(fastx_reader, fastx_writer, fastx_files, output_file):
 gather_fasta = P(__gather_fastx, FastaReader, FastaWriter)
 gather_fastq = P(__gather_fastx, FastqReader, FastqWriter)
 gather_gff = merge_gffs_sorted
+gather_vcf = merge_vcfs_sorted
 
 
 def _read_header(csv_file):
@@ -331,6 +333,7 @@ add_chunk_key_txt = __add_chunk_key_option('$chunk.txt_id')
 add_chunk_key_fasta = __add_chunk_key_option('$chunk.fasta_id')
 add_chunk_key_fastq = __add_chunk_key_option('$chunk.fastq_id')
 add_chunk_key_gff = __add_chunk_key_option('$chunk.gff_id')
+add_chunk_key_vcf = __add_chunk_key_option('$chunk.vcf_id')
 add_chunk_key_fofn = __add_chunk_key_option('$chunk.fofn_id')
 add_chunk_key_subreadset = __add_chunk_key_option('$chunk.subreadset_id')
 add_chunk_key_alignmentset = __add_chunk_key_option('$chunk.alignmentset_id')
@@ -366,9 +369,8 @@ _gather_txt_options = __add_gather_options("Output text file", "input text file"
 _gather_report_options = __add_gather_options("Output JSON file", "input JSON file", add_chunk_key_report)
 _gather_fastq_options = __add_gather_options("Output Fastq file", "Chunk input JSON file", add_chunk_key_fastq)
 _gather_fasta_options = __add_gather_options("Output Fasta file", "Chunk input JSON file", add_chunk_key_fasta)
-_gather_gff_options = __add_gather_options("Output Fasta file",
-                                           "Chunk input JSON file",
-                                           add_chunk_key_gff)
+_gather_gff_options = __add_gather_options("Output GFF file", "Chunk input JSON file", add_chunk_key_gff)
+_gather_vcf_options = __add_gather_options("Output VCF file", "Chunk input JSON file", add_chunk_key_vcf)
 _gather_fofn_options = __add_gather_options(
     "Output Fofn file", "Chunk input JSON file", add_chunk_key_fofn)
 _gather_subreadset_options = __add_gather_options("Output SubreadSet XML file",
@@ -414,6 +416,7 @@ def __args_gather_runner(func, args):
 # args.chunk_key)
 _args_runner_gather_fasta = P(__args_gather_runner, gather_fasta)
 _args_runner_gather_gff = P(__args_gather_runner, gather_gff)
+_args_runner_gather_vcf = P(__args_gather_runner, gather_vcf)
 _args_runner_gather_fastq = P(__args_gather_runner, gather_fastq)
 _args_runner_gather_fastq_contigset = P(__args_gather_runner, gather_fastq_contigset)
 _args_runner_gather_fofn = P(__args_gather_runner, gather_fofn)
@@ -436,6 +439,7 @@ run_main_gather_csv = P(__gather_runner, gather_csv)
 run_main_gather_txt = P(__gather_runner, gather_txt)
 run_main_gather_report = P(__gather_runner, gather_report)
 run_main_gather_gff = P(__gather_runner, gather_gff)
+run_main_gather_vcf = P(__gather_runner, gather_vcf)
 run_main_gather_alignmentset = P(__gather_runner, gather_alignmentset)
 run_main_gather_subreadset = P(__gather_runner, gather_subreadset)
 run_main_gather_contigset = P(__gather_runner, gather_contigset)
@@ -474,12 +478,17 @@ def get_parser():
     builder('fasta', "Merge Fasta files into a single file.",
             _gather_fasta_options, _args_runner_gather_fasta)
 
+    # Fofn
     builder('fofn', "Merge FOFNs into a single file.",
             _gather_fofn_options, _args_runner_gather_fofn)
 
     # Gff
-    builder('gff', "Merge Fasta files into a single file.",
+    builder('gff', "Merge GFF files into a single file.",
             _gather_gff_options, _args_runner_gather_gff)
+
+    # Vcf
+    builder('gff', "Merge VCF files into a single file.",
+            _gather_vcf_options, _args_runner_gather_vcf)
 
     # SubreadSet
     builder('subreadset', "Merge SubreadSet XMLs into a single file.",

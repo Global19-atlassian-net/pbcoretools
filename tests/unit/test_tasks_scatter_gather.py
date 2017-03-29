@@ -11,6 +11,7 @@ import json
 import os.path as op
 import re
 import sys
+import textwrap
 
 import pysam
 try:
@@ -557,7 +558,7 @@ class TestGatherFastq(_SetupGatherApp):
 class TextRecordsGatherBase(object):
 
     """
-    Base class for testing gather of simple line-based formats (GFF, CSV).
+    Base class for testing gather of simple line-based formats (GFF, VCF, CSV).
     """
     RECORDS = []
     RECORD_HEADER = None
@@ -631,6 +632,46 @@ class TestGatherGFF(TextRecordsGatherBase,
     def validate_content(self, lines):
         self.assertEqual(len(lines), 6)
         self.assertEqual(lines[1].strip(), "##source-id ipdSummary")
+
+
+class TestGatherVCF(TextRecordsGatherBase,
+                    pbcommand.testkit.core.PbTestGatherApp):
+
+    """
+    Test pbcoretools.tasks.gather_vcf
+    """
+    RECORDS = textwrap.dedent('''\
+        ecoliK12_pbi_March2013 84 . TG T 48 PASS DP=53
+        ecoliK12_pbi_March2013 218 . GA G 47 PASS DP=58
+        ecoliK12_pbi_March2013 1536 . G GC 47 PASS DP=91
+        ''').rstrip().replace(' ', '\t').split('\n')
+    RECORD_HEADER = textwrap.dedent('''\
+        ##fileformat=VCFv4.3
+        ##fileDate=20170328
+        ##source=GenomicConsensusV2.2.0
+        ##reference=ecoliK12_pbi_March2013.fasta
+        ##contig=<ID=ecoliK12_pbi_March2013,length=4642522>
+        #CHROM POS ID REF ALT QUAL FILTER INFO
+        ''')
+    EXTENSION = "vcf"
+
+    DRIVER_BASE = "python -m pbcoretools.tasks.gather_vcf"
+    INPUT_FILES = [
+        get_temp_file(suffix=".chunks.json")
+    ]
+    CHUNK_KEY = "$chunk.vcf_id"
+
+    @classmethod
+    def _get_chunk_records(cls, i_chunk):
+        if i_chunk == 0: return cls.RECORDS[2:]
+        else: return cls.RECORDS[0:2]
+
+    def _get_lines(self, lines):
+        return [l.strip() for l in lines if l[0] != '#']
+
+    def validate_content(self, lines):
+        self.assertEqual(len(lines), 9)
+        self.assertEqual(lines[3].strip(), "##reference=ecoliK12_pbi_March2013.fasta")
 
 
 class TestGatherCSV(TextRecordsGatherBase,
