@@ -1,3 +1,6 @@
+* Version 0.1.20
+  - Support gather_vcf
+
 * Version 0.1.0
   - Extract pbcoretools from pbcore
 

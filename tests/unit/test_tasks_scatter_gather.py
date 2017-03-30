@@ -11,12 +11,18 @@ import json
 import os.path as op
 import re
 import sys
+import textwrap
 
 import pysam
-try :
+try:
     import pyBigWig
 except ImportError:
     pyBigWig = None
+try:
+    import h5py
+except ImportError:
+    h5py = None
+
 
 from pbcommand.pb_io.common import load_pipeline_chunks_from_json, \
     write_pipeline_chunks
@@ -29,6 +35,8 @@ from pbcore.io import SubreadSet, ContigSet, FastaReader, FastqReader, \
 
 import pbtestdata
 
+import pbcoretools.chunking.chunk_utils as CU
+
 from base import get_temp_file
 from mock import write_random_report, \
     write_random_fasta_records, write_random_fastq_records
@@ -40,6 +48,7 @@ skip_if_missing_testdata = unittest.skipUnless(op.isdir(MNT_DATA),
     "Missing {d}".format(d=MNT_DATA))
 skip_if_no_pybigwig = unittest.skipUnless(pyBigWig is not None,
     "pyBigWig is not installed")
+skip_if_no_h5py = unittest.skipUnless(h5py is not None, "h5py is not installed")
 
 
 def _write_fasta_or_contigset(file_name, make_faidx=False, n_records=251,
@@ -172,6 +181,7 @@ class TestScatterCCSZMWs(CompareScatteredRecordsBase,
 # XXX it would be better to use local files for this but it's the least
 # important test in this file
 @skip_if_missing_testdata
+@skip_if_no_h5py
 class TestScatterHdfSubreads(CompareScatteredRecordsBase,
                              pbcommand.testkit.core.PbTestScatterApp):
 
@@ -282,6 +292,23 @@ class TestScatterSubreadsBarcoding(pbcommand.testkit.core.PbTestScatterApp):
     RESOLVED_MAX_NCHUNKS = 8
     NCHUNKS_EXPECTED = 2
     CHUNK_KEYS = ("$chunk.subreadset_id", "$chunk.barcodeset_id")
+
+
+DATA_MV = "/pbi/dept/secondary/siv/testdata/minorseq-test"
+@unittest.skipUnless(op.isdir(DATA_MV), "Missing {d}".format(d=DATA_MV))
+class TestScatterMinorVariants(pbcommand.testkit.core.PbTestScatterApp):
+    DRIVER_BASE = "python -m pbcoretools.tasks.scatter_ccs_aligned_barcodes"
+    INPUT_FILES = [
+        op.join(DATA_MV, "barcoded", "aligned.consensusalignmentset.xml"),
+        op.join(DATA_MV, "hxb2.referenceset.xml"),
+        op.join(DATA_MV, "barcoded", "mix.consensusreadset.xml")
+    ]
+    MAX_NCHUNKS = 5
+    RESOLVED_MAX_NCHUNKS = 5
+    NCHUNKS_EXPECTED = 5
+    CHUNK_KEYS = (CU.Constants.CHUNK_KEY_CCS_ALNSET,
+                  CU.Constants.CHUNK_KEY_REF,
+                  CU.Constants.CHUNK_KEY_CCSSET)
 
 
 ########################################################################
@@ -531,7 +558,7 @@ class TestGatherFastq(_SetupGatherApp):
 class TextRecordsGatherBase(object):
 
     """
-    Base class for testing gather of simple line-based formats (GFF, CSV).
+    Base class for testing gather of simple line-based formats (GFF, VCF, CSV).
     """
     RECORDS = []
     RECORD_HEADER = None
@@ -605,6 +632,46 @@ class TestGatherGFF(TextRecordsGatherBase,
     def validate_content(self, lines):
         self.assertEqual(len(lines), 6)
         self.assertEqual(lines[1].strip(), "##source-id ipdSummary")
+
+
+class TestGatherVCF(TextRecordsGatherBase,
+                    pbcommand.testkit.core.PbTestGatherApp):
+
+    """
+    Test pbcoretools.tasks.gather_vcf
+    """
+    RECORDS = textwrap.dedent('''\
+        ecoliK12_pbi_March2013 84 . TG T 48 PASS DP=53
+        ecoliK12_pbi_March2013 218 . GA G 47 PASS DP=58
+        ecoliK12_pbi_March2013 1536 . G GC 47 PASS DP=91
+        ''').rstrip().replace(' ', '\t').split('\n')
+    RECORD_HEADER = textwrap.dedent('''\
+        ##fileformat=VCFv4.3
+        ##fileDate=20170328
+        ##source=GenomicConsensusV2.2.0
+        ##reference=ecoliK12_pbi_March2013.fasta
+        ##contig=<ID=ecoliK12_pbi_March2013,length=4642522>
+        #CHROM POS ID REF ALT QUAL FILTER INFO
+        ''')
+    EXTENSION = "vcf"
+
+    DRIVER_BASE = "python -m pbcoretools.tasks.gather_vcf"
+    INPUT_FILES = [
+        get_temp_file(suffix=".chunks.json")
+    ]
+    CHUNK_KEY = "$chunk.vcf_id"
+
+    @classmethod
+    def _get_chunk_records(cls, i_chunk):
+        if i_chunk == 0: return cls.RECORDS[2:]
+        else: return cls.RECORDS[0:2]
+
+    def _get_lines(self, lines):
+        return [l.strip() for l in lines if l[0] != '#']
+
+    def validate_content(self, lines):
+        self.assertEqual(len(lines), 9)
+        self.assertEqual(lines[3].strip(), "##reference=ecoliK12_pbi_March2013.fasta")
 
 
 class TestGatherCSV(TextRecordsGatherBase,

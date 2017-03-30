@@ -13,22 +13,26 @@ import time
 import re
 import sys
 
-from pbcommand.cli import (pacbio_args_runner,
+from pbcommand.cli import (pbparser_runner,
     get_default_argparser_with_base_opts)
+from pbcommand.models.parser import get_pbparser
+from pbcommand.models import FileTypes
 from pbcommand.utils import setup_log
+
 import bam
 import fasta
 import dataset
 import utils
 
-__version__ = "0.2"
+__version__ = "0.3"
 
 
-def get_parser():
-    parser = get_default_argparser_with_base_opts(
-        version=__version__,
-        description=__doc__,
-        default_level="CRITICAL")
+def get_parser(parser=None):
+    if parser is None:
+        parser = get_default_argparser_with_base_opts(
+            version=__version__,
+            description=__doc__,
+            default_level="CRITICAL")
     parser.add_argument('file', help="BAM, FASTA, or DataSet XML file")
     parser.add_argument("-c", dest="use_termcolor", action="store_true")
     parser.add_argument("--quick", dest="quick", action="store_true",
@@ -59,13 +63,29 @@ def get_parser():
     return parser
 
 
+def get_parser_tc():
+    p = get_pbparser("pbcoretools.tasks.pbvalidate", "0.1.0", "pbvalidate",
+                     "Run pbvalidate on SubreadSet",
+                     "python -m pbcoretools.pbvalidate.main --resolved-tool-contract",
+                     is_distributed=True, nproc=1, default_level="WARN")
+    p.tool_contract_parser.add_input_file_type(FileTypes.DS_SUBREADS,
+        "subreads",
+        name="SubreadSet",
+        description="PacBio Subread DataSet XML")
+    p.tool_contract_parser.add_output_file_type(FileTypes.XML, "junit_report",
+                           name="JUnit Report", description="JUnit Report",
+                           default_name="tests_junit")
+    get_parser(p.arg_parser.parser)
+    return p
+
+
 class run_validator (object):
 
-    def __init__(self, args, out=sys.stdout):
+    def __init__(self, args, out=sys.stdout, save_exit_code=False):
         if not os.path.isfile(args.file):
             raise IOError("Not a file: %s" % args.file)
         self.file_name = args.file
-        self.silent = args.xunit_out is not None
+        self.silent = args.xunit_out is not None and not save_exit_code
         base, ext = os.path.splitext(args.file)
         if ext == ".gz":
             ext_ = ext
@@ -90,8 +110,7 @@ class run_validator (object):
                 quick=args.quick,
                 max_errors=args.max_errors,
                 max_records=args.max_records,
-                validate_index=args.validate_index,
-                permissive_headers=args.permissive_headers)
+                validate_index=args.validate_index)
         elif (args.file_type in ["AlignmentSet", "ReferenceSet", "SubreadSet"] or
               ext in [".xml"]):
             self.errors, self.metrics = dataset.validate_dataset(
@@ -104,8 +123,7 @@ class run_validator (object):
                 aligned=args.aligned,
                 contents=args.contents,
                 validate_index=args.validate_index,
-                strict=args.strict,
-                permissive_headers=args.permissive_headers)
+                strict=args.strict)
         else:
             raise NotImplementedError("No validator found for '%s'." % ext)
         self.t_end = time.time()
@@ -170,11 +188,25 @@ def run(*args, **kwds):
     return run_validator(*args, **kwds).return_code
 
 
+def run_rtc(rtc):
+    argv = [
+        rtc.task.input_files[0],
+        "--type", "SubreadSet",
+        "--index", "--quick",
+        # FIXME we should use --strict, but pyxb is a pain
+        "--xunit-out", rtc.task.output_files[0]
+    ]
+    p = get_parser()
+    args = p.parse_args(argv)
+    return run_validator(args, save_exit_code=True).return_code
+
+
 def main(argv=sys.argv):
-    return pacbio_args_runner(
+    return pbparser_runner(
         argv=argv[1:],
-        parser=get_parser(),
+        parser=get_parser_tc(),
         args_runner_func=run,
+        contract_runner_func=run_rtc,
         alog=logging.getLogger(),
         setup_log_func=setup_log)
 

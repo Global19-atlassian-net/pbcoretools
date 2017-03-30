@@ -266,12 +266,6 @@ class TestCase (unittest.TestCase):
                           'ReadGroupIdMismatchError', "ReadLengthError",
                           'TagValueError',
                           'UninitializedSNRError', 'UnsortedError'])
-        e, c = bam.validate_bam(file_name, validate_index=True,
-                                permissive_headers=True)
-        errors2 = set([type(err).__name__ for err in e])
-        self.assertEqual(len(errors2), len(errors) - 2)
-        self.assertFalse("ReadGroupChemistryError" in errors2)
-        self.assertFalse("BasecallerVersionError" in errors2)
 
     def test_3_unmapped(self):
         file_name = op.join(DATA_DIR, "tst_3_subreads.bam")
@@ -302,6 +296,16 @@ class TestCase (unittest.TestCase):
         e, c = bam.validate_bam(file_name, aligned=False)
         errors3 = sorted([type(err).__name__ for err in e])
         self.assertEqual(errors3, errors1)
+
+    def test_exit_code_0(self):
+        file_name = op.join(DATA_DIR, "tst_1_subreads.bam")
+        rc = subprocess.call(["pbvalidate", file_name])
+        self.assertEqual(rc, 0)
+
+    def test_exit_code_1(self):
+        file_name = op.join(DATA_DIR, "tst_s_subreads.bam")
+        rc = subprocess.call(["pbvalidate", file_name])
+        self.assertEqual(rc, 1)
 
 
 if __name__ == "__main__":

@@ -20,21 +20,28 @@ log = logging.getLogger(__name__)
 TOOL_ID = "pbcoretools.tasks.subreadset_zmw_scatter"
 
 
-class Constants(object):
-    TOOL_ID = "pbcoretools.tasks.subreadset_zmw_scatter"
+class ScatterSubreadsConstants(object):
     DEFAULT_NCHUNKS = 5
-    DRIVER_EXE = "python -m pbcoretools.tasks.scatter_subread_zmws --resolved-tool-contract "
     DATASET_TYPE = FileTypes.DS_SUBREADS
     CHUNK_KEYS = ("$chunk.subreadset_id", )
     READ_TYPE = "Subread"
     READ_TYPE_ABBREV = "subread"
+
+
+class Constants(ScatterSubreadsConstants):
+    TOOL_ID = "pbcoretools.tasks.subreadset_zmw_scatter"
+    DRIVER_EXE = "python -m pbcoretools.tasks.scatter_subread_zmws --resolved-tool-contract "
+
 
 def get_contract_parser_impl(C):
     p = get_scatter_pbparser(C.TOOL_ID, "0.1.3",
         "%sSet ZMW scatter" % C.READ_TYPE,
         "Scatter %s DataSet by ZMWs" % C.READ_TYPE, C.DRIVER_EXE,
         C.CHUNK_KEYS, is_distributed=True)
+    return add_base_subread_scatter_options(C, p)
 
+
+def add_base_subread_scatter_options(C, p):
     p.add_input_file_type(C.DATASET_TYPE,
                           "dataset",
                           "%sSet" % C.READ_TYPE,
@@ -68,24 +75,26 @@ def run_main(chunk_output_json, dataset_xml, max_nchunks, output_dir):
         chunk_ext=FileTypes.DS_SUBREADS.ext)
 
 
-def _args_runner(args):
-    return run_main(args.chunk_report_json, args.subreadset,
-                    args.max_nchunks, os.path.dirname(args.chunk_report_json))
+def args_runner_impl(args):
+    return run_main(args.chunk_report_json,
+                    args.subreadset,
+                    args.max_nchunks,
+                    output_dir=os.path.dirname(args.chunk_report_json))
 
 
-def _rtc_runner(rtc):
-    output_dir = os.path.dirname(rtc.task.output_files[0])
-    max_nchunks = rtc.task.max_nchunks
-    return run_main(rtc.task.output_files[0], rtc.task.input_files[0],
-                    max_nchunks, output_dir)
+def rtc_runner_impl(run_func, rtc):
+    return run_func(rtc.task.output_files[0],
+                    rtc.task.input_files[0],
+                    rtc.task.max_nchunks,
+                    output_dir=os.path.dirname(rtc.task.output_files[0]))
 
 
 def main(argv=sys.argv):
     mp = get_contract_parser()
     return pbparser_runner(argv[1:],
                            mp,
-                           _args_runner,
-                           _rtc_runner,
+                           functools.partial(args_runner_impl, run_main),
+                           functools.partial(rtc_runner_impl, run_main),
                            log,
                            setup_log)
 

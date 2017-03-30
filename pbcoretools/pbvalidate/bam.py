@@ -378,13 +378,11 @@ class ValidateContents (ValidateFileName):
         elif self._aligned == False and file_obj.isMapped:
             errors.append(FileAlignedError.from_args(file_obj))
         if self._content_type is not None:
-            if ((file_obj.readType == Constants.READ_TYPE_SUBREAD_FILE and
-                 self._content_type == Constants.READ_TYPE_SUBREAD) or
+            if not ((file_obj.readType == Constants.READ_TYPE_SUBREAD_FILE and
+                     self._content_type == Constants.READ_TYPE_SUBREAD) or
                     (file_obj.readType == self._content_type)):
-                pass
-            else:
-                errors.append(FileContentMismatchError.from_args(file_obj,
-                                                                 self._content_type, file_obj.readType))
+                errors.append(FileContentMismatchError.from_args(
+                              file_obj, self._content_type, file_obj.readType))
         return errors
 
 
@@ -434,13 +432,12 @@ class ValidateSorting (ValidateFileName):
             for aln in file_obj:
                 if last_aln is not None:
                     if (aln.readType == Constants.READ_TYPE_SUBREAD and
-                            last_aln.readType != Constants.READ_TYPE_SUBREAD):
-                        return [MixedReadSortingError.from_args(file_obj,
-                                                                aln.readType, last_aln.readType)]
-                    elif (aln.readType == Constants.READ_TYPE_CCS and
-                          last_aln.readType == Constants.READ_TYPE_SUBREAD):
-                        pass
-                    elif last_aln.qName > aln.qName:
+                        last_aln.readType != Constants.READ_TYPE_SUBREAD):
+                        return [MixedReadSortingError.from_args(
+                                file_obj, aln.readType, last_aln.readType)]
+                    elif (last_aln.qName > aln.qName and not
+                          (aln.readType == Constants.READ_TYPE_CCS and
+                           last_aln.readType == Constants.READ_TYPE_SUBREAD)):
                         return [BadSortingError.from_args(file_obj, aln.qName,
                                                           last_aln.qName)]
                     last_aln = aln
@@ -842,9 +839,8 @@ class ValidateReadBaseInfo (ValidateReadBase):
         # XXX should we do this without an index?
         if getattr(aln.bam, "pbi", None) is None:
             return None
-        if not re.match(Constants.REGEX_BASECALLS, aln.DeletionTag()):
-            return False
-        elif not re.match(Constants.REGEX_BASECALLS, aln.SubstitutionTag()):
+        if ((not re.match(Constants.REGEX_BASECALLS, aln.DeletionTag())) or
+            (not re.match(Constants.REGEX_BASECALLS, aln.SubstitutionTag()))):
             return False
         return True
 
@@ -1007,17 +1003,12 @@ def get_format_specific_args(parser):
                         default=None,
                         help="Path to optional reference FASTA file, used " +
                              "for additional validation of mapped BAM records")
-    parser.add_argument("--permissive-headers",
-                        dest="permissive_headers",
-                        action="store_true",
-                        help="Don't check chemistry/basecaller versions")
     return parser
 
 
 def get_validators(aligned=None, contents=None,
                    include_file_validators=True,
-                   validate_index=False,
-                   permissive_headers=False):
+                   validate_index=False):
     validators = []
     if include_file_validators:
         validators.extend([
@@ -1033,11 +1024,10 @@ def get_validators(aligned=None, contents=None,
         ValidateReadGroupPlatform(),
         ValidateReadGroupId(),
     ])
-    if not permissive_headers:
-        validators.extend([
-            ValidateReadGroupChemistry(),
-            ValidateReadGroupBasecaller(),
-        ])
+    validators.extend([
+        ValidateReadGroupChemistry(),
+        ValidateReadGroupBasecaller(),
+    ])
     validators.extend([
         ValidateReadGroupPulseManifest(),
         ValidateReadUnique(),
@@ -1091,8 +1081,7 @@ def validate_bam(file_name,
                  quick=False,
                  max_errors=None,
                  max_records=None,
-                 validate_index=False,
-                 permissive_headers=False):
+                 validate_index=False):
     """
     Main API entry point for running BAM validation.
 
@@ -1119,8 +1108,7 @@ def validate_bam(file_name,
         120
     """
     validators = get_validators(aligned=aligned, contents=contents,
-                                validate_index=validate_index,
-                                permissive_headers=permissive_headers)
+                                validate_index=validate_index)
     e, m = run_validators(
         context_class=get_context_class(
             quick=quick,
