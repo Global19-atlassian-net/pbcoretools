@@ -29,13 +29,13 @@ $PIP install --user \
   $NX3PBASEURL/pythonpkgs/tabulate-0.7.5-cp27-none-any.whl \
   $NX3PBASEURL/pythonpkgs/pysam-0.9.1.4-cp27-cp27mu-linux_x86_64.whl \
   $NX3PBASEURL/pythonpkgs/avro-1.7.7-cp27-none-any.whl
-
+ln -sfn ../data repos/PacBioTestData/pbtestdata/data
 $PIP install --user -e repos/PacBioTestData
 $PIP install --user -e repos/pbcommand
 $PIP install --user -e repos/pbcore
-
 $PIP install --user -r requirements-ci.txt
 $PIP install --user -r requirements-dev.txt
+
 $PIP install --user -e ./
 
 make test
