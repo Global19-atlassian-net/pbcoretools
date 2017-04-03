@@ -30,14 +30,12 @@ $PIP install --user \
   $NX3PBASEURL/pythonpkgs/pysam-0.9.1.4-cp27-cp27mu-linux_x86_64.whl \
   $NX3PBASEURL/pythonpkgs/avro-1.7.7-cp27-none-any.whl
 
-(cd repos/PacBioTestData && make python)
-
-(cd repos/pbcommand && make install)
-(cd repos/pbcore && make install)
+$PIP install --user -e repos/PacBioTestData
+$PIP install --user -e repos/pbcommand
+$PIP install --user -e repos/pbcore
 
 $PIP install --user -r requirements-ci.txt
 $PIP install --user -r requirements-dev.txt
-#python setup.py install
 $PIP install --user -e ./
 
 make test
