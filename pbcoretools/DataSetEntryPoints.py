@@ -173,18 +173,23 @@ def splitXml(args):
                             updateCounts=(not args.noCounts))
     log.debug("Splitting into {i} chunks".format(i=len(dss)))
     infix = 'chunk{i}'
+    chNums = range(len(dss))
+    if args.barcodes:
+        infix = '{i}'
+        chNums = ['_'.join(ds.barcodes).replace(
+            '[', '').replace(']', '').replace(', ', '-') for ds in dss]
     nSuf = -2 if re.search(r".+\.\w+set\.xml", args.infile) else -1
     if not args.outfiles:
         if not args.outdir:
             args.outfiles = ['.'.join(args.infile.split('.')[:nSuf] +
                                       [infix.format(i=chNum)] +
                                       args.infile.split('.')[nSuf:])
-                             for chNum in range(len(dss))]
+                             for chNum in chNums]
         else:
             args.outfiles = ['.'.join(args.infile.split('.')[:nSuf] +
                                       [infix.format(i=chNum)] +
                                       args.infile.split('.')[nSuf:])
-                             for chNum in range(len(dss))]
+                             for chNum in chNums]
             args.outfiles = [os.path.join(args.outdir,
                                           os.path.basename(outfn))
                              for outfn in args.outfiles]
