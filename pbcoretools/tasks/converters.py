@@ -360,11 +360,11 @@ fasta_file_type = OutputFileType(FileTypes.FASTA.file_type_id, "fasta", "FASTA f
                                  "Reads in FASTA format", "reads")
 fastq_file_type = OutputFileType(FileTypes.FASTQ.file_type_id, "fastq", "FASTQ file",
                                  "Reads in FASTQ format", "reads")
-fasta_gzip_file_type = OutputFileType(FileTypes.GZIP.file_type_id, "fasta_gz",
+fasta_gzip_file_type = OutputFileType(FileTypes.TGZ.file_type_id, "fasta_gz",
                                       "FASTA file(s)",
                                       "Seqeunce data converted to FASTA Format",
                                       "reads.fasta")
-fastq_gzip_file_type = OutputFileType(FileTypes.GZIP.file_type_id, "fastq",
+fastq_gzip_file_type = OutputFileType(FileTypes.TGZ.file_type_id, "fastq",
                                       "FASTQ file(s)",
                                       "Sequence data converted to FASTQ format",
                                       "reads.fastq")
@@ -450,11 +450,11 @@ def _run_fasta_to_gmap_reference(rtc):
         ploidy=rtc.task.options["pbcoretools.task_options.ploidy"])
 
 
-fasta_ccs_file_type = OutputFileType(FileTypes.GZIP.file_type_id, "fasta_gz",
+fasta_ccs_file_type = OutputFileType(FileTypes.TGZ.file_type_id, "fasta_gz",
                                      "Consensus Sequences (FASTA)",
                                      "Consensus sequences generated from CCS2",
                                      "ccs.fasta")
-fastq_ccs_file_type = OutputFileType(FileTypes.GZIP.file_type_id, "fastq_gz",
+fastq_ccs_file_type = OutputFileType(FileTypes.TGZ.file_type_id, "fastq_gz",
                                      "Consensus Sequences (FASTQ)",
                                      "Consensus sequences generated from CCS2",
                                      "ccs.fastq")
