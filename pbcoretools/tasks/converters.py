@@ -162,7 +162,7 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                      input_file_name, output_file_name, tmp_dir=None):
     assert isinstance(program_name, basestring)
     barcode_mode = False
-    if output_file_name.endswith(".gz"):
+    if output_file_name.endswith(".tar.gz"):
         with openDataSet(input_file_name) as ds_in:
             barcode_mode = ds_in.isBarcoded
     tmp_out_prefix = tempfile.NamedTemporaryFile(dir=tmp_dir).name
@@ -184,12 +184,14 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
         if not barcode_mode:
             tmp_out = "{p}.{b}.gz".format(p=tmp_out_prefix, b=base_ext)
             assert os.path.isfile(tmp_out), tmp_out
-            if output_file_name.endswith(".gz"):
-                log.info("cp {t} {f}".format(t=tmp_out, f=output_file_name))
-                shutil.copyfile(tmp_out, output_file_name)
+            if output_file_name.endswith(".tar.gz"):
+                tmp_out_unzipped = re.sub('\.gz$', '', tmp_out)
+                _unzip_fastx(tmp_out, tmp_out_unzipped)
+                os.remove(tmp_out)
+                return archive_files([tmp_out_unzipped], output_file_name)
             else:
                 _unzip_fastx(tmp_out, output_file_name)
-            os.remove(tmp_out)
+                os.remove(tmp_out)
         else:
             suffix = "{f}.gz".format(f=base_ext)
             tmp_out_dir = op.dirname(tmp_out_prefix)
@@ -358,11 +360,11 @@ fasta_file_type = OutputFileType(FileTypes.FASTA.file_type_id, "fasta", "FASTA f
                                  "Reads in FASTA format", "reads")
 fastq_file_type = OutputFileType(FileTypes.FASTQ.file_type_id, "fastq", "FASTQ file",
                                  "Reads in FASTQ format", "reads")
-fasta_gzip_file_type = OutputFileType(FileTypes.GZIP.file_type_id, "fasta_gz",
+fasta_gzip_file_type = OutputFileType(FileTypes.TGZ.file_type_id, "fasta_gz",
                                       "FASTA file(s)",
                                       "Seqeunce data converted to FASTA Format",
-                                      "reads.fasta") # yuck - could be .tar !
-fastq_gzip_file_type = OutputFileType(FileTypes.GZIP.file_type_id, "fastq",
+                                      "reads.fasta")
+fastq_gzip_file_type = OutputFileType(FileTypes.TGZ.file_type_id, "fastq",
                                       "FASTQ file(s)",
                                       "Sequence data converted to FASTQ format",
                                       "reads.fastq")
@@ -448,11 +450,11 @@ def _run_fasta_to_gmap_reference(rtc):
         ploidy=rtc.task.options["pbcoretools.task_options.ploidy"])
 
 
-fasta_ccs_file_type = OutputFileType(FileTypes.GZIP.file_type_id, "fasta_gz",
+fasta_ccs_file_type = OutputFileType(FileTypes.TGZ.file_type_id, "fasta_gz",
                                      "Consensus Sequences (FASTA)",
                                      "Consensus sequences generated from CCS2",
                                      "ccs.fasta")
-fastq_ccs_file_type = OutputFileType(FileTypes.GZIP.file_type_id, "fastq_gz",
+fastq_ccs_file_type = OutputFileType(FileTypes.TGZ.file_type_id, "fastq_gz",
                                      "Consensus Sequences (FASTQ)",
                                      "Consensus sequences generated from CCS2",
                                      "ccs.fastq")
