@@ -192,11 +192,10 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
             tmp_out = "{p}.{b}.gz".format(p=tmp_out_prefix, b=base_ext)
             assert os.path.isfile(tmp_out), tmp_out
             if output_file_name.endswith(".tar.gz"):
-                tmp_out_unzipped = re.sub('\.gz$', '', tmp_out)
-                _unzip_fastx(tmp_out, tmp_out_unzipped)
-                args = ["tar", "-czf", output_file_name, tmp_out_unzipped]
+                output_file_name_unzipped = re.sub('.tar.gz$', '', output_file_name) + '.' + base_ext
+                _unzip_fastx(tmp_out, output_file_name_unzipped)
+                args = ["tar", "-czf", output_file_name, output_file_name_unzipped]
                 result = run_cmd(" ".join(args), stdout_fh=sys.stdout, stderr_fh=sys.stderr)
-                os.remove(tmp_out_unzipped)
             else:
                 _unzip_fastx(tmp_out, output_file_name)
             os.remove(tmp_out)
@@ -214,7 +213,7 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                     suffix2 = ".{f}_{r}.{t}".format(
                         f=bc_fwd_rev[0], r=bc_fwd_rev[1], t=base_ext)
                     assert fn == tmp_out_prefix + suffix2 + ".gz"
-                    fn_out = re.sub(".gz$", suffix2, output_file_name)
+                    fn_out = re.sub(".tar.gz$", suffix2, output_file_name)
                     fastx_out = op.join(tc_out_dir, fn_out)
                     _unzip_fastx(fn, fastx_out)
                     barcoded_file_names.append(fn_out)
