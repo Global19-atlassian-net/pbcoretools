@@ -160,6 +160,13 @@ def archive_files(input_file_names, output_file_name, remove_path=True):
 
 def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                      input_file_name, output_file_name, tmp_dir=None):
+    """
+    Converts a dataset to a set of fastx file, possibly archived.
+    Can take a subreadset or consensusreadset as input.
+    Will convert to either fasta or fastq.
+    If the dataset is barcoded, it will split the fastx files per-barcode.
+    If the output file is .tar.gz, the fastx file(s) will be archived accordingly.
+    """
     assert isinstance(program_name, basestring)
     barcode_mode = False
     if output_file_name.endswith(".tar.gz"):
@@ -187,11 +194,12 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
             if output_file_name.endswith(".tar.gz"):
                 tmp_out_unzipped = re.sub('\.gz$', '', tmp_out)
                 _unzip_fastx(tmp_out, tmp_out_unzipped)
-                os.remove(tmp_out)
-                return archive_files([tmp_out_unzipped], output_file_name)
+                args = ["tar", "-czf", output_file_name, tmp_out_unzipped]
+                result = run_cmd(" ".join(args), stdout_fh=sys.stdout, stderr_fh=sys.stderr)
+                os.remove(tmp_out_unzipped)
             else:
                 _unzip_fastx(tmp_out, output_file_name)
-                os.remove(tmp_out)
+            os.remove(tmp_out)
         else:
             suffix = "{f}.gz".format(f=base_ext)
             tmp_out_dir = op.dirname(tmp_out_prefix)
@@ -266,15 +274,6 @@ def run_fasta_to_referenceset(input_file_name, output_file_name):
     log.info(" ".join(args))
     result = run_cmd(" ".join(args), stdout_fh = sys.stdout,
                      stderr_fh=sys.stderr)
-    # the '.py' name difference will be resolved in pbdataset/pbcoretools, but
-    # for now, work with either
-    if result.exit_code == 127:
-        args = ["dataset.py create", "--type ReferenceSet",
-                "--generateIndices",
-                output_file_name, input_file_name]
-        log.info(" ".join(args))
-        result = run_cmd(" ".join(args), stdout_fh = sys.stdout,
-                         stderr_fh=sys.stderr)
     return result.exit_code
 
 
