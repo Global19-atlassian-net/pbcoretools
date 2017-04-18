@@ -156,7 +156,7 @@ def archive_files(input_file_names, output_file_name, remove_path=True):
         os.chdir(_cwd)
     assert op.isfile(output_file_name)
     return 0
-
+      
 
 def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                      input_file_name, output_file_name, tmp_dir=None):
@@ -187,39 +187,34 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
     if result.exit_code != 0:
         return result.exit_code
     else:
-        base_ext = re.sub("bam2", "", program_name) 
-        if not barcode_mode:
-            tmp_out = "{p}.{b}.gz".format(p=tmp_out_prefix, b=base_ext)
-            assert os.path.isfile(tmp_out), tmp_out
-            if output_file_name.endswith(".tar.gz"):
-                output_file_name_unzipped = re.sub('.tar.gz$', '', output_file_name) + '.' + base_ext
-                _unzip_fastx(tmp_out, output_file_name_unzipped)
-                args = ["tar", "-czf", output_file_name, output_file_name_unzipped]
-                result = run_cmd(" ".join(args), stdout_fh=sys.stdout, stderr_fh=sys.stderr)
-            else:
-                _unzip_fastx(tmp_out, output_file_name)
-            os.remove(tmp_out)
-        else:
+        if output_file_name.endswith(".tar.gz"):
+            base_ext = re.sub("bam2", "", program_name) 
             suffix = "{f}.gz".format(f=base_ext)
             tmp_out_dir = op.dirname(tmp_out_prefix)
             tc_out_dir = op.dirname(output_file_name)
-            barcoded_file_names = []
+            fastx_file_names = []
             # find the barcoded FASTX files and unzip them to the same
             # output directory and file prefix as the ultimate output
             for fn in os.listdir(tmp_out_dir):
                 fn = op.join(tmp_out_dir, fn)
                 if fn.startswith(tmp_out_prefix) and fn.endswith(suffix):
-                    bc_fwd_rev = fn.split(".")[-3].split("_")
-                    suffix2 = ".{f}_{r}.{t}".format(
-                        f=bc_fwd_rev[0], r=bc_fwd_rev[1], t=base_ext)
+                    if barcode_mode:
+                        bc_fwd_rev = fn.split(".")[-3].split("_")
+                        suffix2 = ".{f}_{r}.{t}".format(
+                            f=bc_fwd_rev[0], r=bc_fwd_rev[1], t=base_ext)
+                    else:
+                        suffix2 = '.' + base_ext
                     assert fn == tmp_out_prefix + suffix2 + ".gz"
                     fn_out = re.sub(".tar.gz$", suffix2, output_file_name)
                     fastx_out = op.join(tc_out_dir, fn_out)
                     _unzip_fastx(fn, fastx_out)
-                    barcoded_file_names.append(fn_out)
+                    fastx_file_names.append(fn_out)
                     os.remove(fn)
-            assert len(barcoded_file_names) > 0
-            return archive_files(barcoded_file_names, output_file_name)
+            assert len(fastx_file_names) > 0
+            return archive_files(fastx_file_names, output_file_name)
+        else:
+            _unzip_fastx(tmp_out, output_file_name)
+        os.remove(tmp_out)
     return 0
 
 
