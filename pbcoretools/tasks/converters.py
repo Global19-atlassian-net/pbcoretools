@@ -156,7 +156,7 @@ def archive_files(input_file_names, output_file_name, remove_path=True):
         os.chdir(_cwd)
     assert op.isfile(output_file_name)
     return 0
-      
+
 
 def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                      input_file_name, output_file_name, tmp_dir=None):
