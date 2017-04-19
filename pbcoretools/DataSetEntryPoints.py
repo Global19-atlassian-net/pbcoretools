@@ -72,10 +72,12 @@ def createXml(args):
 
 
 def create_options(parser):
-    parser.description = 'Create an XML file from a fofn or bam.'
-    parser.add_argument("outfile", type=str, help="The XML to create")
+    parser.description = ('Create an XML file from fofn, BAM, or DataSet XML '
+                          'files.')
+    parser.add_argument("outfile", type=str, help="The XML file to create")
     parser.add_argument("infile", type=str, nargs='+',
-                        help="The fofn or BAM file(s) to make into an XML")
+                        help=("The fofn, BAM, or XML file(s) to make into "
+                              "a DataSet XML"))
     parser.add_argument("--force", default=False, action='store_true',
                         help=("Clobber output file if it already exists"))
     parser.add_argument("--type", type=str,
@@ -84,17 +86,18 @@ def create_options(parser):
                         help=("The type of XML to create (may be inferred "
                               "if not provided). "))
     parser.add_argument("--name", type=str, default='',
-                        dest='dsName', help="The name of the new DataSet")
+                        dest='dsName',
+                        help="The name (in metadata) of the new DataSet")
     parser.add_argument("--generateIndices", action='store_true',
                         default=False,
                         help=("Generate index files (.pbi and .bai for BAM, "
-                              ".fai for FASTA).  Requires samtools/pysam and "
+                              ".fai for FASTA).  Requires pysam and "
                               "pbindex."))
     parser.add_argument("--metadata", type=str, default=None,
                         help=("A Sequel metadata.xml file (or DataSet) to "
                               "supply metadata"))
     parser.add_argument("--novalidate", action='store_false', default=True,
-                        help=("Don't validate the resulting XML, don't touch "
+                        help=("Don't validate the resulting XML, don't modify "
                               "paths"))
     parser.add_argument("--relative", action='store_true', default=False,
                         help=("Make the included paths relative instead of "
@@ -153,11 +156,12 @@ def filter_options(parser):
         b=sorted(list(bamFilterOptions - pbiFilterOptions))))
     #parser.add_argument("infile", type=validate_file,
     parser.add_argument("infile", type=str,
-                        help="The xml file to filter")
-    parser.add_argument("outfile", type=str, help="The resulting xml file")
+                        help="The XML file to filter")
+    parser.add_argument("outfile", type=str,
+                        help="The resulting DataSet XML file")
     parser.add_argument("filters", type=str, nargs='+',
-                        help="The values and thresholds to filter (e.g. "
-                        "'rq>0.85')")
+                        help=("The parameters, operators and values to filter "
+                              "(e.g. 'rq>0.85')"))
     parser.set_defaults(func=filterXml)
 
 def splitXml(args):
@@ -216,33 +220,33 @@ def splitXml(args):
     return 0
 
 def split_options(parser):
-    parser.description = "Split the dataset"
+    parser.description = "Split the DataSet"
     parser.add_argument("infile", type=str,
-                        help="The xml file to split")
+                        help="The DataSet XML file to split")
     parser.add_argument("--contigs", default=False, action='store_true',
                         help="Split on contigs")
     parser.add_argument("--barcodes", default=False, action='store_true',
                         help="Split on barcodes")
     parser.add_argument("--zmws", default=False, action='store_true',
-                        help="Split on zmws")
+                        help="Split on ZMWs")
     parser.add_argument("--byRefLength", default=True, action='store_true',
                         help="Split contigs by contig length")
     parser.add_argument("--noCounts", default=False, action='store_true',
-                        help="Update dataset counts after split")
+                        help="Update DataSet counts after split")
     parser.add_argument("--chunks", default=0, type=int,
                         help="Split contigs into <chunks> total windows")
     parser.add_argument("--maxChunks", default=0, type=int,
-                        help="Split contig list into at most <chunks> groups")
+                        help="Split contigs into at most <chunks> groups")
     parser.add_argument("--targetSize", default=5000, type=int,
                         help="Target number of records per chunk")
     parser.add_argument("--breakContigs", default=False, action='store_true',
                         help="Break contigs to get closer to maxCounts")
     parser.add_argument("--subdatasets", default=False, action='store_true',
-                        help="Split on subdatasets")
+                        help="Split on SubDataSets")
     parser.add_argument("--outdir", default=False, type=str,
                         help="Specify an output directory")
     parser.add_argument("outfiles", nargs=argparse.REMAINDER,
-                        type=str, help="The resulting xml files")
+                        type=str, help="The resulting XML files (optional)")
     parser.set_defaults(func=splitXml)
 
 def mergeXml(args):
@@ -257,8 +261,8 @@ def mergeXml(args):
     return 0
 
 def merge_options(parser):
-    parser.description = ('Combine XML DataSet files without touching '
-                          'resource files (e.g. Bam, Fasta, etc.)')
+    parser.description = ('Combine DataSet XML files without touching '
+                          'resource files (e.g. BAM, Fasta, etc.)')
     parser.add_argument("outfile", type=str,
                         help="The resulting XML file")
     #parser.add_argument("infiles", type=validate_file, nargs='+',
@@ -275,7 +279,7 @@ def relativizeXml(args):
 def relativize_options(parser):
     # doesn't make sense to have an outdir, that would screw with the relative
     # paths...
-    parser.description = 'Make the paths in an XML file relative'
+    parser.description = 'Make the paths in a DataSet XML file relative'
     parser.add_argument("infile", type=str,
                         help="The XML file to relativize")
     parser.set_defaults(func=relativizeXml)
@@ -387,13 +391,14 @@ def validateXml(args):
     return 0
 
 def validate_options(parser):
-    parser.description = ('Validate XML and ResourceId files (XML validation '
+    parser.description = ('Validate DataSet XML and ResourceId files '
+                          '(XML validation '
                           'only available when PyXB is installed)')
     parser.add_argument("infile", type=str,
                         help="The DataSet XML file to validate")
     parser.add_argument("--skipFiles",
                         default=False, action='store_true',
-                        help="Skip validating external resources")
+                        help="Skip validating ResourceIds")
     parser.set_defaults(func=validateXml)
 
 def consolidateXml(args):

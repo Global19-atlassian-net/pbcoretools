@@ -443,7 +443,7 @@ class TestDataSet(unittest.TestCase):
 
         log.debug("Force clobber existing")
         mtime = os.path.getmtime(ofn)
-        # in case we do create a new file (bad), we need to detect that with a
+        # We want to create a new file, we need to detect that with a
         # different mtime (seconds from epoch)
         time.sleep(1)
         cmd = ("dataset create --force --relative --type AlignmentSet "
