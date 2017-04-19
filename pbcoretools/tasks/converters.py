@@ -187,8 +187,8 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
     if result.exit_code != 0:
         return result.exit_code
     else:
+        base_ext = re.sub("bam2", "", program_name)
         if output_file_name.endswith(".tar.gz"):
-            base_ext = re.sub("bam2", "", program_name) 
             suffix = "{f}.gz".format(f=base_ext)
             tmp_out_dir = op.dirname(tmp_out_prefix)
             tc_out_dir = op.dirname(output_file_name)
@@ -213,8 +213,9 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
             assert len(fastx_file_names) > 0
             return archive_files(fastx_file_names, output_file_name)
         else:
+            tmp_out = "{p}.{b}.gz".format(p=tmp_out_prefix, b=base_ext)
             _unzip_fastx(tmp_out, output_file_name)
-        os.remove(tmp_out)
+            os.remove(tmp_out)
     return 0
 
 
