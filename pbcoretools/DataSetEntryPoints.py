@@ -44,6 +44,9 @@ def summarize_options(parser):
     parser.set_defaults(func=summarizeXml)
 
 def createXml(args):
+    if os.path.exists(args.outfile) and not args.force:
+        raise IOError("Output file {} already exists. Use --force to "
+                      "clobber".format(args.outfile))
     if args.dsType is None:
         dset = openDataFile(*args.infile, strict=args.strict,
                             skipCounts=args.skipCounts,
@@ -73,6 +76,8 @@ def create_options(parser):
     parser.add_argument("outfile", type=str, help="The XML to create")
     parser.add_argument("infile", type=str, nargs='+',
                         help="The fofn or BAM file(s) to make into an XML")
+    parser.add_argument("--force", default=False, action='store_true',
+                        help=("Clobber output file if it already exists"))
     parser.add_argument("--type", type=str,
                         dest='dsType',
                         choices=DataSet.castableTypes(),
@@ -81,7 +86,10 @@ def create_options(parser):
     parser.add_argument("--name", type=str, default='',
                         dest='dsName', help="The name of the new DataSet")
     parser.add_argument("--generateIndices", action='store_true',
-                        default=False, help="Generate index files (.pbi and .bai for BAM, .fai for FASTA).  Requires samtools/pysam and pbindex.")
+                        default=False,
+                        help=("Generate index files (.pbi and .bai for BAM, "
+                              ".fai for FASTA).  Requires samtools/pysam and "
+                              "pbindex."))
     parser.add_argument("--metadata", type=str, default=None,
                         help=("A Sequel metadata.xml file (or DataSet) to "
                               "supply metadata"))

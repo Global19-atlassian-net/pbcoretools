@@ -4,6 +4,7 @@ import re
 import logging
 import itertools
 import tempfile
+import time
 
 import numpy as np
 import unittest
@@ -413,6 +414,22 @@ class TestDataSet(unittest.TestCase):
 
         log.debug("Relative")
         outdir = tempfile.mkdtemp(suffix="dataset-unittest")
+        ofn = os.path.join(outdir, os.path.basename(data.getXml(12)))
+        cmd = ("dataset create --relative --type AlignmentSet "
+               "{o} {i1} {i2}".format(
+                   o=ofn,
+                   i1=data.getXml(8),
+                   i2=data.getXml(11)))
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(ofn))
+
+        log.debug("Don't clobber existing")
+        mtime = os.path.getmtime(ofn)
+        # in case we do create a new file (bad), we need to detect that with a
+        # different mtime (seconds from epoch)
+        time.sleep(1)
         cmd = ("dataset create --relative --type AlignmentSet "
                "{o} {i1} {i2}".format(
                    o=os.path.join(outdir, 'pbalchemysim.alignmentset.xml'),
@@ -420,9 +437,25 @@ class TestDataSet(unittest.TestCase):
                    i2=data.getXml(11)))
         log.debug(cmd)
         o, r, m = backticks(cmd)
+        self.assertNotEqual(r, 0)
+        self.assertTrue(os.path.exists(ofn))
+        self.assertEqual(mtime, os.path.getmtime(ofn))
+
+        log.debug("Force clobber existing")
+        mtime = os.path.getmtime(ofn)
+        # in case we do create a new file (bad), we need to detect that with a
+        # different mtime (seconds from epoch)
+        time.sleep(1)
+        cmd = ("dataset create --force --relative --type AlignmentSet "
+               "{o} {i1} {i2}".format(
+                   o=os.path.join(outdir, 'pbalchemysim.alignmentset.xml'),
+                   i1=data.getXml(8),
+                   i2=data.getXml(11)))
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
         self.assertEqual(r, 0)
-        self.assertTrue(os.path.exists(
-            os.path.join(outdir, os.path.basename(data.getXml(12)))))
+        self.assertTrue(os.path.exists(ofn))
+        self.assertNotEqual(mtime, os.path.getmtime(ofn))
 
     @unittest.skipIf(not _check_constools(),
                      "bamtools or pbindex not found, skipping")
