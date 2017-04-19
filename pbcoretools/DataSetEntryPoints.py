@@ -88,7 +88,7 @@ def create_options(parser):
     parser.add_argument("--generateIndices", action='store_true',
                         default=False,
                         help=("Generate index files (.pbi and .bai for BAM, "
-                              ".fai for FASTA).  Requires samtools/pysam and "
+                              ".fai for FASTA).  Requires pysam and "
                               "pbindex."))
     parser.add_argument("--metadata", type=str, default=None,
                         help=("A Sequel metadata.xml file (or DataSet) to "
