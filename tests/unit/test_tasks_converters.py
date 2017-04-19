@@ -2,6 +2,7 @@
 import subprocess
 import tempfile
 import unittest
+import tarfile
 import logging
 import gzip
 import os.path as op
@@ -244,6 +245,7 @@ class TestBam2FastqFiltered(_BaseTestBam2Fasta):
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     READER_CLASS = FastqReader
     NRECORDS_EXPECTED = 13
+    SRC_FILE = pbtestdata.get_file("subreads-xml")
 
     @classmethod
     def setUpClass(cls):
@@ -251,6 +253,12 @@ class TestBam2FastqFiltered(_BaseTestBam2Fasta):
         ds.filters.addRequirement(length=[('>=', 1000)])
         ds.write(cls.INPUT_FILES[0])
         super(TestBam2FastqFiltered, cls).setUpClass()
+
+
+def _get_tarred_fastx_file(tar_gz_file):
+    file_name = tarfile.TarFile(fileobj=gzip.open(tar_gz_file)).getnames()[0]
+    dir_name = op.dirname(tar_gz_file)
+    return op.join(dir_name, file_name)
 
 
 @skip_unless_bam2fastx
@@ -267,7 +275,7 @@ class TestBam2FastaArchive(_BaseTestBam2Fasta):
         super(TestBam2FastaArchive, cls).setUpClass()
 
     def _get_output_file(self, rtc):
-        return gzip.open(rtc.task.output_files[0])
+        return _get_tarred_fastx_file(rtc.task.output_files[0])
 
 
 @skip_unless_bam2fastx
@@ -287,6 +295,9 @@ class TestBam2FastaCCS(_BaseTestBam2Fasta):
     READER_CLASS = FastaReader
     NRECORDS_EXPECTED = None
 
+    def _get_output_file(self, rtc):
+        return _get_tarred_fastx_file(rtc.task.output_files[0])
+
 
 @skip_unless_bam2fastx
 class TestBam2FastqCCS(TestBam2FastaCCS):
@@ -294,6 +305,9 @@ class TestBam2FastqCCS(TestBam2FastaCCS):
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     READER_CLASS = FastqReader
     NRECORDS_EXPECTED = None
+
+    def _get_output_file(self, rtc):
+        return _get_tarred_fastx_file(rtc.task.output_files[0])
 
 
 @skip_unless_bam2fastx
