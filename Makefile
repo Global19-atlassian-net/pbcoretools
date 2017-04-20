@@ -26,8 +26,8 @@ doctest:
 	cd doc && make doctest
 
 unit-test:
-	nosetests --with-xunit tests/unit -v
-
+	nosetests --with-xunit tests/unit/test_*.py -v --with-coverage --cover-xml-file=coverage.xml --cover-package=pbcoretools --cover-xml --nocapture --nologcapture --verbose 
+	sed -i -e 's@filename="@filename="./@g' coverage.xml
 test: doctest unit-test
 
 tests: test
