@@ -334,13 +334,16 @@ subreads_barcoded_file_type = OutputFileType(FileTypes.DS_SUBREADS.file_type_id,
 def run_bax2bam(rtc):
     return run_bax_to_bam(rtc.task.input_files[0], rtc.task.output_files[0])
 
+score_mode_opt = QuickOpt(["symmetric","asymmetric","tailed"], "Score Mode", 
+                           "Select method of barcode pairing and orientation. "
+                           "Use 'Tailed' for Barcode Universal Primers.")
 
-@registry("bam2bam_barcode", "0.1.0",
+@registry("bam2bam_barcode", "0.2.0",
           (FileTypes.DS_SUBREADS, FileTypes.DS_BARCODE),
           subreads_barcoded_file_type,
           is_distributed=True,
           nproc=SymbolTypes.MAX_NPROC,
-          options={"score_mode":"symmetric"})
+          options={"score_mode":score_mode_opt})
 def run_bam2bam(rtc):
     return run_bam_to_bam(
         subread_set_file=rtc.task.input_files[0],
