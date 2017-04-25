@@ -18,7 +18,7 @@ class Constants(object):
     OPT_CHUNK_KEY = 'pbcoretools.task_options.gather_tgz_chunk_key'
 
 
-def get_parser():
+def _get_parser():
     p = get_gather_pbparser(Constants.TOOL_ID,
                             Constants.VERSION,
                             "Dev TGZ Gather",
@@ -42,22 +42,22 @@ def get_parser():
     return p
 
 
-def args_runner(args):
+def _args_runner(args):
     return run_main_gather_tgz(args.cjson_in, args.tgz_out, args.chunk_key)
 
 
-def rtc_runner(rtc):
+def _rtc_runner(rtc):
     return run_main_gather_tgz(rtc.task.input_files[0], rtc.task.output_files[0], rtc.task.chunk_key)
 
 
-def main(argv=sys.argv):
+def _main(argv=sys.argv):
     return pbparser_runner(argv[1:],
-                           get_parser(),
-                           args_runner,
-                           rtc_runner,
+                           _get_parser(),
+                           _args_runner,
+                           _rtc_runner,
                            log,
                            setup_log)
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    sys.exit(_main())
