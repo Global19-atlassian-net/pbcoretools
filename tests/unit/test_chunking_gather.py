@@ -1,4 +1,9 @@
+
 from collections import namedtuple
+import tempfile
+import tarfile
+import shutil
+import uuid
 import json
 import csv
 import os
@@ -83,3 +88,39 @@ class TestJsonGather(unittest.TestCase):
         stats = { a.id:a.value for a in r.attributes }
         self.assertEqual(stats['pb_n_reads'], 549+733)
         self.assertEqual(stats['pb_n_zmws'], 200)
+
+
+def create_tarball(file_name, n=2):
+    with tarfile.open(file_name, mode="w:gz") as tgz_out:
+        for i in range(n):
+            uuid_ = str(uuid.uuid4())
+            json_file = "{u}.json".format(u=uuid_)
+            with open(json_file, "w") as json_out:
+                json_out.write('{"uuid":"%s"}' % uuid_)
+            tgz_out.add(json_file)
+            os.remove(json_file)
+    return file_name
+
+
+class TestTgzGather(unittest.TestCase):
+
+    def test_gather_tgz(self):
+        tmp_dir = tempfile.mkdtemp()
+        base_dir = os.getcwd()
+        try:
+            os.chdir(tmp_dir)
+            tgz_files = [
+                create_tarball(get_temp_file(suffix="-1.tgz")),
+                create_tarball(get_temp_file(suffix="-2.tgz"))
+            ]
+            tgz_out = get_temp_file(suffix="-0.tgz")
+            G.gather_tgz(tgz_files, tgz_out)
+            uuids = set()
+            with tarfile.open(tgz_out, mode="r:gz") as gathered:
+                for member in gathered.getmembers():
+                    d = json.loads(gathered.extractfile(member.name).read())
+                    uuids.add(d["uuid"])
+            self.assertEqual(len(uuids), 4)
+        finally:
+            os.chdir(base_dir)
+            shutil.rmtree(tmp_dir)

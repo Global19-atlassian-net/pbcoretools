@@ -16,7 +16,7 @@ from pbcommand.utils import which
 
 import pbtestdata
 
-from pbcoretools.tasks.converters import split_laa_fastq, split_laa_fastq_archived
+from pbcoretools.tasks.converters import split_laa_fastq, split_laa_fastq_archived, run_bam_to_bam
 from pbcoretools import pbvalidate
 
 from base import get_temp_file
@@ -109,29 +109,19 @@ class TestBax2Bam(PbTestApp):
             self.assertEqual(ds_out.name, "lambda_rsii")
 
 
-@skip_unless_bam2bam
-class TestBam2Bam(PbTestApp):
-    TASK_ID = "pbcoretools.tasks.bam2bam_barcode"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
-    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
-    INPUT_FILES = [
-        "/pbi/dept/secondary/siv/testdata/SA3-Sequel/phi29/315/3150101/r54008_20160219_002905/1_A01_micro/m54008_160219_003234_micro.subreadset.xml",
-        "/pbi/dept/secondary/siv/barcodes/pacbio_barcodes_384/pacbio_barcodes_384.barcodeset.xml"
-    ]
-    MAX_NPROC = 8
-    RESOLVED_NPROC = 8
-    IS_DISTRIBUTED = True
-    RESOLVED_IS_DISTRIBUTED = True
+class Bam2BamCore(object):
+    SUBREADS = "/pbi/dept/secondary/siv/testdata/SA3-Sequel/phi29/315/3150101/r54008_20160219_002905/1_A01_micro/m54008_160219_003234_micro.subreadset.xml"
+    BARCODES = "/pbi/dept/secondary/siv/barcodes/pacbio_barcodes_384/pacbio_barcodes_384.barcodeset.xml"
 
-    def run_after(self, rtc, output_dir):
+    def _validate_subreads(self, output_file):
         err, metrics = pbvalidate.validate_dataset(
-            file_name=rtc.task.output_files[0],
+            file_name=output_file,
             dataset_type="SubreadSet",
             quick=False,
             validate_index=True,
             strict=True)
         self.assertEqual(len(err), 0)
-        with SubreadSet(rtc.task.output_files[0]) as ds:
+        with SubreadSet(output_file) as ds:
             self.assertEqual(len(ds.externalResources), 1)
             # make sure metadata are propagated
             md = ds.metadata
@@ -139,11 +129,39 @@ class TestBam2Bam(PbTestApp):
                 md.collections.submetadata[0].attrib['InstrumentName'],
                 "Inst54008")
             self.assertTrue(ds.externalResources[0].scraps is not None)
-            self.assertEqual(ds.externalResources[0].barcodes,
-                             self.INPUT_FILES[1])
+            self.assertEqual(ds.externalResources[0].barcodes, self.BARCODES)
             rr = ds.resourceReaders()[0]
             self.assertTrue(rr.pbi.hasBarcodeInfo)
             #self.assertEqual(len(rr.pbi.bcReverse), 13194)
+
+
+@skip_unless_bam2bam
+class TestBam2Bam(unittest.TestCase, Bam2BamCore):
+
+    def setUp(self):
+        # FIXME workaround for 'nose' stupidity
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+
+    def test_run_bam_to_bam(self):
+        tmp_out = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
+        run_bam_to_bam(self.SUBREADS, self.BARCODES, tmp_out)
+        self._validate_subreads(tmp_out)
+
+
+@skip_unless_bam2bam
+class TestBam2BamTask(PbTestApp, Bam2BamCore):
+    TASK_ID = "pbcoretools.tasks.bam2bam_barcode"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [Bam2BamCore.SUBREADS, Bam2BamCore.BARCODES]
+    MAX_NPROC = 8
+    RESOLVED_NPROC = 8
+    IS_DISTRIBUTED = True
+    RESOLVED_IS_DISTRIBUTED = True
+
+    def run_after(self, rtc, output_dir):
+        self._validate_subreads(rtc.task.output_files[0])
 
 
 class _BaseTestBam2Fasta(PbTestApp):
