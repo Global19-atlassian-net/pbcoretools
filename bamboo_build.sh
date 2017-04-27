@@ -18,6 +18,8 @@ if [ ! -z "$PB_TOOLS_BIN" ]; then
   ln -sfn $PB_TOOLS_BIN/pbmerge  bin/
   ln -sfn $PB_TOOLS_BIN/bax2bam  bin/
   ln -sfn $PB_TOOLS_BIN/bam2bam  bin/
+  ln -sfn $PB_TOOLS_BIN/bam2fasta  bin/
+  ln -sfn $PB_TOOLS_BIN/bam2fastq  bin/
   ln -sfn $PB_TOOLS_BIN/samtools bin/
 else
   echo "WARNING: smrttools not available, some tests will be skipped"
