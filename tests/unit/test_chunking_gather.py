@@ -2,6 +2,7 @@
 from collections import namedtuple
 import tempfile
 import tarfile
+import shutil
 import uuid
 import json
 import csv
