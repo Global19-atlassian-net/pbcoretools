@@ -150,9 +150,9 @@ class ValidateXML(ValidateFile):
             DataSetValidator.validateFile(path, skipResources=True)
         except pyxbexceptions.StructuralBadDocumentError as e:
             emsg = "{t} ('<{n}>')".format(t=type(e).__name__,
-                                          n=e.node.tagName)
+                    n=e.node.tagName) # pylint: disable=no-member
         except pyxbexceptions.ValidationError as e:
-            emsg = "{t}: {m}".format(t=type(e).__name__, m=e.details())
+            emsg = "{t}: {m}".format(t=type(e).__name__, m=e.details()) # pylint: disable=no-member
         except pyxbexceptions.PyXBException as e:
             emsg = "{t}: {m})".format(t=type(e).__name__, m=str(e.message))
         except Exception as e:
