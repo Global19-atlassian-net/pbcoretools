@@ -305,7 +305,7 @@ class ValidateDatasetType (ValidateResources):
             # XXX see pbcore.io.dataset.DataSetIO:HdfSubreadSet - not sure
             # I understand what's going on here but I think it is a patch for
             # bug 27976
-            if self.dataset_type == "HdfSubreadSet" and ts_type == "SubreadSet":
+            if self.dataset_type == "HdfSubreadSet" and ds_type == "SubreadSet":
                 return []
             return [DatasetTypeError.from_args(
                 DatasetReader.get_dataset_object(file_obj),
@@ -370,7 +370,7 @@ class ValidateFileProxy (ValidateFileObject):
     validator_class = None
 
     def __init__(self, **kwds):
-        self._validator = self.validator_class(**kwds)
+        self._validator = self.validator_class(**kwds) # pylint: disable=not-callable
         self._errors = set([])
 
     def validate(self, file_obj):
