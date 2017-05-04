@@ -1,11 +1,12 @@
-#!/bin/bash -ex
+#!/bin/bash
+type module >& /dev/null || . /mnt/software/Modules/current/init/bash
+set -ex
 
 NX3PBASEURL=http://nexus/repository/unsupported/pitchfork/gcc-4.9.2
 export PATH=$PWD/bin:/mnt/software/a/anaconda2/4.2.0/bin:$PATH
 export PYTHONUSERBASE=$PWD
 export CFLAGS="-I/mnt/software/a/anaconda2/4.2.0/include"
 PIP="pip --cache-dir=$bamboo_build_working_directory/.pip"
-type module >& /dev/null || . /mnt/software/Modules/current/init/bash
 module load gcc/4.9.2
 
 rm -rf bin lib include share
@@ -41,4 +42,5 @@ $PIP install --user -r requirements-dev.txt
 
 $PIP install --user -e ./
 
+make pylint
 make test

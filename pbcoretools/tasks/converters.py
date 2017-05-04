@@ -543,7 +543,7 @@ def _run_slimbam(ext_res, nproc=1, exe="slimbam"):
             fi.resourceId = bai_out
             log.info("Updated path: {o}".format(o=bai_out))
         else:
-            local_file = op.basename(er.resourceId)
+            local_file = op.basename(ext_res.resourceId)
             if not op.exists(local_file):
                 shutil.copyfile(ext_res.resourceId, local_file)
                 ext_res.resourceId = local_file

@@ -23,8 +23,11 @@ import pbcore.chemistry.chemistry
 from pbcore.io.align._BamSupport import IncompatibleFile
 import pbcore.io
 
-from pbcoretools.pbvalidate.core import *
-
+from pbcoretools.pbvalidate.core import (
+        ValidateBase, ValidateRecord, ValidatorError, RecordValidatorError, ValidateFileObject,
+        ValidateRandomAccessBase, ValidateFileObject,
+        apply_validator_with_ctx, run_validators, get_context_class,
+)
 #log = logging.getLogger()
 
 
@@ -450,6 +453,9 @@ class ValidateReadGroup (ValidateBase):
     Base class for validation of @RG headers
     """
 
+    def _get_errors(self, aln):
+        raise NotImplementedError()
+
     def validate(self, rg):
         return len(self._get_errors(rg)) == 0
 
@@ -558,7 +564,7 @@ class ValidateReadGroupChemistry (ValidateReadGroup):
         if None in fields:
             return [ReadGroupChemistryError.from_args(rg, rg['ID'],
                                                       tuple(fields))]
-        decoded = pbcore.chemistry.decodeTriple(*fields)
+        decoded = pbcore.chemistry.decodeTriple(*fields) # pylint: disable=no-value-for-parameter
         if decoded == "unknown":
             return [ReadGroupChemistryError.from_args(rg, rg['ID'],
                                                       tuple(fields))]
@@ -592,6 +598,9 @@ class ValidateReadBase (ValidateRecord):
     def __init__(self, aligned=None, contents=None):
         self._aligned = aligned
         self._contents = contents
+
+    def _get_errors(self, aln):
+        raise NotImplementedError()
 
     def validate(self, aln):
         e = self._get_errors(aln)
@@ -726,7 +735,7 @@ class ValidateReadQname (ValidateReadBase):
             if ((rg.ReadType == Constants.READ_TYPE_CCS and qrange != "ccs") or
                     (rg.ReadType != Constants.READ_TYPE_CCS and qrange == "ccs")):
                 err.append(
-                    QnameReadTypeError.from_args(aln, rg.readType, qname))
+                    QnameReadTypeError.from_args(aln, rg.readType, aln.qName))
             if qrange != "ccs":
                 try:
                     qstart, qend = [int(x) for x in qrange.split("_")]
