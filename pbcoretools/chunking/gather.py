@@ -1,6 +1,7 @@
 
 from collections import defaultdict, namedtuple, OrderedDict
 from functools import partial as P
+from zipfile import ZipFile
 import itertools
 import argparse
 import tarfile
@@ -331,6 +332,16 @@ def gather_tgz(input_files, output_file):
     return output_file
 
 
+def gather_zip(input_files, output_file):
+    with ZipFile(output_file, "w") as zip_out:
+        for zip_file in input_files:
+            with ZipFile(zip_file, "r") as zip_in:
+                for member in zip_in.namelist():
+                    f = zip_in.open(member)
+                    zip_out.writestr(member, f.read())
+    return output_file
+
+
 def __add_chunk_key_option(default_chunk_key):
     def _add_chunk_key_option(p):
         p.add_argument('--chunk-key', type=str, default=default_chunk_key,
@@ -460,6 +471,7 @@ run_main_gather_ccsset = P(__gather_runner, gather_ccsset)
 run_main_gather_ccs_alignmentset = P(__gather_runner, gather_ccs_alignmentset)
 run_main_gather_bigwig = P(__gather_runner, gather_bigwig)
 run_main_gather_tgz = P(__gather_runner, gather_tgz)
+run_main_gather_zip = P(__gather_runner, gather_zip)
 
 
 def get_main_runner(gather_func):

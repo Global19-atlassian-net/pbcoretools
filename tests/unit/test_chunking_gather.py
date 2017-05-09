@@ -1,5 +1,6 @@
 
 from collections import namedtuple
+from zipfile import ZipFile
 import tempfile
 import tarfile
 import shutil
@@ -90,13 +91,19 @@ class TestJsonGather(unittest.TestCase):
         self.assertEqual(stats['pb_n_zmws'], 200)
 
 
+
+def _mkjson():
+    uuid_ = str(uuid.uuid4())
+    json_file = "{u}.json".format(u=uuid_)
+    with open(json_file, "w") as json_out:
+        json_out.write('{"uuid":"%s"}' % uuid_)
+    return json_file
+
+
 def create_tarball(file_name, n=2):
     with tarfile.open(file_name, mode="w:gz") as tgz_out:
         for i in range(n):
-            uuid_ = str(uuid.uuid4())
-            json_file = "{u}.json".format(u=uuid_)
-            with open(json_file, "w") as json_out:
-                json_out.write('{"uuid":"%s"}' % uuid_)
+            json_file = _mkjson()
             tgz_out.add(json_file)
             os.remove(json_file)
     return file_name
@@ -119,6 +126,39 @@ class TestTgzGather(unittest.TestCase):
             with tarfile.open(tgz_out, mode="r:gz") as gathered:
                 for member in gathered.getmembers():
                     d = json.loads(gathered.extractfile(member.name).read())
+                    uuids.add(d["uuid"])
+            self.assertEqual(len(uuids), 4)
+        finally:
+            os.chdir(base_dir)
+            shutil.rmtree(tmp_dir)
+
+
+def create_zip(file_name, n=2):
+    with ZipFile(file_name, "w") as zip_out:
+        for i in range(n):
+            json_file = _mkjson()
+            zip_out.write(json_file)
+            os.remove(json_file)
+    return file_name
+
+
+class TestZipGather(unittest.TestCase):
+
+    def test_gather_zip(self):
+        tmp_dir = tempfile.mkdtemp()
+        base_dir = os.getcwd()
+        try:
+            os.chdir(tmp_dir)
+            zip_files = [
+                create_zip(get_temp_file(suffix="-1.zip")),
+                create_zip(get_temp_file(suffix="-2.zip"))
+            ]
+            zip_out = get_temp_file(suffix="-0.zip")
+            G.gather_zip(zip_files, zip_out)
+            uuids = set()
+            with ZipFile(zip_out, "r") as gathered:
+                for member in gathered.namelist():
+                    d = json.loads(gathered.open(member).read())
                     uuids.add(d["uuid"])
             self.assertEqual(len(uuids), 4)
         finally:
