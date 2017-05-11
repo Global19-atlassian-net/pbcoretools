@@ -336,7 +336,8 @@ def run_bax2bam(rtc):
 
 score_mode_opt = QuickOpt(["symmetric","asymmetric","tailed"], "Score Mode", 
                            "Select method of barcode pairing and orientation. "
-                           "Use 'Tailed' for Barcode Universal Primers.")
+                           "For Barcode Universal Primers use 'asymmetric' with the "
+                           "universal BarcodeSet or 'tailed' with the normal BarcodeSet")
 
 @registry("bam2bam_barcode", "0.2.0",
           (FileTypes.DS_SUBREADS, FileTypes.DS_BARCODE),
@@ -542,7 +543,7 @@ def _run_slimbam(ext_res, nproc=1, exe="slimbam"):
             fi.resourceId = bai_out
             log.info("Updated path: {o}".format(o=bai_out))
         else:
-            local_file = op.basename(er.resourceId)
+            local_file = op.basename(ext_res.resourceId)
             if not op.exists(local_file):
                 shutil.copyfile(ext_res.resourceId, local_file)
                 ext_res.resourceId = local_file

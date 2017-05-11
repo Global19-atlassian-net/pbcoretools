@@ -3,8 +3,10 @@
 Unit tests for the various scatter/gather tools in pbcoretools.tasks.
 """
 
+from zipfile import ZipFile
 import tempfile
 import unittest
+import tarfile
 import random
 import shutil
 import json
@@ -40,6 +42,7 @@ import pbcoretools.chunking.chunk_utils as CU
 from base import get_temp_file
 from mock import write_random_report, \
     write_random_fasta_records, write_random_fastq_records
+from test_chunking_gather import create_tarball, create_zip
 
 
 DATA = op.join(op.dirname(op.dirname(__file__)), "data")
@@ -778,3 +781,39 @@ class TestGatherBigwig(_SetupGatherApp):
         self.assertEqual(nrec, 6, "{n} != 6".format(n=nrec))
         self.assertAlmostEqual(bw.stats("chr1", 2, 3)[0], 1.9, places=5)
         self.assertAlmostEqual(bw.stats("chr2", 7, 8)[0], 1.0, places=5)
+
+
+class TestGatherTgz(_SetupGatherApp):
+    DRIVER_BASE = "python -m pbcoretools.tasks.gather_tgz"
+    NCHUNKS = 2
+
+    def _generate_chunk_output_file(self, i=None):
+        fn = tempfile.NamedTemporaryFile(suffix=".tgz").name
+        return create_tarball(fn)
+
+    def run_after(self, rtc, output_dir):
+        uuids = set()
+        tgz_out = rtc.task.output_files[0]
+        with tarfile.open(tgz_out, mode="r:gz") as gathered:
+            for member in gathered.getmembers():
+                d = json.loads(gathered.extractfile(member.name).read())
+                uuids.add(d["uuid"])
+        self.assertEqual(len(uuids), 4)
+
+
+class TestGatherZip(_SetupGatherApp):
+    DRIVER_BASE = "python -m pbcoretools.tasks.gather_zip"
+    NCHUNKS = 2
+
+    def _generate_chunk_output_file(self, i=None):
+        fn = tempfile.NamedTemporaryFile(suffix=".zip").name
+        return create_zip(fn)
+
+    def run_after(self, rtc, output_dir):
+        uuids = set()
+        zip_out = rtc.task.output_files[0]
+        with ZipFile(zip_out, "r") as gathered:
+            for member in gathered.namelist():
+                d = json.loads(gathered.open(member).read())
+                uuids.add(d["uuid"])
+        self.assertEqual(len(uuids), 4)

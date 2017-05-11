@@ -432,7 +432,7 @@ def run_validators_expect_errors(path, reader_class, validators,
                                  quick=False):
 
     errors, metrics = run_validators(ValidatorErrorContext, path, reader_class, validators,
-                                     additional_validation_function=additional_validation_function, quick=quick)
+                                     additional_validation_function=additional_validation_function)
 
     # check that expected errors are in errors returned
     # if the errors are found, then return the proper metrics and errors

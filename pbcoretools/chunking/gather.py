@@ -1,8 +1,10 @@
 
 from collections import defaultdict, namedtuple, OrderedDict
 from functools import partial as P
+from zipfile import ZipFile
 import itertools
 import argparse
+import tarfile
 import logging
 import shutil
 import json
@@ -321,6 +323,25 @@ def gather_bigwig(input_files, output_file):
     return output_file
 
 
+def gather_tgz(input_files, output_file):
+    with tarfile.open(output_file, mode="w:gz") as tgz_out:
+        for tgz_file in input_files:
+            with tarfile.open(tgz_file, mode="r:gz") as tgz_in:
+                for member in tgz_in.getmembers():
+                    tgz_out.addfile(member, tgz_in.extractfile(member.name))
+    return output_file
+
+
+def gather_zip(input_files, output_file):
+    with ZipFile(output_file, "w") as zip_out:
+        for zip_file in input_files:
+            with ZipFile(zip_file, "r") as zip_in:
+                for member in zip_in.namelist():
+                    f = zip_in.open(member)
+                    zip_out.writestr(member, f.read())
+    return output_file
+
+
 def __add_chunk_key_option(default_chunk_key):
     def _add_chunk_key_option(p):
         p.add_argument('--chunk-key', type=str, default=default_chunk_key,
@@ -344,6 +365,7 @@ add_chunk_key_ccs_alignmentset = __add_chunk_key_option(
 add_chunk_key_contigset = __add_chunk_key_option('$chunk.fasta_id')
 add_chunk_key_report = __add_chunk_key_option('$chunk.json_id')
 add_chunk_key_bigwig = __add_chunk_key_option('$chunk.bw_id')
+add_chunk_key_tgz = __add_chunk_key_option('$chunk.tgz_id')
 
 
 def __gather_options(output_file_message, input_files_message, input_validate_func, add_chunk_key_func_):
@@ -389,6 +411,7 @@ _gather_contigset_options = __add_gather_options("Output ContigSet XML file",
                                                  "Chunk input JSON file",
                                                  add_chunk_key_contigset)
 _gather_bigwig_options = __add_gather_options("Output BigWig file", "input BigWig file", add_chunk_key_bigwig)
+_gather_tgz_options = __add_gather_options("Output TGZ file", "input TGZ file", add_chunk_key_tgz)
 
 
 def __gather_runner(func, chunk_input_json, output_file, chunk_key, **kwargs):
@@ -430,6 +453,7 @@ _args_runner_gather_csv = P(__args_gather_runner, gather_csv)
 _args_runner_gather_txt = P(__args_gather_runner, gather_txt)
 _args_runner_gather_report = P(__args_gather_runner, gather_report)
 _args_runner_gather_bigwig = P(__args_gather_runner, gather_bigwig)
+_args_runner_gather_tgz = P(__args_gather_runner, gather_tgz)
 
 # (chunk.json, output_file, chunk_key)
 run_main_gather_fasta = P(__gather_runner, gather_fasta)
@@ -446,6 +470,8 @@ run_main_gather_contigset = P(__gather_runner, gather_contigset)
 run_main_gather_ccsset = P(__gather_runner, gather_ccsset)
 run_main_gather_ccs_alignmentset = P(__gather_runner, gather_ccs_alignmentset)
 run_main_gather_bigwig = P(__gather_runner, gather_bigwig)
+run_main_gather_tgz = P(__gather_runner, gather_tgz)
+run_main_gather_zip = P(__gather_runner, gather_zip)
 
 
 def get_main_runner(gather_func):
@@ -510,6 +536,9 @@ def get_parser():
     # ContigSet
     builder('contigset', "Merge ContigSet XMLs into a single file.",
             _gather_contigset_options, _args_runner_gather_contigset)
+
+    builder('tgz', "Merge TGZ files into a single file.",
+            _gather_tgz_options, _args_runner_gather_tgz)
 
     return p
 
