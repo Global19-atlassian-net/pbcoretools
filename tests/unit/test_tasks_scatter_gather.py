@@ -387,9 +387,20 @@ class TestGatherSubreads(_SetupGatherApp):
     READER_KWARGS = {'strict': True}
     DRIVER_BASE = "python -m pbcoretools.tasks.gather_subreads"
     CHUNK_KEY = "$chunk.subreadset_id"
+    NCHUNKS = 4
 
     def _generate_chunk_output_file(self, i=None):
-        return self._copy_mock_output_file(pbtestdata.get_file("subreads-bam"))
+        ds_file = self._copy_mock_output_file(pbtestdata.get_file("subreads-bam"))
+        with SubreadSet(ds_file, strict=True) as ds_in:
+            ds_in.name = "PBCORETOOLS_TEST"
+            ds_in.tags = "gathered"
+            ds_in.write(ds_file)
+        return ds_file
+
+    def run_after(self, rtc, output_dir):
+        with SubreadSet(rtc.task.output_files[0]) as ds:
+            self.assertEqual(ds.tags, "gathered")
+            self.assertEqual(ds.name, "PBCORETOOLS_TEST")
 
 
 class TestGatherWrongType(_SetupGatherApp):
