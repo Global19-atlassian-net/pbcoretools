@@ -53,3 +53,4 @@ class TestFilterDataSet(PbTestApp):
         self.assertEqual(n_actual, n_expected)
         ds = openDataSet(rtc.task.output_files[0])
         self.assertTrue(ds.name.endswith("(filtered)"))
+        self.assertTrue("filtered" in ds.tags)

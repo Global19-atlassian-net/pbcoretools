@@ -153,6 +153,7 @@ class TestFilterDataSet(unittest.TestCase):
         run_filter_dataset(ssfn, ofn, "0", "None")
         ds = openDataSet(ofn)
         self.assertTrue(ds.name.endswith("(filtered)"))
+        self.assertTrue("filtered" in ds.tags)
 
 
 if __name__ == "__main__":

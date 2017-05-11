@@ -132,6 +132,8 @@ class Bam2BamCore(object):
             self.assertEqual(ds.externalResources[0].barcodes, self.BARCODES)
             rr = ds.resourceReaders()[0]
             self.assertTrue(rr.pbi.hasBarcodeInfo)
+            self.assertTrue("barcoded" in ds.name)
+            self.assertTrue("barcoded" in ds.tags)
             #self.assertEqual(len(rr.pbi.bcReverse), 13194)
 
 

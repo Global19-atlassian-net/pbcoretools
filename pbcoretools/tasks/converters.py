@@ -116,6 +116,7 @@ def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
         with SubreadSet(subread_set_file) as ds_in:
             ds.metadata = ds_in.metadata
             ds.name = ds_in.name + " (barcoded)"
+            ds.tags = ",".join(dataSet.tags.split(",") + ["barcoded"])
         ds.updateCounts()
         ds.newUuid()
         ds.write(output_file_name)
