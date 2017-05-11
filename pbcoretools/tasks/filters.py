@@ -54,6 +54,7 @@ def run_filter_dataset(in_file, out_file, read_length, other_filters):
             length=[('>=', rlen)])
     if rlen or other_filters:
         dataSet.updateCounts()
+    dataSet.name = dataSet.name + " (filtered)"
     dataSet.newUuid()
     dataSet.write(out_file)
     return 0

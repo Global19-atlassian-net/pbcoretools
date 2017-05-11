@@ -51,4 +51,5 @@ class TestFilterDataSet(PbTestApp):
         n_expected, n_actual = self._get_counts(rtc)
         self.assertEqual(self._get_filters(rtc), "( length <= 1400 )")
         self.assertEqual(n_actual, n_expected)
-
+        ds = openDataSet(rtc.task.output_files[0])
+        self.assertTrue(ds.name.endswith("(filtered)"))

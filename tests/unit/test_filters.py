@@ -147,5 +147,13 @@ class TestFilterDataSet(unittest.TestCase):
             '( length gte 1000 AND length lte 5000 AND rq >= .7 )')
 
 
+    def test_datset_name(self):
+        ssfn = data.getXml(8)
+        ofn = tempfile.NamedTemporaryFile(suffix=".xml").name
+        run_filter_dataset(ssfn, ofn, "0", "None")
+        ds = openDataSet(ofn)
+        self.assertTrue(ds.name.endswith("(filtered)"))
+
+
 if __name__ == "__main__":
     unittest.main()
