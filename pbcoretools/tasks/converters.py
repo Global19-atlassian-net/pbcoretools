@@ -115,8 +115,14 @@ def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
     with SubreadSet(tmp_out, strict=True) as ds:
         with SubreadSet(subread_set_file) as ds_in:
             ds.metadata = ds_in.metadata
-            ds.name = ds_in.name + " (barcoded)"
-            ds.tags = ",".join(dataSet.tags.split(",") + ["barcoded"])
+            ds_name_out = ds_in.name
+            if not "(barcoded)" in ds_name_out:
+                ds_name_out = ds_name_out + " (barcoded)"
+            ds.name = ds_name_out
+            if ds.tags.strip() == "":
+                ds.tags = "barcoded"
+            elif not "barcoded" in ds.tags:
+                ds.tags = ",".join(ds.tags.strip().split(",") + ["barcoded"])
         ds.updateCounts()
         ds.newUuid()
         ds.write(output_file_name)
