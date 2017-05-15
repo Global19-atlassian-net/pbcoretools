@@ -87,7 +87,7 @@ def run_bax_to_bam(input_file_name, output_file_name):
 
 def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
                    nproc=1, score_mode="symmetric"):
-    if not score_mode in ["asymmetric", "symmetric"]:
+    if not score_mode in ["symmetric", "asymmetric", "tailed"]:
         raise ValueError("Unrecognized score mode '{m}'".format(m=score_mode))
     bc = BarcodeSet(barcode_set_file)
     if len(bc.resourceReaders()) > 1:
