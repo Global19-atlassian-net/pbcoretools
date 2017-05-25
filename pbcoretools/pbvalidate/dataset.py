@@ -545,10 +545,10 @@ def validate_dataset(
     log.debug("Actual type:  %s" % actual_dataset_type)
     subread_types = (pbcore.io.SubreadSet, pbcore.io.AlignmentSet)
     ccs_types = (pbcore.io.ConsensusReadSet, pbcore.io.ConsensusAlignmentSet)
-    if isinstance(ds, subread_types) and contents is None:
-        contents = "SUBREAD"
-    elif isinstance(ds, ccs_types) and contents is None:
+    if isinstance(ds, ccs_types) and contents is None:
         contents = "CCS"
+    elif isinstance(ds, subread_types) and contents is None:
+        contents = "SUBREAD"
     validators = [
         ValidateEncoding(),
         ValidateRootTag(),
