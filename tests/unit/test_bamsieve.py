@@ -161,7 +161,7 @@ class TestBamSieve(unittest.TestCase):
             input_bam=BARCODED_DS,
             output_bam=ofn,
             count=1,
-            seed=12345)
+            seed=1)
         _verify()
         rc = bamSieve.filter_reads(
             input_bam=BARCODED_DS,

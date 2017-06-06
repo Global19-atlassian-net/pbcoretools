@@ -235,7 +235,7 @@ class TestBam2FastaIgnoreBarcodes(_BaseTestBam2Fasta):
     DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fasta --emit-tool-contract"
     DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fasta --resolved-tool-contract"
     SRC_FILE = pbtestdata.get_file("barcoded-subreadset")
-    NRECORDS_EXPECTED = 2
+    NRECORDS_EXPECTED = 3
 
     @classmethod
     def setUpClass(cls):
@@ -351,11 +351,14 @@ class TestBam2FastaBarcoded(PbTestApp):
             args = ["tar", "xzf", rtc.task.output_files[0]]
             self.assertEqual(subprocess.call(args), 0)
             file_names = sorted(os.listdir(tmp_dir))
-            self.assertEqual(file_names,
-                             ["reads.{e}.0_0.{e}".format(e=self.EXT),
-                              "reads.{e}.2_2.{e}".format(e=self.EXT)])
+            self.assertEqual(file_names, [
+                             "reads.{e}.0_0.{e}".format(e=self.EXT),
+                             "reads.{e}.2_2.{e}".format(e=self.EXT),
+                             "reads.{e}.65535_65535.{e}".format(e=self.EXT)
+            ])
             fastx_ids = ["m54008_160219_003234/74056024/3985_5421", # bc 0
-                         "m54008_160219_003234/28901719/5058_5262" ] # bc 2
+                         "m54008_160219_003234/28901719/5058_5262", # bc 2
+                         "m54008_160219_003234/4194401/236_10027" ] # bc -1
             for file_name, fastx_id in zip(file_names, fastx_ids):
                 with self.READER_CLASS(file_name) as f:
                     records = [rec.id for rec in f]
