@@ -10,6 +10,7 @@ import subprocess
 import warnings
 import logging
 import random
+import shutil
 import os.path as op
 import re
 import sys
@@ -124,7 +125,8 @@ def filter_reads(input_bam,
                  relative=None,
                  anonymize=False,
                  use_barcodes=False,
-                 sample_scraps=False):
+                 sample_scraps=False,
+                 keep_original_uuid=False):
     if output_bam is None:
         log.error("Must specify output file")
         return 1
@@ -144,7 +146,7 @@ def filter_reads(input_bam,
         if not 0 < percentage < 100 and not count > 0:
             log.error("No reads selected for output.")
             return 1
-    output_ds = None
+    output_ds = base_name = None
     if output_bam.endswith(".xml"):
         if not input_bam.endswith(".xml"):
             print "DataSet output only supported for DataSet inputs."
@@ -159,8 +161,8 @@ def filter_reads(input_bam,
         if not ds_type in ext2:
             raise ValueError("Invalid dataset type 't'".format(t=ds_type))
         output_ds = output_bam
-        output_bam = ".".join(output_ds.split(".")[:-2] +
-                              [ext2[ds_type], "bam"])
+        base_name = ".".join(output_ds.split(".")[:-2])
+        output_bam = base_name + "." + ".".join([ext2[ds_type], "bam"])
     if output_bam == input_bam:
         log.error("Input and output files must not be the same path")
         return 1
@@ -169,7 +171,7 @@ def filter_reads(input_bam,
         return 1
     n_file_reads = 0
     have_zmws = set()
-    scraps_bam = barcode_set = None
+    scraps_bam = barcode_set = sts_xml = None
     with openDataFile(input_bam) as ds_in:
         if not isinstance(ds_in, ReadSet):
             raise TypeError("{t} is not an allowed dataset type".format(
@@ -183,6 +185,11 @@ def filter_reads(input_bam,
             if ext_res.barcodes is not None:
                 assert barcode_set is None or barcode_set == ext_res.barcodes
                 barcode_set = barcode_set
+            if ext_res.sts is not None:
+                if sts_xml is None:
+                    sts_xml = ext_res.sts
+                else:
+                    log.warn("Multiple sts.xml files, will not propagate")
         f1 = ds_in.resourceReaders()[0]
         if percentage is not None or count is not None:
             bam_readers = list(ds_in.resourceReaders())
@@ -254,11 +261,19 @@ def filter_reads(input_bam,
                 # scraps automatically anyway, the impact is minimal
             if barcode_set is not None:
                 ds_out.externalResources[0].barcodes = barcode_set
+            if sts_xml is not None:
+                sts_xml_out = base_name + ".sts.xml"
+                log.info("Copying {s} to {d}".format(s=sts_xml, d=sts_xml_out))
+                shutil.copyfile(sts_xml, sts_xml_out)
+                ds_out.externalResources[0].sts = sts_xml_out
             if not ignore_metadata:
                 ds_out.metadata = ds_in.metadata
                 ds_out.updateCounts()
             if relative:
                 ds_out.makePathsRelative(op.dirname(output_ds))
+            if keep_original_uuid:
+                log.warn("Keeping input UUID {u}".format(u=ds_in.uuid))
+                ds_out.objMetadata["UniqueId"] = ds_in.uuid
             ds_out.write(output_ds)
             log.info("wrote {t} XML to {x}".format(
                      t=ds_out.__class__.__name__, x=output_ds))
@@ -313,7 +328,8 @@ def run(args):
         relative=args.relative,
         anonymize=args.anonymize,
         use_barcodes=args.barcodes,
-        sample_scraps=args.sample_scraps)
+        sample_scraps=args.sample_scraps,
+        keep_original_uuid=args.keep_uuid)
 
 
 def get_parser():
@@ -356,6 +372,9 @@ def get_parser():
                         "hole numbers from scraps BAM files when picking a "+
                         "random sample (default is to sample only ZMWs "+
                         "present in subreads BAM).")
+    p.add_argument("--keep-uuid", action="store_true",
+                   help="If enabled, the UUID from the input dataset will "+
+                        "be used for the output as well.")
     return p
 
 
