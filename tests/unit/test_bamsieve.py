@@ -6,7 +6,8 @@ import shutil
 import os.path as op
 import os
 
-from pbcore.io import openDataFile, openDataSet, BamReader
+from pbcommand.models import FileTypes
+from pbcore.io import openDataFile, BamReader, SubreadSet
 
 import pbtestdata
 
@@ -22,6 +23,8 @@ SUBREADS4 = pbtestdata.get_file("aligned-bam")
 CCS = pbtestdata.get_file("ccs-bam")
 BARCODED = pbtestdata.get_file("barcoded-subreads-bam")
 BARCODED_DS = pbtestdata.get_file("barcoded-subreadset")
+SUBREADS_STS = pbtestdata.get_file("subreads-sequel")
+
 
 class TestBamSieve(unittest.TestCase):
 
@@ -59,14 +62,16 @@ class TestBamSieve(unittest.TestCase):
             output_bam=ofn,
             whitelist="8")
         self.assertEqual(rc, 0)
-        with openDataSet(ofn, strict=False) as bam_out:
+        with SubreadSet(ofn, strict=False) as bam_out:
+            with SubreadSet(DS2) as ds_in:
+                self.assertNotEqual(ds_in.uuid, bam_out.uuid)
             have_zmws = set([rec.HoleNumber for rec in bam_out])
             self.assertEqual(have_zmws, set([8]))
         # make sure paths are absolute
         tmpdir = tempfile.mkdtemp()
         ofn2 = op.join(tmpdir, op.basename(ofn))
         shutil.copyfile(ofn, ofn2)
-        with openDataSet(ofn2, strict=False) as bam_out:
+        with SubreadSet(ofn2, strict=False) as bam_out:
             have_zmws = set([rec.HoleNumber for rec in bam_out])
             self.assertEqual(have_zmws, set([8]))
 
@@ -86,7 +91,7 @@ class TestBamSieve(unittest.TestCase):
                 shutil.move(op.join(op.dirname(ofn), file_name),
                             op.join(tmpdir, file_name))
         ofn2 = op.join(tmpdir, op.basename(ofn))
-        with openDataSet(ofn2, strict=False) as bam_out:
+        with SubreadSet(ofn2, strict=False) as bam_out:
             have_zmws = set([rec.HoleNumber for rec in bam_out])
             self.assertEqual(have_zmws, set([8]))
 
@@ -149,8 +154,10 @@ class TestBamSieve(unittest.TestCase):
             whitelist=[74056024])
         self.assertEqual(rc, 0)
         def _verify():
-            with openDataSet(ofn, strict=False) as ds_out:
+            with SubreadSet(ofn, strict=False) as ds_out:
                 ext_res = ds_out.externalResources[0]
+                self.assertTrue(ext_res.bam.endswith(".subreads.bam"))
+                self.assertTrue(ext_res.scraps.endswith(".scraps.bam"))
                 for bam_file in [ext_res.bam, ext_res.scraps]:
                     with BamReader(bam_file) as bam:
                         zmws = set([rec.HoleNumber for rec in bam])
@@ -192,6 +199,27 @@ class TestBamSieve(unittest.TestCase):
         with BamReader(ofn) as bam_out:
             zmws = set([rec.HoleNumber for rec in bam_out])
             self.assertEqual(len(zmws), 1)
+
+    def test_sts_xml(self):
+        ofn = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
+        rc = bamSieve.filter_reads(
+            input_bam=SUBREADS_STS,
+            output_bam=ofn,
+            count=1,
+            seed=12345,
+            keep_original_uuid=True)
+        self.assertEqual(rc, 0)
+        with SubreadSet(ofn, strict=True) as ds:
+            with SubreadSet(SUBREADS_STS) as ds_in:
+                self.assertEqual(ds_in.uuid, ds.uuid)
+            for er in ds.externalResources:
+                if er.metaType == FileTypes.BAM_SUB.file_type_id:
+                    self.assertTrue(er.sts is not None)
+                    self.assertTrue(os.path.exists(er.sts))
+                    self.assertNotEqual(er.sts, ds_in.externalResources[0].sts)
+                    break
+            else:
+                self.fail("Can't find subreads BAM")
 
     def test_error(self):
         ofn = tempfile.NamedTemporaryFile(suffix=".bam").name
