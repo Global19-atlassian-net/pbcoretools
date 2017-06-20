@@ -232,6 +232,18 @@ class TestCase (unittest.TestCase):
         rc = subprocess.call(["pbvalidate", "test_2.fa"])
         self.assertEqual(rc, 1)
 
+    def test_carriage_returns(self):
+        file_name = op.join(op.dirname(op.dirname(__file__)), "data",
+                            "bc_bad_returns.fasta")
+        e, m = validate_file(file_name)
+        self.assertEqual(len(e), 1)
+
+    def test_dos(self):
+        file_name = op.join(op.dirname(op.dirname(__file__)), "data",
+                            "tst_dos.fasta")
+        e, m = validate_file(file_name)
+        self.assertEqual(len(e), 0)
+
 
 if __name__ == "__main__":
     unittest.main()
