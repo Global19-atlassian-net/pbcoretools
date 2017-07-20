@@ -42,12 +42,10 @@ def get_contract_parser():
                            "ccsset_chunked")
 
     # max nchunks for this specific task
-    # FIXME using same option names as scatter_subread_reference.py - it would
-    # be nice if these were more generic
-    p.add_int("pbcoretools.task_options.scatter_subread_max_nchunks", "max_nchunks", Constants.DEFAULT_NCHUNKS,
+    p.add_int("pbcoretools.task_options.scatter_ccs_max_nchunks", "max_nchunks", Constants.DEFAULT_NCHUNKS,
               "Max NChunks", "Maximum number of Chunks")
 
-    p.add_str("pbcoretools.task_options.scatter_subreadset_chunk_key", "chunk_key",
+    p.add_str("pbcoretools.task_options.scatter_ccsset_chunk_key", "chunk_key",
               "$chunk:fasta_id", "Chunk key", "Chunk key to use (format $chunk:{chunk-key}")
     return p
 
