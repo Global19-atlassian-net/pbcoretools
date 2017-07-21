@@ -14,6 +14,10 @@ mkdir  bin lib include share
 
 # HACK to put binaries on path
 if [ ! -z "$PB_TOOLS_BIN" ]; then
+  if [ ! -d "$PB_TOOLS_BIN" ]; then
+    echo "ERROR: $PB_TOOLS_BIN is not a valid directory"
+    exit 1
+  fi
   echo "Symlinking to executables in smrttools installation..."
   ln -sfn $PB_TOOLS_BIN/pbindex  bin/
   ln -sfn $PB_TOOLS_BIN/pbmerge  bin/
