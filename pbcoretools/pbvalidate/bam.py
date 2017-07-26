@@ -921,6 +921,8 @@ def _validate_encoding(aln, feature_name, tag_id):
 
 
 class ValidateEncodingBase (ValidateReadBase):
+    FEATURE_NAME = None
+    TAG_ID = None
 
     def validate(self, aln):
         if aln.isMapped:
