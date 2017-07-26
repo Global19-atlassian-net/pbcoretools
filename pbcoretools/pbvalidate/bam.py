@@ -294,6 +294,10 @@ class PulseFeatureError (BAMReadError):
         "declared in manifest: %s"
 
 
+class BadEncodingError (BAMReadError):
+    MESSAGE_FORMAT = "Record %s contains a %s tag with 16-bit values, but the BAM header claims that %s is encoded as 8-bit values"
+
+
 class UninitializedSNRError (BAMReadError):
     MESSAGE_FORMAT = "The HQRegionSNR field ('sn') for the alignment of %s " +\
         "is uninitialized"
@@ -316,6 +320,7 @@ class UnmappedPropertiesError (BAMReadError):
 class BadTranscriptError (BAMReadError):  # XXX untested
     MESSAGE_FORMAT = "Unexpected error attempting to extract transcript " +\
         "for %s: '%s'"
+
 
 #
 #
@@ -905,6 +910,45 @@ class ValidateReadPulseFeatures (ValidateReadBase):
         return [PulseFeatureError.from_args(aln, aln.qName, ", ".join(sorted(missing)))]
 
 
+def _validate_encoding(aln, feature_name, tag_id):
+    baseFeatures = aln.bam.baseFeaturesAvailable()
+    if feature_name in baseFeatures:
+        concreteFeatureName = aln.bam._baseFeatureNameMappings[aln.qId][feature_name]
+        if concreteFeatureName.endswith(":CodecV1"):
+            feature = aln.peer.opt(tag_id)
+            return feature.itemsize == 1
+    return True
+
+
+class ValidateEncodingBase (ValidateReadBase):
+
+    def validate(self, aln):
+        if aln.isMapped:
+            return _validate_encoding(aln, self.FEATURE_NAME, self.TAG_ID)
+        return True
+
+    def to_errors(self, aln):
+        return [BadEncodingError.from_args(aln, aln.qName, self.TAG_ID, self.FEATURE_NAME)]
+
+
+class ValidatePulseWidthEncoding (ValidateEncodingBase):
+
+    """
+    Verify that pulse width is 8-bit if the header claims it is encoded.
+    """
+    FEATURE_NAME = "PulseWidth"
+    TAG_ID = "pw"
+
+
+class ValidateIpdEncoding (ValidateEncodingBase):
+
+    """
+    Verify that IPD is 8-bit if the header claims it is encoded.
+    """
+    FEATURE_NAME = "Ipd"
+    TAG_ID = "ip"
+
+
 class ValidateReadLocalContext (ValidateReadBase):
 
     """
@@ -1050,6 +1094,8 @@ def get_validators(aligned=None, contents=None,
         ValidateReadCigar(),
         ValidateReadCigarMatches(),
         ValidateReadPulseFeatures(),
+        ValidatePulseWidthEncoding(),
+        ValidateIpdEncoding(),
         # XXX is this actually done?
         # ValidateReadLocalContext(),
         ValidateReadMapped(aligned, contents),
