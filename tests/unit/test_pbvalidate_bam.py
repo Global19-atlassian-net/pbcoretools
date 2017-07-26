@@ -27,7 +27,7 @@ sam_str_ = """\
 @SQ\tSN:ecoliK12_pbi_March2013_2955000_to_2980000\tLN:25000\tM5:734d5f3b2859595f4bd87a2fe6b7389b
 @RG\tID:%(rg_id)s%(pl)s\tDS:READTYPE=SUBREAD;DeletionQV=dq;DeletionTag=dt;InsertionQV=iq;MergeQV=mq;SubstitutionQV=sq;%(ipd)s=ip;FRAMERATEHZ=75.0;BASECALLERVERSION=%(bcv)s;BINDINGKIT=%(bk)s;SEQUENCINGKIT=%(sk)s\tPU:movie1
 @PG\tID:bax2bam-0.0.2\tPN:bax2bam\tVN:0.0.2\tDS:bax2bam converts the legacy PacBio basecall format (bax.h5) into the BAM basecall format.\tCL:bax2bam in.bax.h5 out.bam
-movie1/54130/0_10\t2\tecoliK12_pbi_March2013_2955000_to_2980000\t2\t10\t%(cigar)s\t*\t0\t0\tAATGAGGAGA\t*\tRG:Z:%(rg_id)s\tdq:Z:2222'$22'2\tdt:Z:NNNNAGNNGN\tip:B:C,255,2,0,10,22,34,0,2,3,0,16\tiq:Z:(+#1'$#*1&\tmq:Z:&1~51*5&~2\tnp:i:1\tqe:i:10\tqs:i:%(qs)d\trq:f:%(rq)s\tsn:B:f,%(sn)s\tsq:Z:<32<4<<<<3\tzm:i:54130\tAS:i:-3020\tNM:i:134\tcx:i:2
+movie1/54130/0_10\t2\tecoliK12_pbi_March2013_2955000_to_2980000\t2\t10\t%(cigar)s\t*\t0\t0\tAATGAGGAGA\t*\tRG:Z:%(rg_id)s\tdq:Z:2222'$22'2\tdt:Z:NNNNAGNNGN\tip:B:%(ip)s\tiq:Z:(+#1'$#*1&\tmq:Z:&1~51*5&~2\tnp:i:1\tqe:i:10\tqs:i:%(qs)d\trq:f:%(rq)s\tsn:B:f,%(sn)s\tsq:Z:<32<4<<<<3\tzm:i:54130\tAS:i:-3020\tNM:i:134\tcx:i:2
 movie1/54130/10_20\t2\tecoliK12_pbi_March2013_2955000_to_2980000\t12\t10\t%(cigar2)s\t*\t0\t0\tAATGAGGAGA\t*\tRG:Z:%(rg_id)s\tdq:Z:2222'$22'2\tdt:Z:NNNNAGNNGN\tip:B:C,255,2,0,10,22,34,0,2,3,0,16\tiq:Z:(+#1'$#*1&\tmq:Z:&1~51*5&~2\tnp:i:1\tqe:i:20\tqs:i:10\trq:f:0.854\tsn:B:f,2.0,2.0,2.0,2.0\tsq:Z:<32<4<<<<3\tzm:i:54130\tAS:i:-3020\tNM:i:134\tcx:i:2
 %(qname)s\t%(flag)s\tecoliK12_pbi_March2013_2955000_to_2980000\t22\t10\t%(cigar)s\t*\t0\t0\tAATGAGGAGA\t%(qual)s\tRG:Z:%(rg_id)s\tdq:Z:2222'$22'2\tdt:Z:%(dt)s\tip:B:C,255,2,0,10,22,34,0,2,3,0,16\tiq:Z:(+#1'$#*1&\tmq:Z:&1~51*5&~2\tnp:i:1\tqe:i:%(qe)d\tqs:i:20\trq:f:0.854\tsn:B:f,2.0,2.0,2.0,2.0\tsq:Z:%(sq)s\tzm:i:54130\tAS:i:-3020\tNM:i:134\tcx:i:2"""
 
@@ -40,6 +40,7 @@ basic_tags = {
     "dt": "NNNNAGNNGN",
     "flag": "2",
     "ipd": "Ipd:CodecV1",
+    "ip": "C,255,2,0,10,22,34,0,2,3,0,16",
     "pl": "\tPL:PACBIO",
     "qe": 30,
     "qname": "movie1/54130/20_30",
@@ -62,6 +63,7 @@ bad_tags = {
     "dt": "012345689",
     "flag": "4",
     "ipd": "Ipd",
+    "ip": "C,255,2,0,10,22,34,0,2,3,0,16",
     "pl": "",
     "qe": 29,
     "qname": "movie1_54130_10-20",
@@ -114,12 +116,15 @@ bad_tags2 = {
 # XXX attempting to screw with sort order, but this isn't currently checked...
 bad_tags3 = dict(basic_tags2)
 bad_tags3["zm2"] = "7"
+bad_tags4 = dict(basic_tags)
+bad_tags4["ip"] = "S,255,2,0,512,22,34,0,2,3,0,16"
 sam_strings = [
     sam_str_ % basic_tags,
     (sam_str_ + "\n" + rec1) % bad_tags,
     unmapped_sam_str_ % basic_tags2,
     unmapped_sam_str_ % bad_tags2,
     #unmapped_sam_str_ % bad_tags3,
+    sam_str_ % bad_tags4
 ]
 
 DATA_DIR = op.join(op.dirname(op.dirname(__file__)), "data")
@@ -296,6 +301,12 @@ class TestCase (unittest.TestCase):
         e, c = bam.validate_bam(file_name, aligned=False)
         errors3 = sorted([type(err).__name__ for err in e])
         self.assertEqual(errors3, errors1)
+
+    def test_bad_encoding(self):
+        file_name = op.join(DATA_DIR, "tst_5_subreads.bam")
+        e, c = bam.validate_bam(file_name)
+        errors1 = sorted([type(err).__name__ for err in e])
+        self.assertEqual(errors1, ["BadEncodingError"])
 
     def test_exit_code_0(self):
         file_name = op.join(DATA_DIR, "tst_1_subreads.bam")
