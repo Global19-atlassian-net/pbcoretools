@@ -10,6 +10,7 @@ from pbcore.io.dataset import InvalidDataSetIOError
 from pbcore.io.dataset.utils import _swapPath
 from pbcore.io.dataset.DataSetMembers import Filters, OPMAP
 from pbcore.io.dataset.DataSetValidator import validateFile
+from pbcommand.validators import validate_output_dir
 import logging
 
 log = logging.getLogger(__name__)
@@ -56,16 +57,12 @@ def createXml(args):
         dset = dsTypes[args.dsType](*args.infile, strict=args.strict,
                                     skipCounts=args.skipCounts,
                                     generateIndices=args.generateIndices)
-    if args.generateIndices:
-        # we generated the indices with the last open, lets capture them with
-        # this one:
-        dset = dsTypes[args.dsType](*args.infile, strict=args.strict,
-                                    skipCounts=args.skipCounts)
     if args.dsName != '':
         dset.name = args.dsName
     if args.metadata:
         dset.loadMetadata(args.metadata)
     log.debug("Dataset created")
+    dset.newUuid()
     dset.write(args.outfile, validate=args.novalidate, relPaths=args.relative)
     log.debug("Dataset written")
     return 0
@@ -243,7 +240,7 @@ def split_options(parser):
                         help="Break contigs to get closer to maxCounts")
     parser.add_argument("--subdatasets", default=False, action='store_true',
                         help="Split on SubDataSets")
-    parser.add_argument("--outdir", default=False, type=str,
+    parser.add_argument("--outdir", default=False, type=validate_output_dir,
                         help="Specify an output directory")
     parser.add_argument("outfiles", nargs=argparse.REMAINDER,
                         type=str, help="The resulting XML files (optional)")

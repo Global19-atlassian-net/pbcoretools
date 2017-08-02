@@ -25,7 +25,8 @@ rl_opt = QuickOpt(0, "Minimum subread length",
 filters_opt = QuickOpt(
     "",
     "Filters to add to the DataSet",
-    "A comma separated list of other filters to add to the DataSet")
+    ("A semicolon or comma separated list of other filters "
+     "to add to the DataSet"))
 
 subreads_file_type = OutputFileType(FileTypes.DS_SUBREADS.file_type_id,
                                     "SubreadSet", "Filtered SubreadSet XML",
@@ -45,7 +46,10 @@ def run_filter_dataset(in_file, out_file, read_length, other_filters):
     dataSet = openDataSet(in_file)
     dataSet.updateCounts() # just in case
     if other_filters and other_filters != "None":
-        filters = parse_filter_list(str(other_filters).split(','))
+        if ';' in str(other_filters):
+            filters = parse_filter_list(str(other_filters).split(';'))
+        else:
+            filters = parse_filter_list(str(other_filters).split(','))
         dataSet.filters.addFilter(**filters)
         log.info("{i} other filters added".format(i=len(filters)))
     rlen = sanitize_read_length(read_length)
