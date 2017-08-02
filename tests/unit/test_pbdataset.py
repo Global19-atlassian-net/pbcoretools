@@ -457,6 +457,94 @@ class TestDataSet(unittest.TestCase):
         self.assertTrue(os.path.exists(ofn))
         self.assertNotEqual(mtime, os.path.getmtime(ofn))
 
+
+        log.debug("No type specified")
+        outdir = tempfile.mkdtemp(suffix="dataset-unittest")
+        ofn = os.path.join(outdir, os.path.basename(data.getXml(12)))
+        cmd = "dataset create {o} {i1} {i2}".format(
+            o=ofn, i1=data.getXml(8), i2=data.getXml(11))
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(ofn))
+        aset = AlignmentSet(ofn)
+        shutil.rmtree(outdir)
+
+        log.debug("Generate existing indices")
+        outdir = tempfile.mkdtemp(suffix="dataset-unittest")
+        ofn = os.path.join(outdir, os.path.basename(data.getXml(12)))
+        cmd = ("dataset create --type AlignmentSet "
+               "--generateIndices {o} {i1} {i2}").format(
+            o=ofn, i1=data.getXml(8), i2=data.getXml(11))
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        log.debug(m)
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(ofn))
+        aset = AlignmentSet(ofn, strict=True)
+        shutil.rmtree(outdir)
+
+        log.debug("Generate existing indices no type specified")
+        outdir = tempfile.mkdtemp(suffix="dataset-unittest")
+        ofn = os.path.join(outdir, os.path.basename(data.getXml(12)))
+        cmd = ("dataset create "
+               "--generateIndices {o} {i1} {i2}").format(
+            o=ofn, i1=data.getXml(8), i2=data.getXml(11))
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        log.debug(m)
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(ofn))
+        aset = AlignmentSet(ofn, strict=True)
+        shutil.rmtree(outdir)
+
+        log.debug("Generate indices")
+        outdir = tempfile.mkdtemp(suffix="dataset-unittest")
+        ifn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml",
+                                          dir=outdir).name
+        log.info(ifn)
+        # copy the resources and xml
+        aset = AlignmentSet(data.getXml(12))
+        aset.copyTo(ifn)
+        aset = AlignmentSet(ifn)
+        # get the key resource filename
+        ifn = aset.toExternalFiles()[0]
+        log.info(ifn)
+        ofn = os.path.join(outdir, os.path.basename(data.getXml(12)))
+        cmd = ("dataset create --type AlignmentSet "
+               "--generateIndices {} {}").format(ofn, ifn)
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        log.debug(m)
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(ofn))
+        aset = AlignmentSet(ofn, strict=True)
+        shutil.rmtree(outdir)
+
+
+        log.debug("Generate indices, no type specified")
+        outdir = tempfile.mkdtemp(suffix="dataset-unittest")
+        ifn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml",
+                                          dir=outdir).name
+        log.info(ifn)
+        # copy the resources and xml
+        aset = AlignmentSet(data.getXml(12))
+        aset.copyTo(ifn)
+        aset = AlignmentSet(ifn)
+        # get the key resource filename
+        ifn = aset.toExternalFiles()[0]
+        log.info(ifn)
+        ofn = os.path.join(outdir, os.path.basename(data.getXml(12)))
+        cmd = ("dataset create --generateIndices {} {}").format(ofn, ifn)
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        log.debug(m)
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(ofn))
+        aset = AlignmentSet(ofn, strict=True)
+        shutil.rmtree(outdir)
+
+
     @unittest.skipIf(not _check_constools(),
                      "bamtools or pbindex not found, skipping")
     def test_loadstats_cli(self):
