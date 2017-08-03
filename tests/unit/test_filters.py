@@ -127,7 +127,7 @@ class TestFilterDataSet(unittest.TestCase):
                          "( rq > .7 AND length >= 100 )")
 
         # semicolon:
-        run_filter_dataset(ssfn, ofn, "100", "rq > .7; length < 5000")
+        run_filter_dataset(ssfn, ofn, "100", "rq > .7 AND length < 5000")
         ds = openDataSet(ofn)
         self.assertEqual(
             str(ds.filters),
