@@ -46,8 +46,8 @@ def run_filter_dataset(in_file, out_file, read_length, other_filters):
     dataSet = openDataSet(in_file)
     dataSet.updateCounts() # just in case
     if other_filters and other_filters != "None":
-        if ';' in str(other_filters):
-            filters = parse_filter_list(str(other_filters).split(';'))
+        if ' AND ' in str(other_filters):
+            filters = parse_filter_list(str(other_filters).split(' AND '))
         else:
             filters = parse_filter_list(str(other_filters).split(','))
         dataSet.filters.addFilter(**filters)
