@@ -352,9 +352,9 @@ class TestBam2FastaBarcoded(PbTestApp):
             self.assertEqual(subprocess.call(args), 0)
             file_names = sorted(os.listdir(tmp_dir))
             self.assertEqual(file_names, [
-                             "reads.{e}.0_0.{e}".format(e=self.EXT),
-                             "reads.{e}.2_2.{e}".format(e=self.EXT),
-                             "reads.{e}.65535_65535.{e}".format(e=self.EXT)
+                             "reads.{e}.lbc1__lbc1.{e}".format(e=self.EXT),
+                             "reads.{e}.lbc3__lbc3.{e}".format(e=self.EXT),
+                             "reads.{e}.unbarcoded.{e}".format(e=self.EXT)
             ])
             fastx_ids = ["m54008_160219_003234/74056024/3985_5421", # bc 0
                          "m54008_160219_003234/28901719/5058_5262", # bc 2
