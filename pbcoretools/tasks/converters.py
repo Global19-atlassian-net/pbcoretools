@@ -176,9 +176,34 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
     """
     assert isinstance(program_name, basestring)
     barcode_mode = False
+    barcode_sets = set()
     if output_file_name.endswith(".tar.gz"):
         with openDataSet(input_file_name) as ds_in:
             barcode_mode = ds_in.isBarcoded
+            if barcode_mode:
+                # attempt to collect the labels of barcodes used on this
+                # dataset.  assumes that all BAM files used the same barcodes
+                for bam in ds_in.externalResources:
+                    if bam.barcodes is not None:
+                        barcode_sets.add(bam.barcodes)
+    barcode_labels = []
+    if barcode_mode:
+        if len(barcode_sets) == 1:
+            bc_file = list(barcode_sets)[0]
+            log.info("Reading barcode labels from %s", bc_file)
+            try:
+                with BarcodeSet(bc_file) as bc_in:
+                    for bc in bc_in:
+                        barcode_labels.append(bc.id)
+            except IOError as e:
+                log.error("Can't read %s", bc_file)
+                log.error(e)
+        elif len(barcode_sets) > 1:
+            log.warn("Multiple barcode sets used for this SubreadSet:")
+            for fn in sorted(list(barcode_sets)):
+                log.warn("  %s", fn)
+        else:
+            log.info("No barcode labels available")
     tmp_out_prefix = tempfile.NamedTemporaryFile(dir=tmp_dir).name
     args = [
         program_name,
@@ -206,12 +231,31 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                 fn = op.join(tmp_out_dir, fn)
                 if fn.startswith(tmp_out_prefix) and fn.endswith(suffix):
                     if barcode_mode:
+                        # bam2fastx outputs files with the barcode indices
+                        # encoded in the file names; here we attempt to
+                        # translate these to barcode labels, falling back on
+                        # the original indices if necessary
                         bc_fwd_rev = fn.split(".")[-3].split("_")
-                        suffix2 = ".{f}_{r}.{t}".format(
-                            f=bc_fwd_rev[0], r=bc_fwd_rev[1], t=base_ext)
+                        bc_label = "unbarcoded"
+                        if (bc_fwd_rev != ["65535", "65535"] and
+                            bc_fwd_rev != ["-1", "-1"]):
+                            def _label_or_none(x):
+                                try:
+                                    bc = int(x)
+                                    if bc < 0:
+                                        return "none"
+                                    elif bc < len(barcode_labels):
+                                        return barcode_labels[bc]
+                                except ValueError as e:
+                                    pass
+                                return x
+                            bc_fwd_label = _label_or_none(bc_fwd_rev[0])
+                            bc_rev_label = _label_or_none(bc_fwd_rev[1])
+                            bc_label = "{f}__{r}".format(f=bc_fwd_label,
+                                                         r=bc_rev_label)
+                        suffix2 = ".{l}.{t}".format(l=bc_label, t=base_ext)
                     else:
                         suffix2 = '.' + base_ext
-                    assert fn == tmp_out_prefix + suffix2 + ".gz"
                     fn_out = re.sub(".tar.gz$", suffix2, output_file_name)
                     fastx_out = op.join(tc_out_dir, fn_out)
                     _unzip_fastx(fn, fastx_out)
@@ -381,14 +425,14 @@ def run_bam2fastq(rtc):
     return run_bam_to_fastq(rtc.task.input_files[0], rtc.task.output_files[0])
 
 
-@registry("bam2fasta_archive", "0.1.0",
+@registry("bam2fasta_archive", "0.2.0",
           FileTypes.DS_SUBREADS,
           fasta_gzip_file_type, is_distributed=True, nproc=1)
 def run_bam2fasta_archive(rtc):
     return run_bam_to_fasta(rtc.task.input_files[0], rtc.task.output_files[0])
 
 
-@registry("bam2fastq_archive", "0.1.0",
+@registry("bam2fastq_archive", "0.2.0",
           FileTypes.DS_SUBREADS,
           fastq_gzip_file_type, is_distributed=True, nproc=1)
 def run_bam2fastq_archive(rtc):

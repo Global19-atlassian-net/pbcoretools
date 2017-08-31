@@ -343,6 +343,13 @@ class TestBam2FastaBarcoded(PbTestApp):
     READER_CLASS = FastaReader
     EXT = "fasta"
 
+    def _get_expected_file_names(self):
+        return [
+            "reads.{e}.lbc1__lbc1.{e}".format(e=self.EXT),
+            "reads.{e}.lbc3__lbc3.{e}".format(e=self.EXT),
+            "reads.{e}.unbarcoded.{e}".format(e=self.EXT)
+        ]
+
     def run_after(self, rtc, output_dir):
         tmp_dir = tempfile.mkdtemp()
         _cwd = os.getcwd()
@@ -351,11 +358,7 @@ class TestBam2FastaBarcoded(PbTestApp):
             args = ["tar", "xzf", rtc.task.output_files[0]]
             self.assertEqual(subprocess.call(args), 0)
             file_names = sorted(os.listdir(tmp_dir))
-            self.assertEqual(file_names, [
-                             "reads.{e}.0_0.{e}".format(e=self.EXT),
-                             "reads.{e}.2_2.{e}".format(e=self.EXT),
-                             "reads.{e}.65535_65535.{e}".format(e=self.EXT)
-            ])
+            self.assertEqual(file_names, self._get_expected_file_names())
             fastx_ids = ["m54008_160219_003234/74056024/3985_5421", # bc 0
                          "m54008_160219_003234/28901719/5058_5262", # bc 2
                          "m54008_160219_003234/4194401/236_10027" ] # bc -1
@@ -369,7 +372,36 @@ class TestBam2FastaBarcoded(PbTestApp):
 
 
 @skip_unless_bam2fastx
+class TestBam2FastaBarcodedNoLabels(TestBam2FastaBarcoded):
+    INPUT_FILES = [tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name]
+
+    @classmethod
+    def setUpClass(cls):
+        bam_files = []
+        with SubreadSet(pbtestdata.get_file("barcoded-subreadset")) as ds_in:
+            for er in ds_in.externalResources:
+                bam_files.append(er.bam)
+        with SubreadSet(*bam_files, strict=True) as ds_out:
+            ds_out.write(cls.INPUT_FILES[0])
+    def _get_expected_file_names(self):
+        return [
+            "reads.{e}.0__0.{e}".format(e=self.EXT),
+            "reads.{e}.2__2.{e}".format(e=self.EXT),
+            "reads.{e}.unbarcoded.{e}".format(e=self.EXT)
+        ]
+
+
+
+@skip_unless_bam2fastx
 class TestBam2FastqBarcoded(TestBam2FastaBarcoded):
+    TASK_ID = "pbcoretools.tasks.bam2fastq_archive"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    READER_CLASS = FastqReader
+    EXT = "fastq"
+
+
+@skip_unless_bam2fastx
+class TestBam2FastqBarcodedNoLabels(TestBam2FastaBarcodedNoLabels):
     TASK_ID = "pbcoretools.tasks.bam2fastq_archive"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     READER_CLASS = FastqReader
