@@ -247,7 +247,8 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                                     elif bc < len(barcode_labels):
                                         return barcode_labels[bc]
                                 except ValueError as e:
-                                    return x
+                                    pass
+                                return x
                             bc_fwd_label = _label_or_none(bc_fwd_rev[0])
                             bc_rev_label = _label_or_none(bc_fwd_rev[1])
                             bc_label = "{f}__{r}".format(f=bc_fwd_label,
