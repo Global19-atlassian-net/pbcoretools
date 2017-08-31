@@ -237,7 +237,8 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                         # the original indices if necessary
                         bc_fwd_rev = fn.split(".")[-3].split("_")
                         bc_label = "unbarcoded"
-                        if bc_fwd_rev != ["65535", "65535"]:
+                        if (bc_fwd_rev != ["65535", "65535"] and
+                            bc_fwd_rev != ["-1", "-1"]):
                             def _int_or_maxint(x):
                                 try:
                                     return int(x)
@@ -247,9 +248,13 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                             bc_rev_label = bc_fwd_rev[1]
                             bc_fwd = _int_or_maxint(bc_fwd_label)
                             bc_rev = _int_or_maxint(bc_rev_label)
-                            if bc_fwd < len(barcode_labels):
+                            if bc_fwd < 0:
+                                bc_fwd_label = "none"
+                            elif bc_fwd < len(barcode_labels):
                                 bc_fwd_label = barcode_labels[bc_fwd]
-                            if bc_rev < len(barcode_labels):
+                            if bc_rev < 0:
+                                bc_rev_label = "none"
+                            elif bc_rev < len(barcode_labels):
                                 bc_rev_label = barcode_labels[bc_rev]
                             bc_label = "{f}__{r}".format(f=bc_fwd_label,
                                                          r=bc_rev_label)
