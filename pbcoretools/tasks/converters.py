@@ -176,7 +176,7 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
     """
     assert isinstance(program_name, basestring)
     barcode_mode = False
-    barcode_labels = []
+    barcode_sets = set()
     if output_file_name.endswith(".tar.gz"):
         with openDataSet(input_file_name) as ds_in:
             barcode_mode = ds_in.isBarcoded
@@ -185,13 +185,25 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                 # dataset.  assumes that all BAM files used the same barcodes
                 for bam in ds_in.externalResources:
                     if bam.barcodes is not None:
-                        try:
-                            with BarcodeSet(bam.barcodes) as bc_in:
-                                for bc in bc_in:
-                                    barcode_labels.append(bc.id)
-                        except IOError as e:
-                            log.error("Can't read %s", bam.barcodes)
-                            log.error(e)
+                        barcode_sets.add(bam.barcodes)
+    barcode_labels = []
+    if barcode_mode:
+        if len(barcode_sets) == 1:
+            bc_file = list(barcode_sets)[0]
+            log.info("Reading barcode labels from %s", bc_file)
+            try:
+                with BarcodeSet(bc_file) as bc_in:
+                    for bc in bc_in:
+                        barcode_labels.append(bc.id)
+            except IOError as e:
+                log.error("Can't read %s", bc_file)
+                log.error(e)
+        elif len(barcode_sets) > 1:
+            log.warn("Multiple barcode sets used for this SubreadSet:")
+            for fn in sorted(list(barcode_sets)):
+                log.warn("  %s", fn)
+        else:
+            log.info("No barcode labels available")
     tmp_out_prefix = tempfile.NamedTemporaryFile(dir=tmp_dir).name
     args = [
         program_name,
