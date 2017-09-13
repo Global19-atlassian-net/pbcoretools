@@ -4,6 +4,7 @@ import tempfile
 import unittest
 import tarfile
 import logging
+import uuid
 import gzip
 import os.path as op
 import os
@@ -13,6 +14,7 @@ from pbcore.io import (FastaReader, FastqReader, openDataSet, HdfSubreadSet,
                        SubreadSet, ConsensusReadSet, FastqWriter, FastqRecord)
 from pbcommand.testkit import PbTestApp
 from pbcommand.utils import which
+from pbcommand.models.common import DataStore, DataStoreFile, FileTypes
 
 import pbtestdata
 
@@ -575,3 +577,20 @@ class TestSlimbam(PbTestApp):
                 bam_out = ds_out.externalResources[0].resourceId
                 factor = op.getsize(bam_in) / op.getsize(bam_out)
                 self.assertTrue(factor >= 3, "File size larger than expected")
+
+
+class TestDataStoreToSubreads(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.datastore_to_subreads"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [tempfile.NamedTemporaryFile(suffix=".datastore.json").name]
+
+    @classmethod
+    def setUpClass(cls):
+        subreads = pbtestdata.get_file("subreads-sequel")
+        files = [
+            DataStoreFile(uuid.uuid4(), "barcoding.tasks.lima-out-0",
+                          FileTypes.DS_SUBREADS.file_type_id, subreads)
+        ]
+        ds = DataStore(files)
+        ds.write_json(cls.INPUT_FILES[0])

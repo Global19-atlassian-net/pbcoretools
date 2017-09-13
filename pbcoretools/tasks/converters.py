@@ -21,7 +21,7 @@ from pbcore.io import (SubreadSet, HdfSubreadSet, FastaReader, FastaWriter,
                        GmapReferenceSet)
 from pbcommand.engine import run_cmd
 from pbcommand.cli import registry_builder, registry_runner, QuickOpt
-from pbcommand.models import FileTypes, SymbolTypes, OutputFileType
+from pbcommand.models import FileTypes, SymbolTypes, OutputFileType, DataStore
 
 log = logging.getLogger(__name__)
 
@@ -132,7 +132,10 @@ def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
 def _unzip_fastx(gzip_file_name, fastx_file_name):
     with gzip.open(gzip_file_name, "rb") as gz_in:
         with open(fastx_file_name, "wb") as fastx_out:
-            fastx_out.write(gz_in.read())
+            def _fread():
+                return gz_in.read(1024)
+            for chunk in iter(_fread, ''):
+                fastx_out.write(chunk)
 
 
 def archive_files(input_file_names, output_file_name, remove_path=True):
@@ -621,6 +624,30 @@ def run_slimbam(rtc):
     ds.newUuid()
     ds.updateCounts()
     ds.write(rtc.task.output_files[0])
+    return 0
+
+
+@registry("datastore_to_subreads", "0.1.0",
+          FileTypes.DATASTORE,
+          FileTypes.DS_SUBREADS,
+          is_distributed=False,
+          nproc=1)
+def run_datastore_to_subreads(rtc):
+    ds = DataStore.load_from_json(rtc.task.input_files[0])
+    files = sorted(ds.files.values(), lambda a,b: cmp(a.file_id, b.file_id))
+    for f in files:
+        if f.file_type_id == FileTypes.DS_SUBREADS.file_type_id:
+            file_name = f.path
+            if not op.isabs(file_name):
+                file_name = op.join(op.dirname(rtc.task.input_files[0]),
+                                    file_name)
+            log.info("Re-writing %s as %s", file_name, rtc.task.output_files[0])
+            with SubreadSet(file_name, strict=True) as ds:
+                ds.newUuid()
+                ds.write(rtc.task.output_files[0])
+            break
+    else:
+        raise ValueError("Expected one or more SubreadSets in datastore")
     return 0
 
 
