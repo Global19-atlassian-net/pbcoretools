@@ -641,9 +641,13 @@ def run_datastore_to_subreads(rtc):
             if not op.isabs(file_name):
                 file_name = op.join(op.dirname(rtc.task.input_files[0]),
                                     file_name)
+            log.info("Re-writing %s as %s", file_name, rtc.task.output_files[0])
             with SubreadSet(file_name, strict=True) as ds:
                 ds.newUuid()
                 ds.write(rtc.task.output_files[0])
+            break
+    else:
+        raise ValueError("Expected one or more SubreadSets in datastore")
     return 0
 
 
