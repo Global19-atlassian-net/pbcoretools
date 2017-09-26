@@ -6,5 +6,4 @@ networkx
 jsonschema
 xmlbuilder
 functools32
-pyxb==1.2.4
 pyBigWig
