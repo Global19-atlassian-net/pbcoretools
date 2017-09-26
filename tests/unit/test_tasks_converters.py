@@ -18,7 +18,12 @@ from pbcommand.models.common import DataStore, DataStoreFile, FileTypes
 
 import pbtestdata
 
-from pbcoretools.tasks.converters import split_laa_fastq, split_laa_fastq_archived, run_bam_to_bam
+from pbcoretools.tasks.converters import (
+    split_laa_fastq,
+    split_laa_fastq_archived,
+    run_bam_to_bam,
+    update_barcoded_sample_metadata,
+    discard_bio_samples)
 from pbcoretools import pbvalidate
 
 from base import get_temp_file
@@ -594,3 +599,66 @@ class TestDataStoreToSubreads(PbTestApp):
         ]
         ds = DataStore(files)
         ds.write_json(cls.INPUT_FILES[0])
+
+
+class TestUpdateBarcodedSampleMetadata(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.update_barcoded_sample_metadata"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [
+        tempfile.NamedTemporaryFile(suffix=".datastore.json").name,
+        pbtestdata.get_file("barcodeset")
+    ]
+
+    @classmethod
+    def setUpClass(cls):
+        from pbcoretools.bamSieve import filter_reads
+        subreads = pbtestdata.get_file("barcoded-subreadset")
+        ds_dir = tempfile.mkdtemp()
+        ds_files = []
+        for bc, label in zip([0,2], ["lbc1--lbc1", "lbc3--lbc3"]):
+            ds_tmp = op.join(ds_dir, "lima_output.%s.subreadset.xml" % label)
+            filter_reads(
+                input_bam=subreads,
+                output_bam=ds_tmp,
+                whitelist=[bc],
+                use_barcodes=True)
+            ds_files.append(DataStoreFile(uuid.uuid4(),
+                                          "barcoding.tasks.lima-out-0",
+                                          FileTypes.DS_SUBREADS.file_type_id,
+                                          ds_tmp))
+        ds = DataStore(ds_files)
+        ds.write_json(cls.INPUT_FILES[0])
+
+    def run_after(self, rtc, output_dir):
+        pass
+
+    def test_discard_bio_samples(self):
+        ds = SubreadSet(pbtestdata.get_file("barcoded-subreadset"))
+        discard_bio_samples(ds, "lbc1--lbc1")
+        coll = ds.metadata.collections[0]
+        self.assertEqual(len(coll.wellSample.bioSamples), 1)
+        self.assertEqual(coll.wellSample.bioSamples[0].name, "Alice")
+        # failure modes
+        ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))
+        coll = ds.metadata.collections[0]
+        self.assertEqual(len(coll.wellSample.bioSamples), 0)
+        discard_bio_samples(ds, "lbc1--lbc1")
+
+    def update_barcoded_sample_metadata(self):
+        base_dir = tempfile.mkdtemp()
+        datastore = update_barcoded_sample_metadata(base_dir,
+                                                    self.INPUT_FILES[0],
+                                                    self.INPUT_FILES[1])
+        bio_sample_names = {
+            "lbc1--lbc1": "Alice",
+            "lbc3--lbc3": "Charles"
+        }
+        self.assertEqual(len(datastore.files), 2)
+        for f in datastore.files.values():
+            with SubreadSet(f.path) as ds:
+                bc_label = op.basename(f.path).split(".")[1]
+                coll = ds.metadata.collections[0]
+                self.assertEqual(len(coll.wellSample.bioSamples), 1)
+                self.assertEqual(coll.wellSample.bioSamples[0].name,
+                                 bio_sample_names[bc_label])
