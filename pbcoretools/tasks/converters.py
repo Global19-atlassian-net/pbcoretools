@@ -689,10 +689,7 @@ def update_barcoded_sample_metadata(base_dir, datastore_file, barcode_set):
     for f in _iterate_datastore_subread_sets(datastore_file):
         ds_out = op.join(base_dir, op.basename(f.path))
         with SubreadSet(f.path, strict=True) as ds:
-            ds_barcodes = sorted(list(set(itertools.chain(
-                *[list(zip(rr.pbi.bcForward, rr.pbi.bcReverse))
-                  for rr in ds.resourceReaders()]))))
-            print ds_barcodes
+            ds_barcodes = sorted(list(set(zip(ds.index.bcForward, ds.index.bcReverse))))
             if len(ds_barcodes) == 1:
                 bcf, bcr = ds_barcodes[0]
                 barcode_label = "{f}--{r}".format(f=barcode_names[bcf],
