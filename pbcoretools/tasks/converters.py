@@ -5,11 +5,13 @@ Tool contract wrappers for miscellaneous quick functions.
 
 from collections import defaultdict
 import subprocess
+import itertools
 import functools
 import tempfile
 import logging
 import shutil
 import gzip
+import copy
 import re
 import os.path as op
 import os
@@ -627,27 +629,100 @@ def run_slimbam(rtc):
     return 0
 
 
+def _iterate_datastore_subread_sets(datastore_file):
+    """
+    Iterate over SubreadSet files listed in a datastore JSON.
+    """
+    ds = DataStore.load_from_json(datastore_file)
+    files = sorted(ds.files.values(), lambda a,b: cmp(a.file_id, b.file_id))
+    for f in files:
+        if f.file_type_id == FileTypes.DS_SUBREADS.file_type_id:
+            yield f
+
+
 @registry("datastore_to_subreads", "0.1.0",
           FileTypes.DATASTORE,
           FileTypes.DS_SUBREADS,
           is_distributed=False,
           nproc=1)
 def run_datastore_to_subreads(rtc):
-    ds = DataStore.load_from_json(rtc.task.input_files[0])
-    files = sorted(ds.files.values(), lambda a,b: cmp(a.file_id, b.file_id))
-    for f in files:
-        if f.file_type_id == FileTypes.DS_SUBREADS.file_type_id:
-            file_name = f.path
-            if not op.isabs(file_name):
-                file_name = op.join(op.dirname(rtc.task.input_files[0]),
-                                    file_name)
-            log.info("Re-writing %s as %s", file_name, rtc.task.output_files[0])
-            with SubreadSet(file_name, strict=True) as ds:
-                ds.newUuid()
-                ds.write(rtc.task.output_files[0])
-            break
+    for f in _iterate_datastore_subread_sets(rtc.task.input_files[0]):
+        with SubreadSet(f.path, strict=True) as ds:
+            ds.newUuid()
+            ds.write(rtc.task.output_files[0])
+        break
     else:
         raise ValueError("Expected one or more SubreadSets in datastore")
+    return 0
+
+
+def discard_bio_samples(subreads, barcode_label):
+    """
+    Remove any BioSample records from a SubreadSet that are not associated
+    with the specified barcode.
+    """
+    for collection in subreads.metadata.collections:
+        deletions = []
+        for k, bio_sample in enumerate(collection.wellSample.bioSamples):
+            barcodes = set([bc.name for bc in bio_sample.DNABarcodes])
+            if len(barcodes) == 0:
+                log.warn("No barcodes defined for sample %s", bio_sample.name)
+            elif not barcode_label in barcodes:
+                deletions.append(k)
+        for k in reversed(deletions):
+            collection.wellSample.bioSamples.pop(k)
+        if len(collection.wellSample.bioSamples) == 0:
+            log.warn("Collection %s has no BioSamples", collection.context)
+
+
+def update_barcoded_sample_metadata(base_dir, datastore_file, barcode_set):
+    """
+    Given a datastore JSON of SubreadSets produced by barcoding, update the
+    metadata in each SubreadSet to contain only the BioSample(s) corresponding
+    to its barcode.
+    """
+    datastore_files = []
+    barcode_names = []
+    with BarcodeSet(barcode_set) as bc_in:
+        for rec in bc_in:
+            barcode_names.append(rec.id)
+    for f in _iterate_datastore_subread_sets(datastore_file):
+        ds_out = op.join(base_dir, op.basename(f.path))
+        with SubreadSet(f.path, strict=True) as ds:
+            ds_barcodes = sorted(list(set(zip(ds.index.bcForward, ds.index.bcReverse))))
+            if len(ds_barcodes) == 1:
+                bcf, bcr = ds_barcodes[0]
+                barcode_label = "{f}--{r}".format(f=barcode_names[bcf],
+                                                  r=barcode_names[bcr])
+                try:
+                    discard_bio_samples(ds, barcode_label)
+                except Exception as e:
+                    log.error(e)
+                    log.warn("Continuing anyway, but results may not be "
+                             "displayed correctly in SMRT Link")
+            else:
+                raise IOError(
+                    "The file {f} contains multiple barcodes: {b}".format(
+                    f=f.path, b="; ".join([str(bc) for bc in ds_barcodes])))
+            ds.write(ds_out)
+            f_new = copy.deepcopy(f)
+            f_new.path = ds_out
+            datastore_files.append(f_new)
+    return DataStore(datastore_files)
+
+
+@registry("update_barcoded_sample_metadata", "0.1.0",
+          (FileTypes.JSON, FileTypes.DS_BARCODE),
+          FileTypes.DATASTORE,
+          is_distributed=False,
+          nproc=1)
+def _run_update_barcoded_sample_metadata(rtc):
+    base_dir = op.dirname(rtc.task.output_files[0])
+    datastore = update_barcoded_sample_metadata(
+        base_dir=op.dirname(rtc.task.output_files[0]),
+        datastore_file=rtc.task.input_files[0],
+        barcode_set=rtc.task.input_files[1])
+    datastore.write_json(rtc.task.output_files[0])
     return 0
 
 
