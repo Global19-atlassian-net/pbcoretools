@@ -675,7 +675,8 @@ def discard_bio_samples(subreads, barcode_label):
             log.warn("Collection %s has no BioSamples", collection.context)
 
 
-def update_barcoded_sample_metadata(base_dir, datastore_file, barcode_set):
+def update_barcoded_sample_metadata(base_dir, datastore_file, input_subreads,
+                                    barcode_set):
     """
     Given a datastore JSON of SubreadSets produced by barcoding, update the
     metadata in each SubreadSet to contain only the BioSample(s) corresponding
@@ -686,6 +687,7 @@ def update_barcoded_sample_metadata(base_dir, datastore_file, barcode_set):
     with BarcodeSet(barcode_set) as bc_in:
         for rec in bc_in:
             barcode_names.append(rec.id)
+    parent_ds = SubreadSet(input_subreads)
     for f in _iterate_datastore_subread_sets(datastore_file):
         ds_out = op.join(base_dir, op.basename(f.path))
         with SubreadSet(f.path, strict=True) as ds:
@@ -704,6 +706,10 @@ def update_barcoded_sample_metadata(base_dir, datastore_file, barcode_set):
                 raise IOError(
                     "The file {f} contains multiple barcodes: {b}".format(
                     f=f.path, b="; ".join([str(bc) for bc in ds_barcodes])))
+            ds.metadata.addParentDataSet(parent_ds.uuid,
+                                         parent_ds.datasetType,
+                                         createdBy="AnalysisJob",
+                                         timeStampedName="")
             ds.write(ds_out)
             f_new = copy.deepcopy(f)
             f_new.path = ds_out
@@ -712,7 +718,7 @@ def update_barcoded_sample_metadata(base_dir, datastore_file, barcode_set):
 
 
 @registry("update_barcoded_sample_metadata", "0.1.0",
-          (FileTypes.JSON, FileTypes.DS_BARCODE),
+          (FileTypes.JSON, FileTypes.DS_SUBREADS, FileTypes.DS_BARCODE),
           FileTypes.DATASTORE,
           is_distributed=False,
           nproc=1)
@@ -721,7 +727,8 @@ def _run_update_barcoded_sample_metadata(rtc):
     datastore = update_barcoded_sample_metadata(
         base_dir=op.dirname(rtc.task.output_files[0]),
         datastore_file=rtc.task.input_files[0],
-        barcode_set=rtc.task.input_files[1])
+        input_subreads=rtc.task.input_files[1],
+        barcode_set=rtc.task.input_files[2])
     datastore.write_json(rtc.task.output_files[0])
     return 0
 

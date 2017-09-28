@@ -607,19 +607,19 @@ class TestUpdateBarcodedSampleMetadata(PbTestApp):
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
     INPUT_FILES = [
         tempfile.NamedTemporaryFile(suffix=".datastore.json").name,
+        pbtestdata.get_file("barcoded-subreadset"),
         pbtestdata.get_file("barcodeset")
     ]
 
     @classmethod
     def setUpClass(cls):
         from pbcoretools.bamSieve import filter_reads
-        subreads = pbtestdata.get_file("barcoded-subreadset")
         ds_dir = tempfile.mkdtemp()
         ds_files = []
         for bc, label in zip([0,2], ["lbc1--lbc1", "lbc3--lbc3"]):
             ds_tmp = op.join(ds_dir, "lima_output.%s.subreadset.xml" % label)
             filter_reads(
-                input_bam=subreads,
+                input_bam=cls.INPUT_FILES[1],
                 output_bam=ds_tmp,
                 whitelist=[bc],
                 use_barcodes=True)
@@ -631,7 +631,8 @@ class TestUpdateBarcodedSampleMetadata(PbTestApp):
         ds.write_json(cls.INPUT_FILES[0])
 
     def run_after(self, rtc, output_dir):
-        pass
+        datastore = DataStore.load_from_json(rtc.task.output_files[0])
+        self._validate_datastore_files(datastore)
 
     def test_discard_bio_samples(self):
         ds = SubreadSet(pbtestdata.get_file("barcoded-subreadset"))
@@ -649,12 +650,17 @@ class TestUpdateBarcodedSampleMetadata(PbTestApp):
         base_dir = tempfile.mkdtemp()
         datastore = update_barcoded_sample_metadata(base_dir,
                                                     self.INPUT_FILES[0],
-                                                    self.INPUT_FILES[1])
+                                                    self.INPUT_FILES[1],
+                                                    self.INPUT_FILES[2])
+        self._validate_datastore_files(datastore)
+
+    def _validate_datastore_files(self, datastore):
         bio_sample_names = {
             "lbc1--lbc1": "Alice",
             "lbc3--lbc3": "Charles"
         }
         self.assertEqual(len(datastore.files), 2)
+        ds_in = SubreadSet(self.INPUT_FILES[1])
         for f in datastore.files.values():
             with SubreadSet(f.path) as ds:
                 bc_label = op.basename(f.path).split(".")[1]
@@ -662,3 +668,5 @@ class TestUpdateBarcodedSampleMetadata(PbTestApp):
                 self.assertEqual(len(coll.wellSample.bioSamples), 1)
                 self.assertEqual(coll.wellSample.bioSamples[0].name,
                                  bio_sample_names[bc_label])
+                self.assertEqual(ds.metadata.provenance.parentDataSet.uniqueId,
+                                 ds_in.uuid)
