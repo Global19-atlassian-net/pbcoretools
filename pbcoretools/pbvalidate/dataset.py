@@ -350,7 +350,6 @@ class ValidateMetadata(ValidateResources):
         return []
 
 
-# FIXME broken by pbcore 1.4.1
 class ValidateNamespace(ValidateResources):
 
     def _get_errors(self, file_obj):
@@ -556,8 +555,7 @@ def validate_dataset(
         ValidateResources(),
         ValidateDatasetType(dataset_type),
         ValidateMetadata(),
-        # FIXME(nechols)(2017-09-28): update or retire this
-        #ValidateNamespace(),
+        ValidateNamespace(),
         ValidateRandomAccess(),
     ]
     if not actual_dataset_type in DatasetTypes.HDF5_DATASET:
