@@ -53,10 +53,10 @@ class TestCase (unittest.TestCase):
 
     def test_api(self):
         ds_file = os.path.join(TESTDATA_DIR, "tst_1.alignmentset.xml")
-        ds = pbcore.io.openDataSet(ds_file)
-        self.assertTrue(ValidateNamespace().validate(ds))
+        #ds = pbcore.io.openDataSet(ds_file)
+        #self.assertTrue(ValidateNamespace().validate(ds))
         ds2 = DatasetReader(pbcore.io.AlignmentSet, ds_file)
-        self.assertTrue(ValidateNamespace().validate(ds2))
+        #self.assertTrue(ValidateNamespace().validate(ds2))
         self.assertTrue(ValidateFileName(ds_file).validate(ds2))
 
     def test_bad_subreadset(self):
