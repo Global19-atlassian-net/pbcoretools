@@ -30,6 +30,11 @@ log = logging.getLogger(__name__)
 TOOL_NAMESPACE = 'pbcoretools'
 DRIVER_BASE = "python -m pbcoretools.tasks.converters "
 
+# For large references setting this to give more overhead for
+# memory usage. The underlying tool should have a well defined
+# memory usage that is independent of reference size (if possible)
+DEFAULT_FASTA_CONVERT_MAX_NPROC = 4
+
 registry = registry_builder(TOOL_NAMESPACE, DRIVER_BASE)
 
 def _run_bax_to_bam(input_file_name, output_file_name):
@@ -460,7 +465,7 @@ ref_file_type = OutputFileType(FileTypes.DS_REF.file_type_id, "ReferenceSet",
 
 @registry("fasta2referenceset", "0.1.0",
           FileTypes.FASTA,
-          ref_file_type, is_distributed=True, nproc=1)
+          ref_file_type, is_distributed=True, nproc=DEFAULT_FASTA_CONVERT_MAX_NPROC)
 def run_fasta2referenceset(rtc):
     return run_fasta_to_referenceset(rtc.task.input_files[0],
                                      rtc.task.output_files[0])
@@ -468,7 +473,7 @@ def run_fasta2referenceset(rtc):
 
 @registry("fasta_to_reference", "0.1.0",
           FileTypes.FASTA,
-          ref_file_type, is_distributed=True, nproc=1,
+          ref_file_type, is_distributed=True, nproc=DEFAULT_FASTA_CONVERT_MAX_NPROC,
           options={
                 "organism": "",
                 "ploidy": "haploid",
@@ -489,7 +494,8 @@ gmap_ref_file_type = OutputFileType(FileTypes.DS_GMAP_REF.file_type_id, "GmapRef
 
 @registry("fasta_to_gmap_reference", "0.1.0",
           FileTypes.FASTA,
-          gmap_ref_file_type, is_distributed=True, nproc=1,
+          gmap_ref_file_type, is_distributed=True,
+          nproc=DEFAULT_FASTA_CONVERT_MAX_NPROC,
           options={
                 "organism": "",
                 "ploidy": "haploid",
