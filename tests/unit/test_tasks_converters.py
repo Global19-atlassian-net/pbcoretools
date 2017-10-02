@@ -646,7 +646,7 @@ class TestUpdateBarcodedSampleMetadata(PbTestApp):
         self.assertEqual(len(coll.wellSample.bioSamples), 0)
         discard_bio_samples(ds, "lbc1--lbc1")
 
-    def update_barcoded_sample_metadata(self):
+    def test_update_barcoded_sample_metadata(self):
         base_dir = tempfile.mkdtemp()
         datastore = update_barcoded_sample_metadata(base_dir,
                                                     self.INPUT_FILES[0],
@@ -664,9 +664,24 @@ class TestUpdateBarcodedSampleMetadata(PbTestApp):
         for f in datastore.files.values():
             with SubreadSet(f.path) as ds:
                 bc_label = op.basename(f.path).split(".")[1]
+                bio_name = bio_sample_names[bc_label]
                 coll = ds.metadata.collections[0]
                 self.assertEqual(len(coll.wellSample.bioSamples), 1)
-                self.assertEqual(coll.wellSample.bioSamples[0].name,
-                                 bio_sample_names[bc_label])
+                self.assertEqual(coll.wellSample.bioSamples[0].name, bio_name)
                 self.assertEqual(ds.metadata.provenance.parentDataSet.uniqueId,
                                  ds_in.uuid)
+                self.assertEqual(ds.name, "{n} ({s})".format(n=ds_in.name,
+                                                             s=bio_name))
+                self.assertEqual(ds.uuid, f.uuid)
+
+
+class TestReparentSubreads(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.reparent_subreads"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [pbtestdata.get_file("subreads-sequel")]
+    TASK_OPTIONS = {"pbcoretools.task_options.new_dataset_name": "My Data"}
+
+    def run_after(self, rtc, output_dir):
+        with SubreadSet(rtc.task.output_files[0]) as ds_out:
+            self.assertEqual(ds_out.name, "My Data")
