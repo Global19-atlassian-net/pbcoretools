@@ -753,12 +753,16 @@ def _run_update_barcoded_sample_metadata(rtc):
     return 0
 
 
+ds_name_opt = QuickOpt("", "Name of Output Data Set",
+                       "Name of new demultiplexed data set as it appears in "+
+                       "SMRT Link")
+
 @registry("reparent_subreads", "0.1.0",
           FileTypes.DS_SUBREADS,
           FileTypes.DS_SUBREADS,
           is_distributed=False,
           nproc=1,
-          options={"new_dataset_name":""})
+          options={"new_dataset_name":ds_name_opt})
 def _run_reparent_subreads(rtc):
     NAME_OPT_ID = "pbcoretools.task_options.new_dataset_name"
     if rtc.task.options[NAME_OPT_ID].strip() == "":
