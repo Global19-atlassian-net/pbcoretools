@@ -19,7 +19,8 @@ def get_contract_parser():
     driver = "python -m pbcoretools.tasks.gather_fastq --resolved-tool-contract "
 
     p = get_gather_pbparser(Constants.TOOL_ID, "0.1.3", "Gather Fastq",
-                            "Gather Fastq", driver, is_distributed=True)
+                            "Gather Fastq", driver, is_distributed=True,
+                            nproc=4)
 
     p.add_input_file_type(FileTypes.CHUNK, "cjson_in", "Gather ChunkJson",
                           "Fastq Gather Chunk JSON")
