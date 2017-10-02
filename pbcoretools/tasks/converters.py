@@ -675,12 +675,28 @@ def discard_bio_samples(subreads, barcode_label):
             log.warn("Collection %s has no BioSamples", collection.context)
 
 
+def _get_ds_name(ds, base_name, barcode_label):
+    suffix = "(unknown sample)"
+    try:
+        collection = ds.metadata.collections[0]
+        if len(collection.wellSample.bioSamples) == 1:
+            suffix = "(%s)" % collection.wellSample.bioSamples[0].name
+        else:
+            suffix = "(multiple samples)"
+    except IndexError:
+        if barcode_label is not None:
+            suffix = "({l})".format(l=barcode_label)
+    return "{n} {s}".format(n=base_name, s=suffix)
+
+
 def update_barcoded_sample_metadata(base_dir, datastore_file, input_subreads,
                                     barcode_set):
     """
-    Given a datastore JSON of SubreadSets produced by barcoding, update the
-    metadata in each SubreadSet to contain only the BioSample(s) corresponding
-    to its barcode.
+    Given a datastore JSON of SubreadSets produced by barcoding, apply the
+    following updates to each:
+    1. Include only the BioSample(s) corresponding to its barcode
+    2. Add the BioSample name to the dataset name
+    3. Add a ParentDataSet record in the Provenance section.
     """
     datastore_files = []
     barcode_names = []
@@ -691,6 +707,7 @@ def update_barcoded_sample_metadata(base_dir, datastore_file, input_subreads,
     for f in _iterate_datastore_subread_sets(datastore_file):
         ds_out = op.join(base_dir, op.basename(f.path))
         with SubreadSet(f.path, strict=True) as ds:
+            barcode_label = None
             ds_barcodes = sorted(list(set(zip(ds.index.bcForward, ds.index.bcReverse))))
             if len(ds_barcodes) == 1:
                 bcf, bcr = ds_barcodes[0]
@@ -710,9 +727,12 @@ def update_barcoded_sample_metadata(base_dir, datastore_file, input_subreads,
                                          parent_ds.datasetType,
                                          createdBy="AnalysisJob",
                                          timeStampedName="")
+            ds.name = _get_ds_name(ds, parent_ds.name, barcode_label)
+            ds.newUuid()
             ds.write(ds_out)
             f_new = copy.deepcopy(f)
             f_new.path = ds_out
+            f_new.uuid = ds.uuid
             datastore_files.append(f_new)
     return DataStore(datastore_files)
 
@@ -730,6 +750,27 @@ def _run_update_barcoded_sample_metadata(rtc):
         input_subreads=rtc.task.input_files[1],
         barcode_set=rtc.task.input_files[2])
     datastore.write_json(rtc.task.output_files[0])
+    return 0
+
+
+ds_name_opt = QuickOpt("", "Name of Output Data Set",
+                       "Name of new demultiplexed data set as it appears in "+
+                       "SMRT Link")
+
+@registry("reparent_subreads", "0.1.0",
+          FileTypes.DS_SUBREADS,
+          FileTypes.DS_SUBREADS,
+          is_distributed=False,
+          nproc=1,
+          options={"new_dataset_name":ds_name_opt})
+def _run_reparent_subreads(rtc):
+    NAME_OPT_ID = "pbcoretools.task_options.new_dataset_name"
+    if rtc.task.options[NAME_OPT_ID].strip() == "":
+        raise ValueError("New dataset name is required")
+    with SubreadSet(rtc.task.input_files[0], strict=True) as ds_in:
+        ds_in.name = rtc.task.options[NAME_OPT_ID]
+        ds_in.newUuid(random=True)
+        ds_in.write(rtc.task.output_files[0])
     return 0
 
 
