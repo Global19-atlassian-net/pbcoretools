@@ -149,7 +149,7 @@ def filter_reads(input_bam,
     output_ds = base_name = None
     if output_bam.endswith(".xml"):
         if not input_bam.endswith(".xml"):
-            print "DataSet output only supported for DataSet inputs."
+            log.warning("DataSet output only supported for DataSet inputs.")
             return 1
         ds_type = output_bam.split(".")[-2]
         ext2 = OrderedDict([
