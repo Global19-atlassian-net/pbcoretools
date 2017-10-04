@@ -340,6 +340,12 @@ def __run_fasta_to_reference(program_name, dataset_class,
     if reference_name is None or reference_name == "":
         reference_name = op.splitext(op.basename(input_file_name))[0]
     ds_in = ContigSet(input_file_name)
+
+    # For historical reasons, there's some munging between the ReferenceSet
+    # name and the sub directories that are created within the job dir.
+    rx = re.compile('[^A-Za-z0-9_]')
+    sanitized_name = re.sub(rx, '_', reference_name)
+
     if len(ds_in.externalResources) > 1:
         raise TypeError("Only a single FASTA file is supported as input.")
     fasta_file_name = ds_in.externalResources[0].resourceId
@@ -357,10 +363,14 @@ def __run_fasta_to_reference(program_name, dataset_class,
     result = run_cmd(" ".join(args), stdout_fh=sys.stdout, stderr_fh=sys.stderr)
     if result.exit_code != 0:
         return result.exit_code
-    ref_file = op.join(output_dir_name, reference_name,
-                       "{t}.xml".format(t=dataset_class.__name__.lower()))
-    assert op.isfile(ref_file), ref_file
-    with dataset_class(ref_file, strict=True) as ds_ref:
+
+    # By convention, the dataset XML is written to this path
+    dataset_xml = op.join(output_dir_name, sanitized_name,
+                          "{t}.xml".format(t=dataset_class.__name__.lower()))
+
+    log.info("Looking for DataSet XML `{}`".format(dataset_xml))
+    assert op.isfile(dataset_xml), dataset_xml
+    with dataset_class(dataset_xml, strict=True) as ds_ref:
         ds_ref.makePathsAbsolute()
         log.info("saving final {t} to {f}".format(
                  f=output_file_name, t=dataset_class.__name__))
