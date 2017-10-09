@@ -691,14 +691,17 @@ def discard_bio_samples(subreads, barcode_label):
             log.warn("Collection %s has no BioSamples", collection.context)
 
 
-def _get_ds_name(ds, base_name, barcode_label):
+def get_ds_name(ds, base_name, barcode_label):
     suffix = "(unknown sample)"
     try:
         collection = ds.metadata.collections[0]
-        if len(collection.wellSample.bioSamples) == 1:
+        n_samples = len(collection.wellSample.bioSamples)
+        if n_samples == 1:
             suffix = "(%s)" % collection.wellSample.bioSamples[0].name
-        else:
+        elif n_samples > 1:
             suffix = "(multiple samples)"
+        else:
+            raise IndexError("No BioSample records present")
     except IndexError:
         if barcode_label is not None:
             suffix = "({l})".format(l=barcode_label)
@@ -743,7 +746,7 @@ def update_barcoded_sample_metadata(base_dir, datastore_file, input_subreads,
                                          parent_ds.datasetType,
                                          createdBy="AnalysisJob",
                                          timeStampedName="")
-            ds.name = _get_ds_name(ds, parent_ds.name, barcode_label)
+            ds.name = get_ds_name(ds, parent_ds.name, barcode_label)
             ds.newUuid()
             ds.write(ds_out)
             f_new = copy.deepcopy(f)

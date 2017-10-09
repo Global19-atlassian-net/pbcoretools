@@ -22,6 +22,7 @@ from pbcoretools.tasks.converters import (
     split_laa_fastq,
     split_laa_fastq_archived,
     run_bam_to_bam,
+    get_ds_name,
     update_barcoded_sample_metadata,
     discard_bio_samples)
 from pbcoretools import pbvalidate
@@ -645,6 +646,29 @@ class TestUpdateBarcodedSampleMetadata(PbTestApp):
         coll = ds.metadata.collections[0]
         self.assertEqual(len(coll.wellSample.bioSamples), 0)
         discard_bio_samples(ds, "lbc1--lbc1")
+
+    def test_get_ds_name(self):
+        ds = SubreadSet(pbtestdata.get_file("barcoded-subreadset"))
+        name = get_ds_name(ds, "My Data", "My Barcode")
+        self.assertEqual(name, "My Data (multiple samples)")
+        for coll in ds.metadata.collections:
+            while len(coll.wellSample.bioSamples) > 0:
+                coll.wellSample.bioSamples.pop(0)
+        name = get_ds_name(ds, "My Data", "My Barcode")
+        self.assertEqual(name, "My Data (My Barcode)")
+        ds = SubreadSet(pbtestdata.get_file("barcoded-subreadset"))
+        for coll in ds.metadata.collections:
+            while len(coll.wellSample.bioSamples) > 1:
+                coll.wellSample.bioSamples.pop(1)
+        name = get_ds_name(ds, "My Data", "My Barcode")
+        expected = "My Data ({s})".format(
+            s=ds.metadata.collections[0].wellSample.bioSamples[0].name)
+        self.assertEqual(name, expected)
+        ds = SubreadSet(ds.externalResources[0].bam)
+        name = get_ds_name(ds, "My Data", "My Barcode")
+        self.assertEqual(name, "My Data (My Barcode)")
+        name = get_ds_name(ds, "My Data", None)
+        self.assertEqual(name, "My Data (unknown sample)")
 
     def test_update_barcoded_sample_metadata(self):
         base_dir = tempfile.mkdtemp()
