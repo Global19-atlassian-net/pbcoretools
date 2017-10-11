@@ -5,11 +5,13 @@ Tool contract wrappers for miscellaneous quick functions.
 
 from collections import defaultdict
 import subprocess
+import itertools
 import functools
 import tempfile
 import logging
 import shutil
 import gzip
+import copy
 import re
 import os.path as op
 import os
@@ -21,12 +23,17 @@ from pbcore.io import (SubreadSet, HdfSubreadSet, FastaReader, FastaWriter,
                        GmapReferenceSet)
 from pbcommand.engine import run_cmd
 from pbcommand.cli import registry_builder, registry_runner, QuickOpt
-from pbcommand.models import FileTypes, SymbolTypes, OutputFileType
+from pbcommand.models import FileTypes, SymbolTypes, OutputFileType, DataStore
 
 log = logging.getLogger(__name__)
 
 TOOL_NAMESPACE = 'pbcoretools'
 DRIVER_BASE = "python -m pbcoretools.tasks.converters "
+
+# For large references setting this to give more overhead for
+# memory usage. The underlying tool should have a well defined
+# memory usage that is independent of reference size (if possible)
+DEFAULT_FASTA_CONVERT_MAX_NPROC = 4
 
 registry = registry_builder(TOOL_NAMESPACE, DRIVER_BASE)
 
@@ -132,7 +139,10 @@ def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
 def _unzip_fastx(gzip_file_name, fastx_file_name):
     with gzip.open(gzip_file_name, "rb") as gz_in:
         with open(fastx_file_name, "wb") as fastx_out:
-            fastx_out.write(gz_in.read())
+            def _fread():
+                return gz_in.read(1024)
+            for chunk in iter(_fread, ''):
+                fastx_out.write(chunk)
 
 
 def archive_files(input_file_names, output_file_name, remove_path=True):
@@ -176,9 +186,34 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
     """
     assert isinstance(program_name, basestring)
     barcode_mode = False
+    barcode_sets = set()
     if output_file_name.endswith(".tar.gz"):
         with openDataSet(input_file_name) as ds_in:
             barcode_mode = ds_in.isBarcoded
+            if barcode_mode:
+                # attempt to collect the labels of barcodes used on this
+                # dataset.  assumes that all BAM files used the same barcodes
+                for bam in ds_in.externalResources:
+                    if bam.barcodes is not None:
+                        barcode_sets.add(bam.barcodes)
+    barcode_labels = []
+    if barcode_mode:
+        if len(barcode_sets) == 1:
+            bc_file = list(barcode_sets)[0]
+            log.info("Reading barcode labels from %s", bc_file)
+            try:
+                with BarcodeSet(bc_file) as bc_in:
+                    for bc in bc_in:
+                        barcode_labels.append(bc.id)
+            except IOError as e:
+                log.error("Can't read %s", bc_file)
+                log.error(e)
+        elif len(barcode_sets) > 1:
+            log.warn("Multiple barcode sets used for this SubreadSet:")
+            for fn in sorted(list(barcode_sets)):
+                log.warn("  %s", fn)
+        else:
+            log.info("No barcode labels available")
     tmp_out_prefix = tempfile.NamedTemporaryFile(dir=tmp_dir).name
     args = [
         program_name,
@@ -206,12 +241,31 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                 fn = op.join(tmp_out_dir, fn)
                 if fn.startswith(tmp_out_prefix) and fn.endswith(suffix):
                     if barcode_mode:
+                        # bam2fastx outputs files with the barcode indices
+                        # encoded in the file names; here we attempt to
+                        # translate these to barcode labels, falling back on
+                        # the original indices if necessary
                         bc_fwd_rev = fn.split(".")[-3].split("_")
-                        suffix2 = ".{f}_{r}.{t}".format(
-                            f=bc_fwd_rev[0], r=bc_fwd_rev[1], t=base_ext)
+                        bc_label = "unbarcoded"
+                        if (bc_fwd_rev != ["65535", "65535"] and
+                            bc_fwd_rev != ["-1", "-1"]):
+                            def _label_or_none(x):
+                                try:
+                                    bc = int(x)
+                                    if bc < 0:
+                                        return "none"
+                                    elif bc < len(barcode_labels):
+                                        return barcode_labels[bc]
+                                except ValueError as e:
+                                    pass
+                                return x
+                            bc_fwd_label = _label_or_none(bc_fwd_rev[0])
+                            bc_rev_label = _label_or_none(bc_fwd_rev[1])
+                            bc_label = "{f}__{r}".format(f=bc_fwd_label,
+                                                         r=bc_rev_label)
+                        suffix2 = ".{l}.{t}".format(l=bc_label, t=base_ext)
                     else:
                         suffix2 = '.' + base_ext
-                    assert fn == tmp_out_prefix + suffix2 + ".gz"
                     fn_out = re.sub(".tar.gz$", suffix2, output_file_name)
                     fastx_out = op.join(tc_out_dir, fn_out)
                     _unzip_fastx(fn, fastx_out)
@@ -286,6 +340,12 @@ def __run_fasta_to_reference(program_name, dataset_class,
     if reference_name is None or reference_name == "":
         reference_name = op.splitext(op.basename(input_file_name))[0]
     ds_in = ContigSet(input_file_name)
+
+    # For historical reasons, there's some munging between the ReferenceSet
+    # name and the sub directories that are created within the job dir.
+    rx = re.compile('[^A-Za-z0-9_]')
+    sanitized_name = re.sub(rx, '_', reference_name)
+
     if len(ds_in.externalResources) > 1:
         raise TypeError("Only a single FASTA file is supported as input.")
     fasta_file_name = ds_in.externalResources[0].resourceId
@@ -303,10 +363,14 @@ def __run_fasta_to_reference(program_name, dataset_class,
     result = run_cmd(" ".join(args), stdout_fh=sys.stdout, stderr_fh=sys.stderr)
     if result.exit_code != 0:
         return result.exit_code
-    ref_file = op.join(output_dir_name, reference_name,
-                       "{t}.xml".format(t=dataset_class.__name__.lower()))
-    assert op.isfile(ref_file), ref_file
-    with dataset_class(ref_file, strict=True) as ds_ref:
+
+    # By convention, the dataset XML is written to this path
+    dataset_xml = op.join(output_dir_name, sanitized_name,
+                          "{t}.xml".format(t=dataset_class.__name__.lower()))
+
+    log.info("Looking for DataSet XML `{}`".format(dataset_xml))
+    assert op.isfile(dataset_xml), dataset_xml
+    with dataset_class(dataset_xml, strict=True) as ds_ref:
         ds_ref.makePathsAbsolute()
         log.info("saving final {t} to {f}".format(
                  f=output_file_name, t=dataset_class.__name__))
@@ -381,14 +445,14 @@ def run_bam2fastq(rtc):
     return run_bam_to_fastq(rtc.task.input_files[0], rtc.task.output_files[0])
 
 
-@registry("bam2fasta_archive", "0.1.0",
+@registry("bam2fasta_archive", "0.2.0",
           FileTypes.DS_SUBREADS,
           fasta_gzip_file_type, is_distributed=True, nproc=1)
 def run_bam2fasta_archive(rtc):
     return run_bam_to_fasta(rtc.task.input_files[0], rtc.task.output_files[0])
 
 
-@registry("bam2fastq_archive", "0.1.0",
+@registry("bam2fastq_archive", "0.2.0",
           FileTypes.DS_SUBREADS,
           fastq_gzip_file_type, is_distributed=True, nproc=1)
 def run_bam2fastq_archive(rtc):
@@ -411,7 +475,7 @@ ref_file_type = OutputFileType(FileTypes.DS_REF.file_type_id, "ReferenceSet",
 
 @registry("fasta2referenceset", "0.1.0",
           FileTypes.FASTA,
-          ref_file_type, is_distributed=True, nproc=1)
+          ref_file_type, is_distributed=True, nproc=DEFAULT_FASTA_CONVERT_MAX_NPROC)
 def run_fasta2referenceset(rtc):
     return run_fasta_to_referenceset(rtc.task.input_files[0],
                                      rtc.task.output_files[0])
@@ -419,7 +483,7 @@ def run_fasta2referenceset(rtc):
 
 @registry("fasta_to_reference", "0.1.0",
           FileTypes.FASTA,
-          ref_file_type, is_distributed=True, nproc=1,
+          ref_file_type, is_distributed=True, nproc=DEFAULT_FASTA_CONVERT_MAX_NPROC,
           options={
                 "organism": "",
                 "ploidy": "haploid",
@@ -440,7 +504,8 @@ gmap_ref_file_type = OutputFileType(FileTypes.DS_GMAP_REF.file_type_id, "GmapRef
 
 @registry("fasta_to_gmap_reference", "0.1.0",
           FileTypes.FASTA,
-          gmap_ref_file_type, is_distributed=True, nproc=1,
+          gmap_ref_file_type, is_distributed=True,
+          nproc=DEFAULT_FASTA_CONVERT_MAX_NPROC,
           options={
                 "organism": "",
                 "ploidy": "haploid",
@@ -577,6 +642,154 @@ def run_slimbam(rtc):
     ds.newUuid()
     ds.updateCounts()
     ds.write(rtc.task.output_files[0])
+    return 0
+
+
+def _iterate_datastore_subread_sets(datastore_file):
+    """
+    Iterate over SubreadSet files listed in a datastore JSON.
+    """
+    ds = DataStore.load_from_json(datastore_file)
+    files = sorted(ds.files.values(), lambda a,b: cmp(a.file_id, b.file_id))
+    for f in files:
+        if f.file_type_id == FileTypes.DS_SUBREADS.file_type_id:
+            yield f
+
+
+@registry("datastore_to_subreads", "0.1.0",
+          FileTypes.DATASTORE,
+          FileTypes.DS_SUBREADS,
+          is_distributed=False,
+          nproc=1)
+def run_datastore_to_subreads(rtc):
+    for f in _iterate_datastore_subread_sets(rtc.task.input_files[0]):
+        with SubreadSet(f.path, strict=True) as ds:
+            ds.newUuid()
+            ds.write(rtc.task.output_files[0])
+        break
+    else:
+        raise ValueError("Expected one or more SubreadSets in datastore")
+    return 0
+
+
+def discard_bio_samples(subreads, barcode_label):
+    """
+    Remove any BioSample records from a SubreadSet that are not associated
+    with the specified barcode.
+    """
+    for collection in subreads.metadata.collections:
+        deletions = []
+        for k, bio_sample in enumerate(collection.wellSample.bioSamples):
+            barcodes = set([bc.name for bc in bio_sample.DNABarcodes])
+            if len(barcodes) == 0:
+                log.warn("No barcodes defined for sample %s", bio_sample.name)
+            elif not barcode_label in barcodes:
+                deletions.append(k)
+        for k in reversed(deletions):
+            collection.wellSample.bioSamples.pop(k)
+        if len(collection.wellSample.bioSamples) == 0:
+            log.warn("Collection %s has no BioSamples", collection.context)
+
+
+def get_ds_name(ds, base_name, barcode_label):
+    suffix = "(unknown sample)"
+    try:
+        collection = ds.metadata.collections[0]
+        n_samples = len(collection.wellSample.bioSamples)
+        if n_samples == 1:
+            suffix = "(%s)" % collection.wellSample.bioSamples[0].name
+        elif n_samples > 1:
+            suffix = "(multiple samples)"
+        else:
+            raise IndexError("No BioSample records present")
+    except IndexError:
+        if barcode_label is not None:
+            suffix = "({l})".format(l=barcode_label)
+    return "{n} {s}".format(n=base_name, s=suffix)
+
+
+def update_barcoded_sample_metadata(base_dir, datastore_file, input_subreads,
+                                    barcode_set):
+    """
+    Given a datastore JSON of SubreadSets produced by barcoding, apply the
+    following updates to each:
+    1. Include only the BioSample(s) corresponding to its barcode
+    2. Add the BioSample name to the dataset name
+    3. Add a ParentDataSet record in the Provenance section.
+    """
+    datastore_files = []
+    barcode_names = []
+    with BarcodeSet(barcode_set) as bc_in:
+        for rec in bc_in:
+            barcode_names.append(rec.id)
+    parent_ds = SubreadSet(input_subreads)
+    for f in _iterate_datastore_subread_sets(datastore_file):
+        ds_out = op.join(base_dir, op.basename(f.path))
+        with SubreadSet(f.path, strict=True) as ds:
+            barcode_label = None
+            ds_barcodes = sorted(list(set(zip(ds.index.bcForward, ds.index.bcReverse))))
+            if len(ds_barcodes) == 1:
+                bcf, bcr = ds_barcodes[0]
+                barcode_label = "{f}--{r}".format(f=barcode_names[bcf],
+                                                  r=barcode_names[bcr])
+                try:
+                    discard_bio_samples(ds, barcode_label)
+                except Exception as e:
+                    log.error(e)
+                    log.warn("Continuing anyway, but results may not be "
+                             "displayed correctly in SMRT Link")
+            else:
+                raise IOError(
+                    "The file {f} contains multiple barcodes: {b}".format(
+                    f=f.path, b="; ".join([str(bc) for bc in ds_barcodes])))
+            ds.metadata.addParentDataSet(parent_ds.uuid,
+                                         parent_ds.datasetType,
+                                         createdBy="AnalysisJob",
+                                         timeStampedName="")
+            ds.name = get_ds_name(ds, parent_ds.name, barcode_label)
+            ds.newUuid()
+            ds.write(ds_out)
+            f_new = copy.deepcopy(f)
+            f_new.path = ds_out
+            f_new.uuid = ds.uuid
+            datastore_files.append(f_new)
+    return DataStore(datastore_files)
+
+
+@registry("update_barcoded_sample_metadata", "0.1.0",
+          (FileTypes.JSON, FileTypes.DS_SUBREADS, FileTypes.DS_BARCODE),
+          FileTypes.DATASTORE,
+          is_distributed=False,
+          nproc=1)
+def _run_update_barcoded_sample_metadata(rtc):
+    base_dir = op.dirname(rtc.task.output_files[0])
+    datastore = update_barcoded_sample_metadata(
+        base_dir=op.dirname(rtc.task.output_files[0]),
+        datastore_file=rtc.task.input_files[0],
+        input_subreads=rtc.task.input_files[1],
+        barcode_set=rtc.task.input_files[2])
+    datastore.write_json(rtc.task.output_files[0])
+    return 0
+
+
+ds_name_opt = QuickOpt("", "Name of Output Data Set",
+                       "Name of new demultiplexed data set as it appears in "+
+                       "SMRT Link")
+
+@registry("reparent_subreads", "0.1.0",
+          FileTypes.DS_SUBREADS,
+          FileTypes.DS_SUBREADS,
+          is_distributed=False,
+          nproc=1,
+          options={"new_dataset_name":ds_name_opt})
+def _run_reparent_subreads(rtc):
+    NAME_OPT_ID = "pbcoretools.task_options.new_dataset_name"
+    if rtc.task.options[NAME_OPT_ID].strip() == "":
+        raise ValueError("New dataset name is required")
+    with SubreadSet(rtc.task.input_files[0], strict=True) as ds_in:
+        ds_in.name = rtc.task.options[NAME_OPT_ID]
+        ds_in.newUuid(random=True)
+        ds_in.write(rtc.task.output_files[0])
     return 0
 
 

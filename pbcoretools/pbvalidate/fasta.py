@@ -45,6 +45,10 @@ class FastaRecordError (RecordValidatorError):
     pass
 
 
+class LineEndingsError (FastaRecordError):
+    MESSAGE_FORMAT = "The file contains a mix of Unix and DOS line endings; this will result in a corrupted samtools index (.fai)"
+
+
 class EmptyLineError (FastaRecordError):
     MESSAGE_FORMAT = "Line %d is blank"
 
@@ -242,13 +246,18 @@ class ValidateFastaRaw (ValidateFile):
             if file_name.endswith(".gz"):
                 return gzip.open(file_name)
             else:
-                # see https://www.python.org/dev/peps/pep-0278/
-                return open(file_name, "rU")
+                return open(file_name, "r")
+        is_dos = is_unix = False
         with _open(path) as f:
             prev_line_was_header = False
             prev_header = None
             for i, line in enumerate(f.readlines()):
-                line = line.rstrip('\n')
+                if line.endswith("\n"):
+                    if line.endswith("\r\n"):
+                        is_dos = True
+                    else:
+                        is_unix = True
+                line = line.rstrip('\n').rstrip('\r')
                 if line.strip() == "":
                     self._errors.append(EmptyLineError.from_args(path, i + 1))
                 elif re.search(Constants.OUTER_WHITESPACE, line):
@@ -276,6 +285,8 @@ class ValidateFastaRaw (ValidateFile):
                                      label=prev_header)
         if len(all_seq_line_lengths) > 1:
             self._errors.append(GlobalWrappingError.from_args(path))
+        if is_dos and is_unix:
+            self._errors.append(LineEndingsError.from_args(path))
         return len(self._errors) == 0
 
     def to_error(self, path):

@@ -5,7 +5,7 @@ hole numbers or a percentage of reads to be randomly selected.
 """
 
 from __future__ import division
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import subprocess
 import warnings
 import logging
@@ -27,7 +27,7 @@ from pbcommand.cli import (pacbio_args_runner,
 from pbcommand.utils import setup_log
 from pbcore.io import openDataFile, openDataSet, BamReader, IndexedBamReader, ReadSet
 
-VERSION = "0.1.1"
+VERSION = "0.1.2"
 
 log = logging.getLogger(__name__)
 
@@ -149,17 +149,17 @@ def filter_reads(input_bam,
     output_ds = base_name = None
     if output_bam.endswith(".xml"):
         if not input_bam.endswith(".xml"):
-            print "DataSet output only supported for DataSet inputs."
+            log.warning("DataSet output only supported for DataSet inputs.")
             return 1
         ds_type = output_bam.split(".")[-2]
-        ext2 = {
-            "subreadset": "subreads",
-            "alignmentset": "subreads",
-            "consensusreadset": "ccs",
-            "consensusalignmentset": "ccs"
-        }
+        ext2 = OrderedDict([
+            ("subreadset", "subreads"),
+            ("alignmentset", "subreads"),
+            ("consensusreadset", "ccs"),
+            ("consensusalignmentset", "ccs")
+        ])
         if not ds_type in ext2:
-            raise ValueError("Invalid dataset type 't'".format(t=ds_type))
+            raise ValueError("Invalid output file extension '{t}.xml'; valid extensions are:\n{e}".format(t=ds_type, e="\n".join(["  %s.xml" % e for e in ext2.keys()])))
         output_ds = output_bam
         base_name = ".".join(output_ds.split(".")[:-2])
         output_bam = base_name + "." + ".".join([ext2[ds_type], "bam"])
