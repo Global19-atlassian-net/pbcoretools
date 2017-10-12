@@ -27,15 +27,22 @@ from pbcommand.models import FileTypes, SymbolTypes, OutputFileType, DataStore
 
 log = logging.getLogger(__name__)
 
-TOOL_NAMESPACE = 'pbcoretools'
-DRIVER_BASE = "python -m pbcoretools.tasks.converters "
 
-# For large references setting this to give more overhead for
-# memory usage. The underlying tool should have a well defined
-# memory usage that is independent of reference size (if possible)
-DEFAULT_FASTA_CONVERT_MAX_NPROC = 4
+class Constants(object):
+    TOOL_NAMESPACE = 'pbcoretools'
+    DRIVER_BASE = "python -m pbcoretools.tasks.converters "
 
-registry = registry_builder(TOOL_NAMESPACE, DRIVER_BASE)
+    # For large references setting this to give more overhead for
+    # memory usage. The underlying tool should have a well defined
+    # memory usage that is independent of reference size (if possible)
+    DEFAULT_FASTA_CONVERT_MAX_NPROC = 4
+
+    # default filter applied to output of 'lima'
+    BARCODE_QUALITY_GREATER_THAN = 26
+
+
+registry = registry_builder(Constants.TOOL_NAMESPACE, Constants.DRIVER_BASE)
+
 
 def _run_bax_to_bam(input_file_name, output_file_name):
     base_name = ".".join(output_file_name.split(".")[:-2])
@@ -475,7 +482,9 @@ ref_file_type = OutputFileType(FileTypes.DS_REF.file_type_id, "ReferenceSet",
 
 @registry("fasta2referenceset", "0.1.0",
           FileTypes.FASTA,
-          ref_file_type, is_distributed=True, nproc=DEFAULT_FASTA_CONVERT_MAX_NPROC)
+          ref_file_type,
+          is_distributed=True,
+          nproc=Constants.DEFAULT_FASTA_CONVERT_MAX_NPROC)
 def run_fasta2referenceset(rtc):
     return run_fasta_to_referenceset(rtc.task.input_files[0],
                                      rtc.task.output_files[0])
@@ -483,7 +492,9 @@ def run_fasta2referenceset(rtc):
 
 @registry("fasta_to_reference", "0.1.0",
           FileTypes.FASTA,
-          ref_file_type, is_distributed=True, nproc=DEFAULT_FASTA_CONVERT_MAX_NPROC,
+          ref_file_type,
+          is_distributed=True,
+          nproc=Constants.DEFAULT_FASTA_CONVERT_MAX_NPROC,
           options={
                 "organism": "",
                 "ploidy": "haploid",
@@ -505,7 +516,7 @@ gmap_ref_file_type = OutputFileType(FileTypes.DS_GMAP_REF.file_type_id, "GmapRef
 @registry("fasta_to_gmap_reference", "0.1.0",
           FileTypes.FASTA,
           gmap_ref_file_type, is_distributed=True,
-          nproc=DEFAULT_FASTA_CONVERT_MAX_NPROC,
+          nproc=Constants.DEFAULT_FASTA_CONVERT_MAX_NPROC,
           options={
                 "organism": "",
                 "ploidy": "haploid",
@@ -692,6 +703,9 @@ def discard_bio_samples(subreads, barcode_label):
 
 
 def get_ds_name(ds, base_name, barcode_label):
+    """
+    Given the base (parent) dataset name, add a suffix indicating sample
+    """
     suffix = "(unknown sample)"
     try:
         collection = ds.metadata.collections[0]
@@ -747,6 +761,8 @@ def update_barcoded_sample_metadata(base_dir, datastore_file, input_subreads,
                                          createdBy="AnalysisJob",
                                          timeStampedName="")
             ds.name = get_ds_name(ds, parent_ds.name, barcode_label)
+            ds.filters.addRequirement(
+                bq=[('>', Constants.BARCODE_QUALITY_GREATER_THAN)])
             ds.newUuid()
             ds.write(ds_out)
             f_new = copy.deepcopy(f)
@@ -756,7 +772,7 @@ def update_barcoded_sample_metadata(base_dir, datastore_file, input_subreads,
     return DataStore(datastore_files)
 
 
-@registry("update_barcoded_sample_metadata", "0.1.0",
+@registry("update_barcoded_sample_metadata", "0.1.1",
           (FileTypes.JSON, FileTypes.DS_SUBREADS, FileTypes.DS_BARCODE),
           FileTypes.DATASTORE,
           is_distributed=False,
