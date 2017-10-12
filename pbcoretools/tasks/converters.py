@@ -560,18 +560,18 @@ def run_bam2fasta_ccs(rtc):
     return run_bam_to_fasta(rtc.task.input_files[0], rtc.task.output_files[0])
 
 
-consensus_gz_ftype = OutputFileType(FileTypes.GZIP.file_type_id,
+consensus_gz_ftype = OutputFileType(FileTypes.TGZ.file_type_id,
                                     "fastq_split_gz",
                                     "Consensus Amplicons",
                                     "Consensus amplicons in FASTQ format, split by barcode",
                                     "consensus_fastq")
-chimera_gz_ftype = OutputFileType(FileTypes.GZIP.file_type_id,
+chimera_gz_ftype = OutputFileType(FileTypes.TGZ.file_type_id,
                                   "fastq_split_gz",
                                   "Chimeric/Noise Sequences by barcode",
                                   "Chimeric and noise sequences in FASTQ format, split by barcode",
                                   "chimera_fastq")
 
-@registry("split_laa_fastq", "0.1.0",
+@registry("split_laa_fastq", "0.2.0",
           (FileTypes.FASTQ, FileTypes.FASTQ),
           (consensus_gz_ftype, chimera_gz_ftype),
           is_distributed=True, nproc=1)
