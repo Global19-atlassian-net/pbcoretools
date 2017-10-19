@@ -803,6 +803,10 @@ def _run_reparent_subreads(rtc):
     if rtc.task.options[NAME_OPT_ID].strip() == "":
         raise ValueError("New dataset name is required")
     with SubreadSet(rtc.task.input_files[0], strict=True) as ds_in:
+        if len(ds_in.metadata.provenance) > 0:
+            log.warn("Removing existing provenance record: %s",
+                     ds_in.metadata.provenance)
+            ds_in.metadata.provenance = None
         ds_in.name = rtc.task.options[NAME_OPT_ID]
         ds_in.newUuid(random=True)
         ds_in.write(rtc.task.output_files[0])
