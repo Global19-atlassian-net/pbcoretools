@@ -667,17 +667,17 @@ def _iterate_datastore_subread_sets(datastore_file):
             yield f
 
 
-@registry("datastore_to_subreads", "0.1.0",
+@registry("datastore_to_subreads", "0.2.0",
           FileTypes.DATASTORE,
           FileTypes.DS_SUBREADS,
           is_distributed=False,
           nproc=1)
 def run_datastore_to_subreads(rtc):
-    for f in _iterate_datastore_subread_sets(rtc.task.input_files[0]):
-        with SubreadSet(f.path, strict=True) as ds:
+    datasets = list(_iterate_datastore_subread_sets(rtc.task.input_files[0]))
+    if len(datasets) > 0:
+        with SubreadSet(*[f.path for f in datasets], strict=True) as ds:
             ds.newUuid()
             ds.write(rtc.task.output_files[0])
-        break
     else:
         raise ValueError("Expected one or more SubreadSets in datastore")
     return 0
