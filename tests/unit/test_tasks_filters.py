@@ -9,6 +9,8 @@ from pbcommand.testkit import PbTestApp
 
 from base import get_temp_file
 
+import pbtestdata
+
 log = logging.getLogger(__name__)
 
 DATA = op.join(op.dirname(__file__), "data")
@@ -31,6 +33,8 @@ class TestFilterDataSet(PbTestApp):
     IS_DISTRIBUTED = True
     RESOLVED_IS_DISTRIBUTED = True
     READER_CLASS = SubreadSet
+    N_EXPECTED = 18
+    EXPECTED_FILTER_STR = "( length <= 1400 )"
 
     @classmethod
     def setUpClass(cls):
@@ -38,7 +42,7 @@ class TestFilterDataSet(PbTestApp):
         ds.write(cls.INPUT_FILES[0])
 
     def _get_counts(self, rtc):
-        n_expected = 18
+        n_expected = self.N_EXPECTED
         with self.READER_CLASS(rtc.task.output_files[0]) as f:
             n_actual = len(f)
         return n_expected, n_actual
@@ -49,8 +53,24 @@ class TestFilterDataSet(PbTestApp):
 
     def run_after(self, rtc, output_dir):
         n_expected, n_actual = self._get_counts(rtc)
-        self.assertEqual(self._get_filters(rtc), "( length <= 1400 )")
+        self.assertEqual(self._get_filters(rtc), self.EXPECTED_FILTER_STR)
         self.assertEqual(n_actual, n_expected)
         ds = openDataSet(rtc.task.output_files[0])
         self.assertTrue(ds.name.endswith("(filtered)"))
         self.assertTrue("filtered" in ds.tags)
+
+
+class TestFilterDataSetBq(TestFilterDataSet):
+
+    TASK_OPTIONS = {"pbcoretools.task_options.other_filters": "length >= 10 AND bq >= 10"}
+    RESOLVED_TASK_OPTIONS = TASK_OPTIONS
+    N_EXPECTED = 2
+    EXPECTED_FILTER_STR = "( length >= 10 AND bq >= 10 )"
+
+    @classmethod
+    def setUpClass(cls):
+        ds = SubreadSet(pbtestdata.get_file("barcoded-subreadset"),
+                        strict=True)
+        ds.filters.addRequirement(bq=[('>', 30)])
+        assert len(ds) == 1
+        ds.write(cls.INPUT_FILES[0])
