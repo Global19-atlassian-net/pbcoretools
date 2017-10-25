@@ -687,6 +687,8 @@ class TestUpdateBarcodedSampleMetadata(PbTestApp):
         ds_in = SubreadSet(self.INPUT_FILES[1])
         for f in datastore.files.values():
             with SubreadSet(f.path) as ds:
+                # FIXME need better testing here
+                self.assertEqual(len(ds.filters), 1)
                 bc_label = op.basename(f.path).split(".")[1]
                 bio_name = bio_sample_names[bc_label]
                 coll = ds.metadata.collections[0]

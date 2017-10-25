@@ -27,15 +27,22 @@ from pbcommand.models import FileTypes, SymbolTypes, OutputFileType, DataStore
 
 log = logging.getLogger(__name__)
 
-TOOL_NAMESPACE = 'pbcoretools'
-DRIVER_BASE = "python -m pbcoretools.tasks.converters "
 
-# For large references setting this to give more overhead for
-# memory usage. The underlying tool should have a well defined
-# memory usage that is independent of reference size (if possible)
-DEFAULT_FASTA_CONVERT_MAX_NPROC = 4
+class Constants(object):
+    TOOL_NAMESPACE = 'pbcoretools'
+    DRIVER_BASE = "python -m pbcoretools.tasks.converters "
 
-registry = registry_builder(TOOL_NAMESPACE, DRIVER_BASE)
+    # For large references setting this to give more overhead for
+    # memory usage. The underlying tool should have a well defined
+    # memory usage that is independent of reference size (if possible)
+    DEFAULT_FASTA_CONVERT_MAX_NPROC = 4
+
+    # default filter applied to output of 'lima'
+    BARCODE_QUALITY_GREATER_THAN = 26
+
+
+registry = registry_builder(Constants.TOOL_NAMESPACE, Constants.DRIVER_BASE)
+
 
 def _run_bax_to_bam(input_file_name, output_file_name):
     base_name = ".".join(output_file_name.split(".")[:-2])
@@ -475,7 +482,9 @@ ref_file_type = OutputFileType(FileTypes.DS_REF.file_type_id, "ReferenceSet",
 
 @registry("fasta2referenceset", "0.1.0",
           FileTypes.FASTA,
-          ref_file_type, is_distributed=True, nproc=DEFAULT_FASTA_CONVERT_MAX_NPROC)
+          ref_file_type,
+          is_distributed=True,
+          nproc=Constants.DEFAULT_FASTA_CONVERT_MAX_NPROC)
 def run_fasta2referenceset(rtc):
     return run_fasta_to_referenceset(rtc.task.input_files[0],
                                      rtc.task.output_files[0])
@@ -483,7 +492,9 @@ def run_fasta2referenceset(rtc):
 
 @registry("fasta_to_reference", "0.1.0",
           FileTypes.FASTA,
-          ref_file_type, is_distributed=True, nproc=DEFAULT_FASTA_CONVERT_MAX_NPROC,
+          ref_file_type,
+          is_distributed=True,
+          nproc=Constants.DEFAULT_FASTA_CONVERT_MAX_NPROC,
           options={
                 "organism": "",
                 "ploidy": "haploid",
@@ -505,7 +516,7 @@ gmap_ref_file_type = OutputFileType(FileTypes.DS_GMAP_REF.file_type_id, "GmapRef
 @registry("fasta_to_gmap_reference", "0.1.0",
           FileTypes.FASTA,
           gmap_ref_file_type, is_distributed=True,
-          nproc=DEFAULT_FASTA_CONVERT_MAX_NPROC,
+          nproc=Constants.DEFAULT_FASTA_CONVERT_MAX_NPROC,
           options={
                 "organism": "",
                 "ploidy": "haploid",
@@ -549,18 +560,18 @@ def run_bam2fasta_ccs(rtc):
     return run_bam_to_fasta(rtc.task.input_files[0], rtc.task.output_files[0])
 
 
-consensus_gz_ftype = OutputFileType(FileTypes.GZIP.file_type_id,
+consensus_gz_ftype = OutputFileType(FileTypes.TGZ.file_type_id,
                                     "fastq_split_gz",
                                     "Consensus Amplicons",
                                     "Consensus amplicons in FASTQ format, split by barcode",
                                     "consensus_fastq")
-chimera_gz_ftype = OutputFileType(FileTypes.GZIP.file_type_id,
+chimera_gz_ftype = OutputFileType(FileTypes.TGZ.file_type_id,
                                   "fastq_split_gz",
                                   "Chimeric/Noise Sequences by barcode",
                                   "Chimeric and noise sequences in FASTQ format, split by barcode",
                                   "chimera_fastq")
 
-@registry("split_laa_fastq", "0.1.0",
+@registry("split_laa_fastq", "0.2.0",
           (FileTypes.FASTQ, FileTypes.FASTQ),
           (consensus_gz_ftype, chimera_gz_ftype),
           is_distributed=True, nproc=1)
@@ -656,17 +667,17 @@ def _iterate_datastore_subread_sets(datastore_file):
             yield f
 
 
-@registry("datastore_to_subreads", "0.1.0",
+@registry("datastore_to_subreads", "0.2.0",
           FileTypes.DATASTORE,
           FileTypes.DS_SUBREADS,
           is_distributed=False,
           nproc=1)
 def run_datastore_to_subreads(rtc):
-    for f in _iterate_datastore_subread_sets(rtc.task.input_files[0]):
-        with SubreadSet(f.path, strict=True) as ds:
+    datasets = list(_iterate_datastore_subread_sets(rtc.task.input_files[0]))
+    if len(datasets) > 0:
+        with SubreadSet(*[f.path for f in datasets], strict=True) as ds:
             ds.newUuid()
             ds.write(rtc.task.output_files[0])
-        break
     else:
         raise ValueError("Expected one or more SubreadSets in datastore")
     return 0
@@ -692,6 +703,9 @@ def discard_bio_samples(subreads, barcode_label):
 
 
 def get_ds_name(ds, base_name, barcode_label):
+    """
+    Given the base (parent) dataset name, add a suffix indicating sample
+    """
     suffix = "(unknown sample)"
     try:
         collection = ds.metadata.collections[0]
@@ -747,6 +761,8 @@ def update_barcoded_sample_metadata(base_dir, datastore_file, input_subreads,
                                          createdBy="AnalysisJob",
                                          timeStampedName="")
             ds.name = get_ds_name(ds, parent_ds.name, barcode_label)
+            ds.filters.addRequirement(
+                bq=[('>', Constants.BARCODE_QUALITY_GREATER_THAN)])
             ds.newUuid()
             ds.write(ds_out)
             f_new = copy.deepcopy(f)
@@ -756,7 +772,7 @@ def update_barcoded_sample_metadata(base_dir, datastore_file, input_subreads,
     return DataStore(datastore_files)
 
 
-@registry("update_barcoded_sample_metadata", "0.1.0",
+@registry("update_barcoded_sample_metadata", "0.1.1",
           (FileTypes.JSON, FileTypes.DS_SUBREADS, FileTypes.DS_BARCODE),
           FileTypes.DATASTORE,
           is_distributed=False,
@@ -787,6 +803,10 @@ def _run_reparent_subreads(rtc):
     if rtc.task.options[NAME_OPT_ID].strip() == "":
         raise ValueError("New dataset name is required")
     with SubreadSet(rtc.task.input_files[0], strict=True) as ds_in:
+        if len(ds_in.metadata.provenance) > 0:
+            log.warn("Removing existing provenance record: %s",
+                     ds_in.metadata.provenance)
+            ds_in.metadata.provenance = None
         ds_in.name = rtc.task.options[NAME_OPT_ID]
         ds_in.newUuid(random=True)
         ds_in.write(rtc.task.output_files[0])
