@@ -661,7 +661,7 @@ def _iterate_datastore_subread_sets(datastore_file):
     Iterate over SubreadSet files listed in a datastore JSON.
     """
     ds = DataStore.load_from_json(datastore_file)
-    files = sorted(ds.files.values(), lambda a,b: cmp(a.file_id, b.file_id))
+    files = ds.files.values()
     for f in files:
         if f.file_type_id == FileTypes.DS_SUBREADS.file_type_id:
             yield f
