@@ -11,7 +11,12 @@ pylint:
 	pylint --errors-only pbcoretools/
 
 install:
-	python setup.py install
+	@which pip > /dev/null
+	@pip freeze|grep 'pbcoretools=='>/dev/null \
+      && pip uninstall -y pbcoretools \
+      || echo -n ''
+	@pip install ./
+
 
 clean: doc-clean
 	rm -rf build/;\
