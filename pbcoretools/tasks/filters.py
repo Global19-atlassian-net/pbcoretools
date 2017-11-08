@@ -50,6 +50,9 @@ def run_filter_dataset(in_file, out_file, read_length, other_filters):
             filters = parse_filter_list(str(other_filters).split(' AND '))
         else:
             filters = parse_filter_list(str(other_filters).split(','))
+        if "bq" in filters:
+            log.warn("Removing any and all existing 'bq' filters")
+            dataSet.filters.removeRequirement("bq")
         dataSet.filters.addFilter(**filters)
         log.info("{i} other filters added".format(i=len(filters)))
     rlen = sanitize_read_length(read_length)
