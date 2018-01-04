@@ -4,6 +4,7 @@ Tool contract wrappers for miscellaneous quick functions.
 """
 
 from collections import defaultdict
+from zipfile import ZipFile
 import subprocess
 import itertools
 import functools
@@ -143,7 +144,10 @@ def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
     return 0
 
 
-def _unzip_fastx(gzip_file_name, fastx_file_name):
+def _ungzip_fastx(gzip_file_name, fastx_file_name):
+    """
+    Decompress an output from bam2fastx.
+    """
     with gzip.open(gzip_file_name, "rb") as gz_in:
         with open(fastx_file_name, "wb") as fastx_out:
             def _fread():
@@ -154,31 +158,20 @@ def _unzip_fastx(gzip_file_name, fastx_file_name):
 
 def archive_files(input_file_names, output_file_name, remove_path=True):
     """
-    Create a gzipped tarball from a list of input files.
+    Create a zipfile from a list of input files.
 
     :param remove_path: if True, the directory will be removed from the input
                         file names before archiving.  All inputs and the output
                         file must be in the same directory for this to work.
     """
+    archive_file_names = input_file_names
     if remove_path:
-        input_file_names = [op.basename(fn) for fn in input_file_names]
-    args = ["tar", "-czf", output_file_name] + input_file_names
-    log.info("Running '{a}'".format(a=" ".join(args)))
-    _cwd = os.getcwd()
-    try:
-        # we want the files to have no leading path
-        os.chdir(op.dirname(output_file_name))
-        result = run_cmd(" ".join(args),
-                         stdout_fh=sys.stdout,
-                         stderr_fh=sys.stderr)
-    except Exception:
-        raise
-    else:
-        if result.exit_code != 0:
-            return result.exit_code
-    finally:
-        os.chdir(_cwd)
-    assert op.isfile(output_file_name)
+        archive_file_names = [op.basename(fn) for fn in archive_file_names]
+    log.info("Creating zip file %s", output_file_name)
+    with ZipFile(output_file_name, "w") as zip_out:
+        for file_name, archive_file_name in zip(input_file_names,
+                                                archive_file_names):
+            zip_out.write(file_name, archive_file_name)
     return 0
 
 
@@ -189,12 +182,12 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
     Can take a subreadset or consensusreadset as input.
     Will convert to either fasta or fastq.
     If the dataset is barcoded, it will split the fastx files per-barcode.
-    If the output file is .tar.gz, the fastx file(s) will be archived accordingly.
+    If the output file is .zip, the fastx file(s) will be archived accordingly.
     """
     assert isinstance(program_name, basestring)
     barcode_mode = False
     barcode_sets = set()
-    if output_file_name.endswith(".tar.gz"):
+    if output_file_name.endswith(".zip"):
         with openDataSet(input_file_name) as ds_in:
             barcode_mode = ds_in.isBarcoded
             if barcode_mode:
@@ -237,12 +230,12 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
         return result.exit_code
     else:
         base_ext = re.sub("bam2", "", program_name)
-        if output_file_name.endswith(".tar.gz"):
+        if output_file_name.endswith(".zip"):
             suffix = "{f}.gz".format(f=base_ext)
             tmp_out_dir = op.dirname(tmp_out_prefix)
             tc_out_dir = op.dirname(output_file_name)
             fastx_file_names = []
-            # find the barcoded FASTX files and unzip them to the same
+            # find the barcoded FASTX files and un-gzip them to the same
             # output directory and file prefix as the ultimate output
             for fn in os.listdir(tmp_out_dir):
                 fn = op.join(tmp_out_dir, fn)
@@ -273,16 +266,16 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                         suffix2 = ".{l}.{t}".format(l=bc_label, t=base_ext)
                     else:
                         suffix2 = '.' + base_ext
-                    fn_out = re.sub(".tar.gz$", suffix2, output_file_name)
+                    fn_out = re.sub(".zip$", suffix2, op.basename(output_file_name))
                     fastx_out = op.join(tc_out_dir, fn_out)
-                    _unzip_fastx(fn, fastx_out)
-                    fastx_file_names.append(fn_out)
+                    _ungzip_fastx(fn, fastx_out)
+                    fastx_file_names.append(fastx_out)
                     os.remove(fn)
             assert len(fastx_file_names) > 0
             return archive_files(fastx_file_names, output_file_name)
         else:
             tmp_out = "{p}.{b}.gz".format(p=tmp_out_prefix, b=base_ext)
-            _unzip_fastx(tmp_out, output_file_name)
+            _ungzip_fastx(tmp_out, output_file_name)
             os.remove(tmp_out)
     return 0
 
@@ -310,15 +303,13 @@ def split_laa_fastq(input_file_name, output_file_base):
 
 def split_laa_fastq_archived(input_file_name, output_file_name):
     """
-    Split an LAA FASTQ file into one file per barcode and package as tar.gz.
+    Split an LAA FASTQ file into one file per barcode and package as zip.
     """
     base, ext = op.splitext(output_file_name)
-    assert (ext == ".gz")
-    if base.endswith(".tar"):
-        base, ext2 = op.splitext(base)
-    fastq_files = [op.basename(fn) for fn in split_laa_fastq(input_file_name, base)]
+    assert (ext == ".zip")
+    fastq_files = list(split_laa_fastq(input_file_name, base))
     if len(fastq_files) == 0: # workaround for empty input
-        with open(output_file_name, "wb") as tar_out:
+        with ZipFile(output_file_name, "w") as zip_out:
             return 0
     return archive_files(fastq_files, output_file_name)
 
@@ -436,14 +427,14 @@ fasta_file_type = OutputFileType(FileTypes.FASTA.file_type_id, "fasta", "FASTA f
                                  "Reads in FASTA format", "reads")
 fastq_file_type = OutputFileType(FileTypes.FASTQ.file_type_id, "fastq", "FASTQ file",
                                  "Reads in FASTQ format", "reads")
-fasta_gzip_file_type = OutputFileType(FileTypes.TGZ.file_type_id, "fasta_gz",
-                                      "FASTA file(s)",
-                                      "Seqeunce data converted to FASTA Format",
-                                      "reads.fasta")
-fastq_gzip_file_type = OutputFileType(FileTypes.TGZ.file_type_id, "fastq",
-                                      "FASTQ file(s)",
-                                      "Sequence data converted to FASTQ format",
-                                      "reads.fastq")
+fasta_zip_file_type = OutputFileType(FileTypes.ZIP.file_type_id, "fasta_gz",
+                                     "FASTA file(s)",
+                                     "Seqeunce data converted to FASTA Format",
+                                     "reads_fasta")
+fastq_zip_file_type = OutputFileType(FileTypes.ZIP.file_type_id, "fastq",
+                                     "FASTQ file(s)",
+                                     "Sequence data converted to FASTQ format",
+                                     "reads_fastq")
 
 @registry("bam2fastq", "0.1.0",
           FileTypes.DS_SUBREADS,
@@ -452,16 +443,16 @@ def run_bam2fastq(rtc):
     return run_bam_to_fastq(rtc.task.input_files[0], rtc.task.output_files[0])
 
 
-@registry("bam2fasta_archive", "0.2.0",
+@registry("bam2fasta_archive", "0.3.0",
           FileTypes.DS_SUBREADS,
-          fasta_gzip_file_type, is_distributed=True, nproc=1)
+          fasta_zip_file_type, is_distributed=True, nproc=1)
 def run_bam2fasta_archive(rtc):
     return run_bam_to_fasta(rtc.task.input_files[0], rtc.task.output_files[0])
 
 
-@registry("bam2fastq_archive", "0.2.0",
+@registry("bam2fastq_archive", "0.3.0",
           FileTypes.DS_SUBREADS,
-          fastq_gzip_file_type, is_distributed=True, nproc=1)
+          fastq_zip_file_type, is_distributed=True, nproc=1)
 def run_bam2fastq_archive(rtc):
     return run_bam_to_fastq(rtc.task.input_files[0], rtc.task.output_files[0])
 
@@ -531,16 +522,16 @@ def _run_fasta_to_gmap_reference(rtc):
         ploidy=rtc.task.options["pbcoretools.task_options.ploidy"])
 
 
-fasta_ccs_file_type = OutputFileType(FileTypes.TGZ.file_type_id, "fasta_gz",
+fasta_ccs_file_type = OutputFileType(FileTypes.ZIP.file_type_id, "fasta_zip",
                                      "Consensus Sequences (FASTA)",
                                      "Consensus sequences generated from CCS2",
                                      "ccs.fasta")
-fastq_ccs_file_type = OutputFileType(FileTypes.TGZ.file_type_id, "fastq_gz",
+fastq_ccs_file_type = OutputFileType(FileTypes.ZIP.file_type_id, "fastq_zip",
                                      "Consensus Sequences (FASTQ)",
                                      "Consensus sequences generated from CCS2",
                                      "ccs.fastq")
 
-@registry("bam2fastq_ccs", "0.1.0",
+@registry("bam2fastq_ccs", "0.2.0",
           FileTypes.DS_CCS,
           fastq_ccs_file_type, is_distributed=True, nproc=1)
 def run_bam2fastq_ccs(rtc):
@@ -550,7 +541,7 @@ def run_bam2fastq_ccs(rtc):
     return run_bam_to_fastq(rtc.task.input_files[0], rtc.task.output_files[0])
 
 
-@registry("bam2fasta_ccs", "0.1.0",
+@registry("bam2fasta_ccs", "0.2.0",
           FileTypes.DS_CCS,
           fasta_ccs_file_type, is_distributed=True, nproc=1)
 def run_bam2fasta_ccs(rtc):
@@ -560,20 +551,20 @@ def run_bam2fasta_ccs(rtc):
     return run_bam_to_fasta(rtc.task.input_files[0], rtc.task.output_files[0])
 
 
-consensus_gz_ftype = OutputFileType(FileTypes.TGZ.file_type_id,
-                                    "fastq_split_gz",
-                                    "Consensus Amplicons",
-                                    "Consensus amplicons in FASTQ format, split by barcode",
-                                    "consensus_fastq")
-chimera_gz_ftype = OutputFileType(FileTypes.TGZ.file_type_id,
-                                  "fastq_split_gz",
-                                  "Chimeric/Noise Sequences by barcode",
-                                  "Chimeric and noise sequences in FASTQ format, split by barcode",
-                                  "chimera_fastq")
+consensus_zip_ftype = OutputFileType(FileTypes.ZIP.file_type_id,
+                                     "fastq_split_zip",
+                                     "Consensus Amplicons",
+                                     "Consensus amplicons in FASTQ format, split by barcode",
+                                     "consensus_fastq")
+chimera_zip_ftype = OutputFileType(FileTypes.ZIP.file_type_id,
+                                   "fastq_split_zip",
+                                   "Chimeric/Noise Sequences by barcode",
+                                   "Chimeric and noise sequences in FASTQ format, split by barcode",
+                                   "chimera_fastq")
 
-@registry("split_laa_fastq", "0.2.0",
+@registry("split_laa_fastq", "0.3.0",
           (FileTypes.FASTQ, FileTypes.FASTQ),
-          (consensus_gz_ftype, chimera_gz_ftype),
+          (consensus_zip_ftype, chimera_zip_ftype),
           is_distributed=True, nproc=1)
 def _run_split_laa_fastq(rtc):
     # XXX a bit of a hack to support unique file names for the FASTQ tarballs

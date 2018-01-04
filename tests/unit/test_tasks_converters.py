@@ -1,11 +1,10 @@
 
+from zipfile import ZipFile
 import subprocess
 import tempfile
 import unittest
-import tarfile
 import logging
 import uuid
-import gzip
 import os.path as op
 import os
 import sys
@@ -283,10 +282,12 @@ class TestBam2FastqFiltered(_BaseTestBam2Fasta):
         super(TestBam2FastqFiltered, cls).setUpClass()
 
 
-def _get_tarred_fastx_file(tar_gz_file):
-    file_name = tarfile.TarFile(fileobj=gzip.open(tar_gz_file)).getnames()[0]
-    dir_name = op.dirname(tar_gz_file)
-    return op.join(dir_name, file_name)
+def _get_zipped_fastx_file(zip_file):
+    with ZipFile(zip_file, "r") as zip_in:
+        file_name = zip_in.namelist()[0]
+        dir_name = op.dirname(zip_file)
+        zip_in.extractall(dir_name)
+        return op.join(dir_name, file_name)
 
 
 @skip_unless_bam2fastx
@@ -303,7 +304,7 @@ class TestBam2FastaArchive(_BaseTestBam2Fasta):
         super(TestBam2FastaArchive, cls).setUpClass()
 
     def _get_output_file(self, rtc):
-        return _get_tarred_fastx_file(rtc.task.output_files[0])
+        return _get_zipped_fastx_file(rtc.task.output_files[0])
 
 
 @skip_unless_bam2fastx
@@ -312,7 +313,7 @@ class TestBam2FastqArchive(TestBam2Fastq):
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
 
     def _get_output_file(self, rtc):
-        return gzip.open(rtc.task.output_files[0])
+        return _get_zipped_fastx_file(rtc.task.output_files[0])
 
 
 @skip_unless_bam2fastx
@@ -324,7 +325,7 @@ class TestBam2FastaCCS(_BaseTestBam2Fasta):
     NRECORDS_EXPECTED = None
 
     def _get_output_file(self, rtc):
-        return _get_tarred_fastx_file(rtc.task.output_files[0])
+        return _get_zipped_fastx_file(rtc.task.output_files[0])
 
 
 @skip_unless_bam2fastx
@@ -335,7 +336,7 @@ class TestBam2FastqCCS(TestBam2FastaCCS):
     NRECORDS_EXPECTED = None
 
     def _get_output_file(self, rtc):
-        return _get_tarred_fastx_file(rtc.task.output_files[0])
+        return _get_zipped_fastx_file(rtc.task.output_files[0])
 
 
 @skip_unless_bam2fastx
@@ -353,9 +354,9 @@ class TestBam2FastaBarcoded(PbTestApp):
 
     def _get_expected_file_names(self):
         return [
-            "reads.{e}.lbc1__lbc1.{e}".format(e=self.EXT),
-            "reads.{e}.lbc3__lbc3.{e}".format(e=self.EXT),
-            "reads.{e}.unbarcoded.{e}".format(e=self.EXT)
+            "reads_{e}.lbc1__lbc1.{e}".format(e=self.EXT),
+            "reads_{e}.lbc3__lbc3.{e}".format(e=self.EXT),
+            "reads_{e}.unbarcoded.{e}".format(e=self.EXT)
         ]
 
     def run_after(self, rtc, output_dir):
@@ -363,8 +364,7 @@ class TestBam2FastaBarcoded(PbTestApp):
         _cwd = os.getcwd()
         try:
             os.chdir(tmp_dir)
-            args = ["tar", "xzf", rtc.task.output_files[0]]
-            self.assertEqual(subprocess.call(args), 0)
+            ZipFile(rtc.task.output_files[0], "r").extractall()
             file_names = sorted(os.listdir(tmp_dir))
             self.assertEqual(file_names, self._get_expected_file_names())
             fastx_ids = ["m54008_160219_003234/74056024/3985_5421", # bc 0
@@ -393,9 +393,9 @@ class TestBam2FastaBarcodedNoLabels(TestBam2FastaBarcoded):
             ds_out.write(cls.INPUT_FILES[0])
     def _get_expected_file_names(self):
         return [
-            "reads.{e}.0__0.{e}".format(e=self.EXT),
-            "reads.{e}.2__2.{e}".format(e=self.EXT),
-            "reads.{e}.unbarcoded.{e}".format(e=self.EXT)
+            "reads_{e}.0__0.{e}".format(e=self.EXT),
+            "reads_{e}.2__2.{e}".format(e=self.EXT),
+            "reads_{e}.unbarcoded.{e}".format(e=self.EXT)
         ]
 
 
@@ -525,11 +525,11 @@ class TestSplitLAA(unittest.TestCase):
 
     def test_split_laa_fastq_archived(self):
         ifn = self.input_file_name
-        ofn = tempfile.NamedTemporaryFile(suffix=".gz").name
+        ofn = tempfile.NamedTemporaryFile(suffix=".zip").name
         rc = split_laa_fastq_archived(ifn, ofn)
         self.assertEqual(rc, 0)
         # now with a different extension
-        ofn = tempfile.NamedTemporaryFile(suffix=".tar.gz").name
+        ofn = tempfile.NamedTemporaryFile(suffix=".zip").name
         rc = split_laa_fastq_archived(ifn, ofn)
         self.assertEqual(rc, 0)
 
