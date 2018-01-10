@@ -1,5 +1,7 @@
 #/usr/bin/env python
 
+from __future__ import print_function
+
 import os
 import argparse
 import string
@@ -12,6 +14,7 @@ from pbcore.io.dataset.DataSetMembers import Filters, OPMAP
 from pbcore.io.dataset.DataSetValidator import validateFile
 from pbcommand.validators import validate_output_dir
 import logging
+from functools import reduce
 
 log = logging.getLogger(__name__)
 
@@ -24,18 +27,18 @@ def summarizeXml(args):
         dset.updateCounts()
         if not dset._countsUpdated:
             numFlag = " Unable to update counts!"
-    print "DataSet Type          : {f}".format(f=dset.datasetType)
-    print "Name                  : {f}".format(f=dset.name)
-    print "Id                    : {f}".format(f=dset.uuid)
-    print "Number of records     : {r}{f}".format(r=dset.numRecords,
-                                                  f=numFlag)
-    print "Total number of bases : {r}{f}".format(r=dset.totalLength,
-                                                  f=numFlag)
-    print "# of Resources        : {r}".format(r=len(dset.toExternalFiles()))
-    print "Filters               : {r}".format(r=str(dset.filters) if
-                                               dset.filters else "None")
+    print("DataSet Type          : {f}".format(f=dset.datasetType))
+    print("Name                  : {f}".format(f=dset.name))
+    print("Id                    : {f}".format(f=dset.uuid))
+    print("Number of records     : {r}{f}".format(r=dset.numRecords,
+                                                  f=numFlag))
+    print("Total number of bases : {r}{f}".format(r=dset.totalLength,
+                                                  f=numFlag))
+    print("# of Resources        : {r}".format(r=len(dset.toExternalFiles())))
+    print("Filters               : {r}".format(r=str(dset.filters) if
+                                               dset.filters else "None"))
     for fname in dset.toExternalFiles():
-        print fname
+        print(fname)
     return 0
 
 def summarize_options(parser):

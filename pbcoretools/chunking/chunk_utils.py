@@ -116,7 +116,7 @@ def write_chunked_csv(chunk_key, csv_path, max_total_nchunks, dir_name, base_nam
                 if i != max_total_nchunks:
                     for _ in xrange(n):
                         nchunk_records += 1
-                        writer.writerow(it.next())
+                        writer.writerow(next(it))
                 else:
                     for x in it:
                         nchunk_records += 1
@@ -202,7 +202,7 @@ def __to_chunked_fastx_files(write_records_func, pbcore_reader_class, pbcore_wri
                 if n_left < 0 or (n_left == 0 and nchunks != 1):
                     break
                 for _ in xrange(min(n_per_chunk, n_left)):
-                    records.append(it.next())
+                    records.append(next(it))
             else:
                 for x in it:
                     records.append(x)

@@ -5,6 +5,7 @@ hole numbers or a percentage of reads to be randomly selected.
 """
 
 from __future__ import division
+from __future__ import print_function
 from collections import defaultdict, OrderedDict
 import subprocess
 import warnings
@@ -307,7 +308,7 @@ def show_zmws(input_file):
             zmws.extend(list([int(x) for x in rr.holeNumber]))
         else:
             zmws.extend([int(rec.HoleNumber) for rec in rr])
-    print "\n".join([str(x) for x in sorted(list(set(zmws)))])
+    print("\n".join([str(x) for x in sorted(list(set(zmws)))]))
 
 
 def run(args):
