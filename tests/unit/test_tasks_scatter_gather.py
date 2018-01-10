@@ -773,7 +773,7 @@ class TestGatherBigwig(_SetupGatherApp):
         for rec in _records:
             seqid = rec[0]
             pos = rec[1]
-            ranges.setdefault(seqid, (sys.maxint, 0))
+            ranges.setdefault(seqid, (sys.maxsize, 0))
             ranges[seqid] = (min(ranges[seqid][0], pos),
                              max(ranges[seqid][1], pos))
         bw = pyBigWig.open(fn, "w")

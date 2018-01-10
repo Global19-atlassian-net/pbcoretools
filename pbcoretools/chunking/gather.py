@@ -67,14 +67,14 @@ def _read_header(csv_file):
 
 
 def __has_header(handle):
-    handle.next()
+    next(handle)
 
 
 def __has_header_and_one_record(handle):
     # has header
     __has_header(handle)
     # has at least one record
-    handle.next()
+    next(handle)
 
 
 def __csv_inspector(func, csv_file):

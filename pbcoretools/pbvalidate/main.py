@@ -4,6 +4,8 @@ Utility for validating files produced by PacBio software against our own
 internal specifications.
 """
 
+from __future__ import absolute_import
+
 from cStringIO import StringIO
 from xml.dom import minidom
 import argparse
@@ -19,10 +21,10 @@ from pbcommand.models.parser import get_pbparser
 from pbcommand.models import FileTypes
 from pbcommand.utils import setup_log
 
-import bam
-import fasta
-import dataset
-import utils
+from . import bam
+from . import fasta
+from . import dataset
+from . import utils
 
 __version__ = "0.3"
 
