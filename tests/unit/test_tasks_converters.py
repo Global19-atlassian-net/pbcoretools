@@ -641,6 +641,16 @@ class TestUpdateBarcodedSampleMetadata(PbTestApp):
         coll = ds.metadata.collections[0]
         self.assertEqual(len(coll.wellSample.bioSamples), 1)
         self.assertEqual(coll.wellSample.bioSamples[0].name, "Alice")
+        ds = SubreadSet(pbtestdata.get_file("barcoded-subreadset"))
+        coll = ds.metadata.collections[0]
+        coll.wellSample.bioSamples.pop(1)
+        coll.wellSample.bioSamples.pop(1)
+        bioSample = coll.wellSample.bioSamples[0]
+        while len(bioSample.DNABarcodes) > 0:
+            bioSample.DNABarcodes.pop(0)
+        self.assertEqual(len(coll.wellSample.bioSamples), 1)
+        discard_bio_samples(ds, "lbc1--lbc1")
+        self.assertEqual(len(coll.wellSample.bioSamples), 0)
         # failure modes
         ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))
         coll = ds.metadata.collections[0]
