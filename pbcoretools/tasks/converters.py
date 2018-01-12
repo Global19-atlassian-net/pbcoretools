@@ -683,10 +683,11 @@ def discard_bio_samples(subreads, barcode_label):
         deletions = []
         for k, bio_sample in enumerate(collection.wellSample.bioSamples):
             barcodes = set([bc.name for bc in bio_sample.DNABarcodes])
+            if barcode_label in barcodes:
+                continue
             if len(barcodes) == 0:
                 log.warn("No barcodes defined for sample %s", bio_sample.name)
-            elif not barcode_label in barcodes:
-                deletions.append(k)
+            deletions.append(k)
         for k in reversed(deletions):
             collection.wellSample.bioSamples.pop(k)
         if len(collection.wellSample.bioSamples) == 0:
@@ -763,7 +764,7 @@ def update_barcoded_sample_metadata(base_dir, datastore_file, input_subreads,
     return DataStore(datastore_files)
 
 
-@registry("update_barcoded_sample_metadata", "0.1.1",
+@registry("update_barcoded_sample_metadata", "0.1.2",
           (FileTypes.JSON, FileTypes.DS_SUBREADS, FileTypes.DS_BARCODE),
           FileTypes.DATASTORE,
           is_distributed=False,
