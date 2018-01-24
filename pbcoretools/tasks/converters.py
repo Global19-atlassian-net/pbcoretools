@@ -692,6 +692,9 @@ def discard_bio_samples(subreads, barcode_label):
             collection.wellSample.bioSamples.pop(k)
         if len(collection.wellSample.bioSamples) == 0:
             log.warn("Collection %s has no BioSamples", collection.context)
+            log.warn("Will create new BioSample and DNABarcode records")
+            collection.wellSample.bioSamples.addSample(barcode_label)
+            collection.wellSample.bioSamples[0].DNABarcodes.addBarcode(barcode_label)
 
 
 def get_ds_name(ds, base_name, barcode_label):
@@ -764,7 +767,7 @@ def update_barcoded_sample_metadata(base_dir, datastore_file, input_subreads,
     return DataStore(datastore_files)
 
 
-@registry("update_barcoded_sample_metadata", "0.1.2",
+@registry("update_barcoded_sample_metadata", "0.1.3",
           (FileTypes.JSON, FileTypes.DS_SUBREADS, FileTypes.DS_BARCODE),
           FileTypes.DATASTORE,
           is_distributed=False,
