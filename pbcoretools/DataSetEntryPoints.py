@@ -292,6 +292,8 @@ def absolutizeXml(args):
             outfn = _swapPath(args.outdir, args.infile)
         else:
             outfn = args.outdir
+    if args.updateCounts:
+        dss.updateCounts()
     dss.write(outfn, relPaths=False)
     return 0
 
@@ -303,6 +305,9 @@ def absolutize_options(parser):
                         help="The XML file to absolutize")
     parser.add_argument("--outdir", default=None, type=str,
                         help="Specify an optional output directory")
+    parser.add_argument("--update", default=False, action="store_true",
+                        dest="updateCounts",
+                        help="Update dataset metadata")
     parser.set_defaults(func=absolutizeXml)
 
 def copyToXml(args):
