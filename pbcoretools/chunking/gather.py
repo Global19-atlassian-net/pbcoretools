@@ -333,7 +333,7 @@ def gather_tgz(input_files, output_file):
 
 
 def gather_zip(input_files, output_file):
-    with ZipFile(output_file, "w") as zip_out:
+    with ZipFile(output_file, "w", allowZip64=True) as zip_out:
         for zip_file in input_files:
             with ZipFile(zip_file, "r") as zip_in:
                 for member in zip_in.namelist():
