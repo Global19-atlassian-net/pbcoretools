@@ -20,7 +20,7 @@ import pbtestdata
 from pbcoretools.tasks.converters import (
     split_laa_fastq,
     split_laa_fastq_archived,
-    run_bam_to_bam,
+    _run_bam_to_bam,
     get_ds_name,
     update_barcoded_sample_metadata,
     discard_bio_samples)
@@ -48,7 +48,7 @@ def _to_skip_msg(exe):
 
 # XXX hacks to make sure tools are actually available
 HAVE_BAX2BAM = which(Constants.BAX2BAM) is not None
-HAVE_BAM2BAM = which(Constants.BAM2BAM) is not None
+HAVE_BAM2BAM = False #XXX disabled #which(Constants.BAM2BAM) is not None
 HAVE_BAM2FASTX = which(Constants.BAM2FASTA) is not None
 HAVE_FASTA2REF = which(Constants.FASTA2REF) is not None
 HAVE_FASTA2GMAP = which(Constants.FASTA2GMAP) is not None
@@ -154,23 +154,8 @@ class TestBam2Bam(unittest.TestCase, Bam2BamCore):
 
     def test_run_bam_to_bam(self):
         tmp_out = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
-        run_bam_to_bam(self.SUBREADS, self.BARCODES, tmp_out)
+        _run_bam_to_bam(self.SUBREADS, self.BARCODES, tmp_out)
         self._validate_subreads(tmp_out)
-
-
-@skip_unless_bam2bam
-class TestBam2BamTask(PbTestApp, Bam2BamCore):
-    TASK_ID = "pbcoretools.tasks.bam2bam_barcode"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
-    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
-    INPUT_FILES = [Bam2BamCore.SUBREADS, Bam2BamCore.BARCODES]
-    MAX_NPROC = 8
-    RESOLVED_NPROC = 8
-    IS_DISTRIBUTED = True
-    RESOLVED_IS_DISTRIBUTED = True
-
-    def run_after(self, rtc, output_dir):
-        self._validate_subreads(rtc.task.output_files[0])
 
 
 class _BaseTestBam2Fasta(PbTestApp):

@@ -100,8 +100,12 @@ def run_bax_to_bam(input_file_name, output_file_name):
     return 0
 
 
-def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
-                   nproc=1, score_mode="symmetric"):
+# XXX no longer used
+def _run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
+                    nproc=1, score_mode="symmetric"):
+    """
+    Run legacy barcoding with bam2bam (requires separate installation).
+    """
     if not score_mode in ["symmetric", "asymmetric", "tailed"]:
         raise ValueError("Unrecognized score mode '{m}'".format(m=score_mode))
     bc = BarcodeSet(barcode_set_file)
@@ -403,25 +407,6 @@ subreads_barcoded_file_type = OutputFileType(FileTypes.DS_SUBREADS.file_type_id,
 def run_bax2bam(rtc):
     return run_bax_to_bam(rtc.task.input_files[0], rtc.task.output_files[0])
 
-score_mode_opt = QuickOpt(["symmetric","asymmetric","tailed"], "Score Mode", 
-                           "Select method of barcode pairing and orientation. "
-                           "For Barcode Universal Primers use 'asymmetric' with the "
-                           "universal BarcodeSet or 'tailed' with the normal BarcodeSet")
-
-@registry("bam2bam_barcode", "0.2.0",
-          (FileTypes.DS_SUBREADS, FileTypes.DS_BARCODE),
-          subreads_barcoded_file_type,
-          is_distributed=True,
-          nproc=SymbolTypes.MAX_NPROC,
-          options={"score_mode":score_mode_opt})
-def run_bam2bam(rtc):
-    return run_bam_to_bam(
-        subread_set_file=rtc.task.input_files[0],
-        barcode_set_file=rtc.task.input_files[1],
-        output_file_name=rtc.task.output_files[0],
-        nproc=rtc.task.nproc,
-        score_mode=rtc.task.options["pbcoretools.task_options.score_mode"])
-
 
 fasta_file_type = OutputFileType(FileTypes.FASTA.file_type_id, "fasta", "FASTA file",
                                  "Reads in FASTA format", "reads")
@@ -435,6 +420,7 @@ fastq_zip_file_type = OutputFileType(FileTypes.ZIP.file_type_id, "fastq",
                                      "FASTQ file(s)",
                                      "Sequence data converted to FASTQ format",
                                      "reads_fastq")
+
 
 @registry("bam2fastq", "0.1.0",
           FileTypes.DS_SUBREADS,

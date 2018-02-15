@@ -284,19 +284,6 @@ class TestScatterSubreadBarcodes(pbcommand.testkit.core.PbTestScatterApp):
     CHUNK_KEYS = ("$chunk.subreadset_id", )
 
 
-class TestScatterSubreadsBarcoding(pbcommand.testkit.core.PbTestScatterApp):
-    DRIVER_BASE = "python -m pbcoretools.tasks.scatter_subreads_bam2bam"
-    INPUT_FILES = [
-        # XXX not actually barcoded data, but it doesn't matter here
-        pbtestdata.get_file("subreads-bam"),
-        pbtestdata.get_file("barcodeset")
-    ]
-    MAX_NCHUNKS = 8
-    RESOLVED_MAX_NCHUNKS = 8
-    NCHUNKS_EXPECTED = 2
-    CHUNK_KEYS = ("$chunk.subreadset_id", "$chunk.barcodeset_id")
-
-
 DATA_MV = "/pbi/dept/secondary/siv/testdata/minorseq-test"
 @unittest.skipUnless(op.isdir(DATA_MV), "Missing {d}".format(d=DATA_MV))
 class TestScatterMinorVariants(pbcommand.testkit.core.PbTestScatterApp):
