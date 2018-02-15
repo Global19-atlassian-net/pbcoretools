@@ -500,35 +500,6 @@ def _run_fasta_to_gmap_reference(rtc):
         ploidy=rtc.task.options["pbcoretools.task_options.ploidy"])
 
 
-fasta_ccs_file_type = OutputFileType(FileTypes.ZIP.file_type_id, "fasta_zip",
-                                     "Consensus Sequences (FASTA)",
-                                     "Consensus sequences generated from CCS2",
-                                     "ccs.fasta")
-fastq_ccs_file_type = OutputFileType(FileTypes.ZIP.file_type_id, "fastq_zip",
-                                     "Consensus Sequences (FASTQ)",
-                                     "Consensus sequences generated from CCS2",
-                                     "ccs.fastq")
-
-@registry("bam2fastq_ccs", "0.2.0",
-          FileTypes.DS_CCS,
-          fastq_ccs_file_type, is_distributed=True, nproc=1)
-def run_bam2fastq_ccs(rtc):
-    """
-    Duplicate of run_bam2fastq, but with ConsensusReadSet as input.
-    """
-    return run_bam_to_fastq(rtc.task.input_files[0], rtc.task.output_files[0])
-
-
-@registry("bam2fasta_ccs", "0.2.0",
-          FileTypes.DS_CCS,
-          fasta_ccs_file_type, is_distributed=True, nproc=1)
-def run_bam2fasta_ccs(rtc):
-    """
-    Duplicate of run_bam2fasta, but with ConsensusReadSet as input.
-    """
-    return run_bam_to_fasta(rtc.task.input_files[0], rtc.task.output_files[0])
-
-
 consensus_zip_ftype = OutputFileType(FileTypes.ZIP.file_type_id,
                                      "fastq_split_zip",
                                      "Consensus Amplicons",

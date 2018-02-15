@@ -319,7 +319,7 @@ class TestBam2FastqArchive(TestBam2Fastq):
 @skip_unless_bam2fastx
 class TestBam2FastaCCS(_BaseTestBam2Fasta):
     TASK_ID = "pbcoretools.tasks.bam2fasta_ccs"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fasta_ccs"
     INPUT_FILES = [pbtestdata.get_file("rsii-ccs")]
     READER_CLASS = FastaReader
     NRECORDS_EXPECTED = None
@@ -331,7 +331,7 @@ class TestBam2FastaCCS(_BaseTestBam2Fasta):
 @skip_unless_bam2fastx
 class TestBam2FastqCCS(TestBam2FastaCCS):
     TASK_ID = "pbcoretools.tasks.bam2fastq_ccs"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fastq_ccs"
     READER_CLASS = FastqReader
     NRECORDS_EXPECTED = None
 
