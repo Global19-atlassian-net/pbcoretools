@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 
 class Constants(object):
     TOOL_ID = "pbcoretools.tasks.bam2fastq_archive"
-    VERSION = "0.2.0"
+    VERSION = "0.3.0"
     DRIVER = "python -m pbcoretools.tasks.bam2fastq_archive --resolved-tool-contract"
 
 def get_parser():
