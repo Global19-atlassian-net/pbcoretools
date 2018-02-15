@@ -408,6 +408,20 @@ def run_bax2bam(rtc):
     return run_bax_to_bam(rtc.task.input_files[0], rtc.task.output_files[0])
 
 
+fasta_file_type = OutputFileType(FileTypes.FASTA.file_type_id, "fasta", "FASTA file",
+                                 "Reads in FASTA format", "reads")
+fastq_file_type = OutputFileType(FileTypes.FASTQ.file_type_id, "fastq", "FASTQ file",
+                                 "Reads in FASTQ format", "reads")
+fasta_zip_file_type = OutputFileType(FileTypes.ZIP.file_type_id, "fasta_gz",
+                                     "FASTA file(s)",
+                                     "Seqeunce data converted to FASTA Format",
+                                     "reads_fasta")
+fastq_zip_file_type = OutputFileType(FileTypes.ZIP.file_type_id, "fastq",
+                                     "FASTQ file(s)",
+                                     "Sequence data converted to FASTQ format",
+                                     "reads_fastq")
+
+
 @registry("bam2fastq", "0.1.0",
           FileTypes.DS_SUBREADS,
           fastq_file_type, is_distributed=True, nproc=1)
