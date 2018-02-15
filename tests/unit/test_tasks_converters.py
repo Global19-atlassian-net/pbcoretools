@@ -294,6 +294,8 @@ def _get_zipped_fastx_file(zip_file):
 class TestBam2FastaArchive(_BaseTestBam2Fasta):
     TASK_ID = "pbcoretools.tasks.bam2fasta_archive"
     DRIVER_BASE = "python -m pbcoretools.tasks.bam2fasta_archive"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fasta_archive --emit-tool-contract"
+    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fasta_archive --resolved-tool-contract"
     NRECORDS_EXPECTED = 117
     SRC_FILE = pbtestdata.get_file("subreads-xml")
 
@@ -311,6 +313,8 @@ class TestBam2FastaArchive(_BaseTestBam2Fasta):
 class TestBam2FastqArchive(TestBam2Fastq):
     TASK_ID = "pbcoretools.tasks.bam2fastq_archive"
     DRIVER_BASE = "python -m pbcoretools.tasks.bam2fastq_archive"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fastq_archive --emit-tool-contract"
+    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fasta_archive --resolved-tool-contract"
 
     def _get_output_file(self, rtc):
         return _get_zipped_fastx_file(rtc.task.output_files[0])
@@ -320,6 +324,8 @@ class TestBam2FastqArchive(TestBam2Fastq):
 class TestBam2FastaCCS(_BaseTestBam2Fasta):
     TASK_ID = "pbcoretools.tasks.bam2fasta_ccs"
     DRIVER_BASE = "python -m pbcoretools.tasks.bam2fasta_ccs"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fasta_ccs --emit-tool-contract"
+    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fasta_ccs --resolved-tool-contract"
     INPUT_FILES = [pbtestdata.get_file("rsii-ccs")]
     READER_CLASS = FastaReader
     NRECORDS_EXPECTED = None
@@ -332,6 +338,8 @@ class TestBam2FastaCCS(_BaseTestBam2Fasta):
 class TestBam2FastqCCS(TestBam2FastaCCS):
     TASK_ID = "pbcoretools.tasks.bam2fastq_ccs"
     DRIVER_BASE = "python -m pbcoretools.tasks.bam2fastq_ccs"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fastq_ccs --emit-tool-contract"
+    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fastq_ccs --resolved-tool-contract"
     READER_CLASS = FastqReader
     NRECORDS_EXPECTED = None
 
@@ -353,9 +361,9 @@ class TestBam2FastaBarcoded(PbTestApp):
 
     def _get_expected_file_names(self):
         return [
-            "reads_{e}.lbc1__lbc1.{e}".format(e=self.EXT),
-            "reads_{e}.lbc3__lbc3.{e}".format(e=self.EXT),
-            "reads_{e}.unbarcoded.{e}".format(e=self.EXT)
+            "subreads_{e}.lbc1__lbc1.{e}".format(e=self.EXT),
+            "subreads_{e}.lbc3__lbc3.{e}".format(e=self.EXT),
+            "subreads_{e}.unbarcoded.{e}".format(e=self.EXT)
         ]
 
     def run_after(self, rtc, output_dir):
@@ -392,9 +400,9 @@ class TestBam2FastaBarcodedNoLabels(TestBam2FastaBarcoded):
             ds_out.write(cls.INPUT_FILES[0])
     def _get_expected_file_names(self):
         return [
-            "reads_{e}.0__0.{e}".format(e=self.EXT),
-            "reads_{e}.2__2.{e}".format(e=self.EXT),
-            "reads_{e}.unbarcoded.{e}".format(e=self.EXT)
+            "subreads_{e}.0__0.{e}".format(e=self.EXT),
+            "subreads_{e}.2__2.{e}".format(e=self.EXT),
+            "subreads_{e}.unbarcoded.{e}".format(e=self.EXT)
         ]
 
 
