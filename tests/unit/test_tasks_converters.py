@@ -412,6 +412,8 @@ class TestBam2FastaBarcodedNoLabels(TestBam2FastaBarcoded):
 class TestBam2FastqBarcoded(TestBam2FastaBarcoded):
     TASK_ID = "pbcoretools.tasks.bam2fastq_archive"
     DRIVER_BASE = "python -m pbcoretools.tasks.bam2fastq_archive"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fastq_archive --emit-tool-contract"
+    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fastq_archive --resolved-tool-contract"
     READER_CLASS = FastqReader
     EXT = "fastq"
 
@@ -420,6 +422,8 @@ class TestBam2FastqBarcoded(TestBam2FastaBarcoded):
 class TestBam2FastqBarcodedNoLabels(TestBam2FastaBarcodedNoLabels):
     TASK_ID = "pbcoretools.tasks.bam2fastq_archive"
     DRIVER_BASE = "python -m pbcoretools.tasks.bam2fastq_archive"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fastq_archive --emit-tool-contract"
+    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fastq_archive --resolved-tool-contract"
     READER_CLASS = FastqReader
     EXT = "fastq"
 
