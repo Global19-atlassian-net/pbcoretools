@@ -314,7 +314,7 @@ class TestBam2FastqArchive(TestBam2Fastq):
     TASK_ID = "pbcoretools.tasks.bam2fastq_archive"
     DRIVER_BASE = "python -m pbcoretools.tasks.bam2fastq_archive"
     DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fastq_archive --emit-tool-contract"
-    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fasta_archive --resolved-tool-contract"
+    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fastq_archive --resolved-tool-contract"
 
     def _get_output_file(self, rtc):
         return _get_zipped_fastx_file(rtc.task.output_files[0])
