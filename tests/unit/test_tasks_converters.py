@@ -293,7 +293,7 @@ def _get_zipped_fastx_file(zip_file):
 @skip_unless_bam2fastx
 class TestBam2FastaArchive(_BaseTestBam2Fasta):
     TASK_ID = "pbcoretools.tasks.bam2fasta_archive"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fasta_archive"
     NRECORDS_EXPECTED = 117
     SRC_FILE = pbtestdata.get_file("subreads-xml")
 
@@ -310,7 +310,7 @@ class TestBam2FastaArchive(_BaseTestBam2Fasta):
 @skip_unless_bam2fastx
 class TestBam2FastqArchive(TestBam2Fastq):
     TASK_ID = "pbcoretools.tasks.bam2fastq_archive"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fastq_archive"
 
     def _get_output_file(self, rtc):
         return _get_zipped_fastx_file(rtc.task.output_files[0])
@@ -342,8 +342,7 @@ class TestBam2FastqCCS(TestBam2FastaCCS):
 @skip_unless_bam2fastx
 class TestBam2FastaBarcoded(PbTestApp):
     TASK_ID = "pbcoretools.tasks.bam2fasta_archive"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
-    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fasta_archive"
     INPUT_FILES = [pbtestdata.get_file("barcoded-subreadset")]
     MAX_NPROC = 24
     RESOLVED_NPROC = 1
@@ -403,7 +402,7 @@ class TestBam2FastaBarcodedNoLabels(TestBam2FastaBarcoded):
 @skip_unless_bam2fastx
 class TestBam2FastqBarcoded(TestBam2FastaBarcoded):
     TASK_ID = "pbcoretools.tasks.bam2fastq_archive"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fastq_archive"
     READER_CLASS = FastqReader
     EXT = "fastq"
 
@@ -411,7 +410,7 @@ class TestBam2FastqBarcoded(TestBam2FastaBarcoded):
 @skip_unless_bam2fastx
 class TestBam2FastqBarcodedNoLabels(TestBam2FastaBarcodedNoLabels):
     TASK_ID = "pbcoretools.tasks.bam2fastq_archive"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fastq_archive"
     READER_CLASS = FastqReader
     EXT = "fastq"
 
