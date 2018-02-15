@@ -214,7 +214,10 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                 log.warn("  %s", fn)
         else:
             log.info("No barcode labels available")
+    base_ext = re.sub("bam2", "", program_name)
+    suffix = "{f}.gz".format(f=base_ext)
     tmp_out_prefix = tempfile.NamedTemporaryFile(dir=tmp_dir).name
+    tmp_out_dir = op.dirname(tmp_out_prefix)
     args = [
         program_name,
         "-o", tmp_out_prefix,
@@ -226,20 +229,21 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
     result = run_cmd(" ".join(args),
                      stdout_fh=sys.stdout,
                      stderr_fh=sys.stderr)
-    if result.exit_code != 0:
-        return result.exit_code
-    else:
-        base_ext = re.sub("bam2", "", program_name)
-        if output_file_name.endswith(".zip"):
-            suffix = "{f}.gz".format(f=base_ext)
-            tmp_out_dir = op.dirname(tmp_out_prefix)
-            tc_out_dir = op.dirname(output_file_name)
-            fastx_file_names = []
-            # find the barcoded FASTX files and un-gzip them to the same
-            # output directory and file prefix as the ultimate output
-            for fn in os.listdir(tmp_out_dir):
-                fn = op.join(tmp_out_dir, fn)
-                if fn.startswith(tmp_out_prefix) and fn.endswith(suffix):
+    def _iter_fastx_files():
+        for fn in os.listdir(tmp_out_dir):
+            fn = op.join(tmp_out_dir, fn)
+            if fn.startswith(tmp_out_prefix) and fn.endswith(suffix):
+                yield fn
+    try:
+        if result.exit_code != 0:
+            return result.exit_code
+        else:
+            if output_file_name.endswith(".zip"):
+                tc_out_dir = op.dirname(output_file_name)
+                fastx_file_names = []
+                # find the barcoded FASTX files and un-gzip them to the same
+                # output directory and file prefix as the ultimate output
+                for fn in _iter_fastx_files():
                     if barcode_mode:
                         # bam2fastx outputs files with the barcode indices
                         # encoded in the file names; here we attempt to
@@ -270,13 +274,15 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                     fastx_out = op.join(tc_out_dir, fn_out)
                     _ungzip_fastx(fn, fastx_out)
                     fastx_file_names.append(fastx_out)
-                    os.remove(fn)
-            assert len(fastx_file_names) > 0
-            return archive_files(fastx_file_names, output_file_name)
-        else:
-            tmp_out = "{p}.{b}.gz".format(p=tmp_out_prefix, b=base_ext)
-            _ungzip_fastx(tmp_out, output_file_name)
-            os.remove(tmp_out)
+                assert len(fastx_file_names) > 0
+                return archive_files(fastx_file_names, output_file_name)
+            else:
+                tmp_out = "{p}.{b}.gz".format(p=tmp_out_prefix, b=base_ext)
+                _ungzip_fastx(tmp_out, output_file_name)
+                os.remove(tmp_out)
+    finally:
+        for fn in _iter_fastx_files():
+            os.remove(fn)
     return 0
 
 

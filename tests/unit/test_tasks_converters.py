@@ -398,13 +398,14 @@ class TestBam2FastaBarcodedNoLabels(TestBam2FastaBarcoded):
                 bam_files.append(er.bam)
         with SubreadSet(*bam_files, strict=True) as ds_out:
             ds_out.write(cls.INPUT_FILES[0])
+        super(TestBam2FastaBarcodedNoLabels, cls).setUpClass()
+
     def _get_expected_file_names(self):
         return [
             "subreads_{e}.0__0.{e}".format(e=self.EXT),
             "subreads_{e}.2__2.{e}".format(e=self.EXT),
             "subreads_{e}.unbarcoded.{e}".format(e=self.EXT)
         ]
-
 
 
 @skip_unless_bam2fastx
