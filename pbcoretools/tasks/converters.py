@@ -24,7 +24,7 @@ from pbcore.io import (SubreadSet, HdfSubreadSet, FastaReader, FastaWriter,
                        GmapReferenceSet)
 from pbcommand.engine import run_cmd
 from pbcommand.cli import registry_builder, registry_runner, QuickOpt
-from pbcommand.models import FileTypes, SymbolTypes, OutputFileType, DataStore
+from pbcommand.models import FileTypes, SymbolTypes, OutputFileType, DataStore, DataStoreFile
 from pbcommand.utils import walker
 
 log = logging.getLogger(__name__)
@@ -745,6 +745,37 @@ def _run_reparent_subreads(rtc):
         ds_in.newUuid(random=True)
         ds_in.write(rtc.task.output_files[0])
     return 0
+
+
+def _ds_to_datastore(dataset_file, datastore_file,
+                     source_id="pbcoretools.tasks.converters-out-0"):
+    with openDataSet(dataset_file, strict=True) as ds:
+        ds_file = DataStoreFile(ds.uniqueId, source_id, ds.datasetType, dataset_file)
+        ds_out = DataStore([ds_file])
+        ds_out.write_json(datastore_file)
+    return 0
+
+
+@registry("subreads_to_datastore", "0.1.0",
+          FileTypes.DS_SUBREADS,
+          FileTypes.JSON,
+          is_distributed=False,
+          nproc=1)
+def _run_subreads_to_datastore(rtc):
+    return _ds_to_datastore(rtc.task.input_files[0],
+                            rtc.task.output_files[0],
+                            source_id=rtc.task.task_id + "-out-0")
+
+
+@registry("ccs_to_datastore", "0.1.0",
+          FileTypes.DS_CCS,
+          FileTypes.JSON,
+          is_distributed=False,
+          nproc=1)
+def _run_ccs_to_datastore(rtc):
+    return _ds_to_datastore(rtc.task.input_files[0],
+                            rtc.task.output_files[0],
+                            source_id=rtc.task.task_id + "-out-0")
 
 
 if __name__ == '__main__':

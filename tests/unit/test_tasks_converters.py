@@ -724,3 +724,17 @@ class TestReparentSubreads(PbTestApp):
     def run_after(self, rtc, output_dir):
         with SubreadSet(rtc.task.output_files[0]) as ds_out:
             self.assertEqual(ds_out.name, "My Data")
+
+
+class TestSubreadsToDataStore(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.subreads_to_datastore"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [pbtestdata.get_file("subreads-sequel")]
+
+
+class TestCCSToDataStore(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.ccs_to_datastore"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [pbtestdata.get_file("rsii-ccs")]
