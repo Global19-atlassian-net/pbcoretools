@@ -52,7 +52,7 @@ def run_args_impl(f, args):
     return f(args.bam, args.fasta_out)
 
 
-def run_rtc_impl(rtc):
+def run_rtc_impl(f, rtc):
     return f(rtc.task.input_files[0], rtc.task.output_files[0],
              tmp_dir=rtc.task.tmpdir_resources[0].path)
 
