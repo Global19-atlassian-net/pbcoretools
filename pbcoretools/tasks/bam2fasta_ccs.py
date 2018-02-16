@@ -3,6 +3,7 @@
 bam2fasta CCS zip file export with tmp dir support
 """
 
+import functools
 import logging
 import sys
 
@@ -11,6 +12,7 @@ from pbcommand.cli import pbparser_runner
 from pbcommand.utils import setup_log
 
 from pbcoretools.tasks.converters import run_bam_to_fasta
+from pbcoretools.tasks.bam2fasta_archive import (get_parser_impl, run_args_impl, run_rtc_impl)
 
 log = logging.getLogger(__name__)
 
@@ -19,40 +21,17 @@ class Constants(object):
     TOOL_ID = "pbcoretools.tasks.bam2fasta_ccs"
     VERSION = "0.3.0"
     DRIVER = "python -m pbcoretools.tasks.bam2fasta_ccs --resolved-tool-contract"
-
-def get_parser():
-    p = get_pbparser(Constants.TOOL_ID,
-                     Constants.VERSION,
-                     "bam2fasta export to ZIP",
-                     __doc__,
-                     Constants.DRIVER,
-                     is_distributed=True,
-                     resource_types=(ResourceTypes.TMP_DIR,))
-    p.add_input_file_type(FileTypes.DS_CCS, "ccsreads",
-                          "Input CCS reads",
-                          "Input ConsensusReadSet XML")
-    p.add_output_file_type(FileTypes.ZIP,
-                           "fasta_out",
-                           "FASTA file(s)",
-                           description="Exported FASTA as ZIP archive",
-                           default_name="ccs_fasta")
-    return p
-
-
-def run_args(args):
-    return run_bam_to_fasta(args.ccsreads, args.fasta_out)
-
-
-def run_rtc(rtc):
-    return run_bam_to_fasta(rtc.task.input_files[0], rtc.task.output_files[0],
-                            tmp_dir=rtc.task.tmpdir_resources[0].path)
+    FILE_TYPE = FileTypes.DS_CCS
+    FORMAT_NAME = "fasta"
+    TOOL_NAME = "bam2fasta"
+    READ_TYPE = "ccs"
 
 
 def main(argv=sys.argv):
     return pbparser_runner(argv[1:],
-                           get_parser(),
-                           run_args,
-                           run_rtc,
+                           get_parser_impl(Constants),
+                           functools.partial(run_args_impl, run_bam_to_fasta),
+                           functools.partial(run_rtc_impl, run_bam_to_fasta),
                            log,
                            setup_log)
 
