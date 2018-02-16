@@ -41,6 +41,8 @@ class Constants(object):
 
     # default filter applied to output of 'lima'
     BARCODE_QUALITY_GREATER_THAN = 26
+    ALLOWED_BC_TYPES = set([f.file_type_id for f in
+                            [FileTypes.DS_SUBREADS, FileTypes.DS_CCS]])
 
 
 registry = registry_builder(Constants.TOOL_NAMESPACE, Constants.DRIVER_BASE)
@@ -586,14 +588,14 @@ def run_slimbam(rtc):
     return 0
 
 
-def _iterate_datastore_subread_sets(datastore_file):
+def _iterate_datastore_read_set_files(datastore_file):
     """
-    Iterate over SubreadSet files listed in a datastore JSON.
+    Iterate over SubreadSet or ConsensusReadSet files listed in a datastore JSON.
     """
     ds = DataStore.load_from_json(datastore_file)
     files = ds.files.values()
     for f in files:
-        if f.file_type_id == FileTypes.DS_SUBREADS.file_type_id:
+        if f.file_type_id in Constants.ALLOWED_BC_TYPES:
             yield f
 
 
@@ -603,7 +605,7 @@ def _iterate_datastore_subread_sets(datastore_file):
           is_distributed=False,
           nproc=1)
 def run_datastore_to_subreads(rtc):
-    datasets = list(_iterate_datastore_subread_sets(rtc.task.input_files[0]))
+    datasets = list(_iterate_datastore_read_set_files(rtc.task.input_files[0]))
     if len(datasets) > 0:
         with SubreadSet(*[f.path for f in datasets], strict=True) as ds:
             ds.newUuid()
@@ -656,7 +658,9 @@ def get_ds_name(ds, base_name, barcode_label):
     return "{n} {s}".format(n=base_name, s=suffix)
 
 
-def update_barcoded_sample_metadata(base_dir, datastore_file, input_subreads,
+def update_barcoded_sample_metadata(base_dir,
+                                    datastore_file,
+                                    input_reads,
                                     barcode_set):
     """
     Given a datastore JSON of SubreadSets produced by barcoding, apply the
@@ -670,10 +674,11 @@ def update_barcoded_sample_metadata(base_dir, datastore_file, input_subreads,
     with BarcodeSet(barcode_set) as bc_in:
         for rec in bc_in:
             barcode_names.append(rec.id)
-    parent_ds = SubreadSet(input_subreads)
-    for f in _iterate_datastore_subread_sets(datastore_file):
+    parent_ds = openDataSet(input_reads)
+    for f in _iterate_datastore_read_set_files(datastore_file):
         ds_out = op.join(base_dir, op.basename(f.path))
-        with SubreadSet(f.path, strict=True) as ds:
+        with openDataSet(f.path, strict=True) as ds:
+            assert ds.datasetType in Constants.ALLOWED_BC_TYPES, ds.datasetType
             barcode_label = None
             ds_barcodes = sorted(list(set(zip(ds.index.bcForward, ds.index.bcReverse))))
             if len(ds_barcodes) == 1:
@@ -716,7 +721,7 @@ def _run_update_barcoded_sample_metadata(rtc):
     datastore = update_barcoded_sample_metadata(
         base_dir=op.dirname(rtc.task.output_files[0]),
         datastore_file=rtc.task.input_files[0],
-        input_subreads=rtc.task.input_files[1],
+        input_reads=rtc.task.input_files[1],
         barcode_set=rtc.task.input_files[2])
     datastore.write_json(rtc.task.output_files[0])
     return 0
