@@ -25,6 +25,7 @@ from pbcore.io import (SubreadSet, HdfSubreadSet, FastaReader, FastaWriter,
 from pbcommand.engine import run_cmd
 from pbcommand.cli import registry_builder, registry_runner, QuickOpt
 from pbcommand.models import FileTypes, SymbolTypes, OutputFileType, DataStore
+from pbcommand.utils import walker
 
 log = logging.getLogger(__name__)
 
@@ -229,11 +230,8 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
     result = run_cmd(" ".join(args),
                      stdout_fh=sys.stdout,
                      stderr_fh=sys.stderr)
-    def _iter_fastx_files():
-        for fn in os.listdir(tmp_out_dir):
-            fn = op.join(tmp_out_dir, fn)
-            if fn.startswith(tmp_out_prefix) and fn.endswith(suffix):
-                yield fn
+    def _is_fastx_file(fn):
+        return fn.startswith(tmp_out_prefix) and fn.endswith(suffix)
     try:
         if result.exit_code != 0:
             return result.exit_code
@@ -243,7 +241,7 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                 fastx_file_names = []
                 # find the barcoded FASTX files and un-gzip them to the same
                 # output directory and file prefix as the ultimate output
-                for fn in _iter_fastx_files():
+                for fn in walker(tmp_out_dir, _is_fastx_file):
                     if barcode_mode:
                         # bam2fastx outputs files with the barcode indices
                         # encoded in the file names; here we attempt to
@@ -281,7 +279,7 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                 _ungzip_fastx(tmp_out, output_file_name)
                 os.remove(tmp_out)
     finally:
-        for fn in _iter_fastx_files():
+        for fn in walker(tmp_out_dir, _is_fastx_file):
             os.remove(fn)
     return 0
 
