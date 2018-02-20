@@ -599,6 +599,25 @@ class TestDataStoreToSubreads(PbTestApp):
         ds.write_json(cls.INPUT_FILES[0])
 
 
+def _split_barcoded_dataset(file_name, ext=".subreadset.xml"):
+    from pbcoretools.bamSieve import filter_reads
+    ds_in = openDataSet(file_name)
+    ds_dir = tempfile.mkdtemp()
+    ds_files = []
+    for bc, label in zip([0,2], ["lbc1--lbc1", "lbc3--lbc3"]):
+        ds_tmp = op.join(ds_dir, "lima_output.{l}{e}".format(l=label, e=ext))
+        filter_reads(
+            input_bam=file_name,
+            output_bam=ds_tmp,
+            whitelist=[bc],
+            use_barcodes=True)
+        ds_files.append(DataStoreFile(uuid.uuid4(),
+                                      "barcoding.tasks.lima-out-0",
+                                      ds_in.datasetType,
+                                      ds_tmp))
+    return DataStore(ds_files)
+
+
 class TestUpdateBarcodedSampleMetadata(PbTestApp):
     TASK_ID = "pbcoretools.tasks.update_barcoded_sample_metadata"
     DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
@@ -611,21 +630,7 @@ class TestUpdateBarcodedSampleMetadata(PbTestApp):
 
     @classmethod
     def setUpClass(cls):
-        from pbcoretools.bamSieve import filter_reads
-        ds_dir = tempfile.mkdtemp()
-        ds_files = []
-        for bc, label in zip([0,2], ["lbc1--lbc1", "lbc3--lbc3"]):
-            ds_tmp = op.join(ds_dir, "lima_output.%s.subreadset.xml" % label)
-            filter_reads(
-                input_bam=cls.INPUT_FILES[1],
-                output_bam=ds_tmp,
-                whitelist=[bc],
-                use_barcodes=True)
-            ds_files.append(DataStoreFile(uuid.uuid4(),
-                                          "barcoding.tasks.lima-out-0",
-                                          FileTypes.DS_SUBREADS.file_type_id,
-                                          ds_tmp))
-        ds = DataStore(ds_files)
+        ds = _split_barcoded_dataset(cls.INPUT_FILES[1])
         ds.write_json(cls.INPUT_FILES[0])
 
     def run_after(self, rtc, output_dir):
@@ -712,6 +717,22 @@ class TestUpdateBarcodedSampleMetadata(PbTestApp):
                 self.assertEqual(ds.name, "{n} ({s})".format(n=ds_in.name,
                                                              s=bio_name))
                 self.assertEqual(ds.uuid, f.uuid)
+
+
+class TestUpdateBarcodedSampleMetadataCCS(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.update_barcoded_sample_metadata_ccs"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [
+        tempfile.NamedTemporaryFile(suffix=".datastore.json").name,
+        pbtestdata.get_file("ccs-barcoded"),
+        pbtestdata.get_file("barcodeset")
+    ]
+
+    @classmethod
+    def setUpClass(cls):
+        ds = _split_barcoded_dataset(cls.INPUT_FILES[1], ".consensusreadset.xml")
+        ds.write_json(cls.INPUT_FILES[0])
 
 
 class TestReparentSubreads(PbTestApp):

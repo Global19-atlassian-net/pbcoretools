@@ -661,7 +661,8 @@ def get_ds_name(ds, base_name, barcode_label):
 def update_barcoded_sample_metadata(base_dir,
                                     datastore_file,
                                     input_reads,
-                                    barcode_set):
+                                    barcode_set,
+                                    isoseq_mode=False):
     """
     Given a datastore JSON of SubreadSets produced by barcoding, apply the
     following updates to each:
@@ -681,6 +682,8 @@ def update_barcoded_sample_metadata(base_dir,
             assert ds.datasetType in Constants.ALLOWED_BC_TYPES, ds.datasetType
             barcode_label = None
             ds_barcodes = sorted(list(set(zip(ds.index.bcForward, ds.index.bcReverse))))
+            if isoseq_mode:
+                ds_barcodes = sorted(list(set([tuple(sorted(bcs)) for bcs in ds_barcodes])))
             if len(ds_barcodes) == 1:
                 bcf, bcr = ds_barcodes[0]
                 barcode_label = "{f}--{r}".format(f=barcode_names[bcf],
@@ -711,7 +714,7 @@ def update_barcoded_sample_metadata(base_dir,
     return DataStore(datastore_files)
 
 
-@registry("update_barcoded_sample_metadata", "0.1.3",
+@registry("update_barcoded_sample_metadata", "0.2.0",
           (FileTypes.JSON, FileTypes.DS_SUBREADS, FileTypes.DS_BARCODE),
           FileTypes.DATASTORE,
           is_distributed=False,
@@ -722,7 +725,25 @@ def _run_update_barcoded_sample_metadata(rtc):
         base_dir=op.dirname(rtc.task.output_files[0]),
         datastore_file=rtc.task.input_files[0],
         input_reads=rtc.task.input_files[1],
-        barcode_set=rtc.task.input_files[2])
+        barcode_set=rtc.task.input_files[2],
+        isoseq_mode=False)
+    datastore.write_json(rtc.task.output_files[0])
+    return 0
+
+
+@registry("update_barcoded_sample_metadata_ccs", "0.1.0",
+          (FileTypes.JSON, FileTypes.DS_CCS, FileTypes.DS_BARCODE),
+          FileTypes.DATASTORE,
+          is_distributed=False,
+          nproc=1)
+def _run_update_barcoded_sample_metadata(rtc):
+    base_dir = op.dirname(rtc.task.output_files[0])
+    datastore = update_barcoded_sample_metadata(
+        base_dir=op.dirname(rtc.task.output_files[0]),
+        datastore_file=rtc.task.input_files[0],
+        input_reads=rtc.task.input_files[1],
+        barcode_set=rtc.task.input_files[2],
+        isoseq_mode=True)
     datastore.write_json(rtc.task.output_files[0])
     return 0
 
