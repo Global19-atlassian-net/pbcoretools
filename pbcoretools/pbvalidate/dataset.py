@@ -48,7 +48,7 @@ class Constants(object):
 
 class DatasetTypes(object):
     BAM_DATASET = ["AlignmentSet", "ConsensusSet", "ConsensusAlignmentSet",
-                   "SubreadSet"]
+                   "SubreadSet", "TranscriptSet"]
     FASTA_DATASET = ["BarcodeSet", "ContigSet", "ReferenceSet",
                      "GmapReferenceSet"]
     HDF5_DATASET = ["HdfSubreadSet"]
