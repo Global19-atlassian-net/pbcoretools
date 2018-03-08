@@ -26,7 +26,7 @@ from . import fasta
 from . import dataset
 from . import utils
 
-__version__ = "0.3"
+__version__ = "0.4"
 
 
 def get_parser(parser=None):
