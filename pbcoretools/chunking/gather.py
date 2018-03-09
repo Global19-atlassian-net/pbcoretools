@@ -21,7 +21,7 @@ from pbcommand.cli import get_default_argparser
 from pbcommand.models.report import Report
 
 from pbcore.io import (SubreadSet, ContigSet, AlignmentSet, ConsensusReadSet,
-                       ConsensusAlignmentSet)
+                       ConsensusAlignmentSet, TranscriptSet)
 from pbcore.io.FastaIO import FastaReader, FastaWriter
 from pbcore.io.FastqIO import FastqReader, FastqWriter
 from pbcore.io.GffIO import merge_gffs_sorted
@@ -258,6 +258,7 @@ gather_subreadset = P(__gather_readset, SubreadSet)
 gather_alignmentset = P(__gather_readset, AlignmentSet)
 gather_ccsset = P(__gather_readset, ConsensusReadSet)
 gather_ccs_alignmentset = P(__gather_readset, ConsensusAlignmentSet)
+gather_transcripts = P(__gather_readset, TranscriptSet)
 
 
 def gather_bigwig(input_files, output_file):
@@ -361,6 +362,7 @@ add_chunk_key_alignmentset = __add_chunk_key_option('$chunk.alignmentset_id')
 add_chunk_key_ccsset = __add_chunk_key_option('$chunk.ccsset_id')
 add_chunk_key_ccs_alignmentset = __add_chunk_key_option(
     '$chunk.ccs_alignmentset_id')
+add_chunk_key_transcripts = __add_chunk_key_option('$chunk.transcriptset_id')
 # TODO: change this to contigset_id once quiver emits contigsets
 add_chunk_key_contigset = __add_chunk_key_option('$chunk.fasta_id')
 add_chunk_key_report = __add_chunk_key_option('$chunk.json_id')
@@ -407,6 +409,9 @@ _gather_alignmentset_options = __add_gather_options("Output AlignmentSet XML fil
 _gather_ccs_alignmentset_options = __add_gather_options("Output ConsensusAlignmentSet XML file",
                                                         "Chunk input JSON file",
                                                         add_chunk_key_ccs_alignmentset)
+_gather_transcripts_options = __add_gather_options("Output TranscriptSet XML file",
+                                                   "Chunk input JSON file",
+                                                   add_chunk_key_transcripts)
 _gather_contigset_options = __add_gather_options("Output ContigSet XML file",
                                                  "Chunk input JSON file",
                                                  add_chunk_key_contigset)
@@ -449,6 +454,7 @@ _args_runner_gather_ccsset = P(__args_gather_runner, gather_ccsset)
 _args_runner_gather_ccs_alignmentset = P(
     __args_gather_runner, gather_ccs_alignmentset)
 _args_runner_gather_contigset = P(__args_gather_runner, gather_contigset)
+_args_runner_gather_transcripts = P(__args_gather_runner, gather_transcripts)
 _args_runner_gather_csv = P(__args_gather_runner, gather_csv)
 _args_runner_gather_txt = P(__args_gather_runner, gather_txt)
 _args_runner_gather_report = P(__args_gather_runner, gather_report)
@@ -469,6 +475,7 @@ run_main_gather_subreadset = P(__gather_runner, gather_subreadset)
 run_main_gather_contigset = P(__gather_runner, gather_contigset)
 run_main_gather_ccsset = P(__gather_runner, gather_ccsset)
 run_main_gather_ccs_alignmentset = P(__gather_runner, gather_ccs_alignmentset)
+run_main_gather_transcripts = P(__gather_runner, gather_transcripts)
 run_main_gather_bigwig = P(__gather_runner, gather_bigwig)
 run_main_gather_tgz = P(__gather_runner, gather_tgz)
 run_main_gather_zip = P(__gather_runner, gather_zip)
@@ -533,6 +540,10 @@ def get_parser():
             "Merge ConsensusAlignmentSet XMLs into a single file.",
             _gather_ccs_alignmentset_options, _args_runner_gather_ccs_alignmentset)
 
+    # TranscriptSet
+    builder('transcripts',
+            "Merge TranscriptSet XMLs into a single file.",
+            _gather_transcripts_options, _args_runner_gather_transcripts)
     # ContigSet
     builder('contigset', "Merge ContigSet XMLs into a single file.",
             _gather_contigset_options, _args_runner_gather_contigset)
