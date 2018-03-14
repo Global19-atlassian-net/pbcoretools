@@ -4,6 +4,7 @@ Tool contract wrappers for miscellaneous quick functions.
 """
 
 from collections import defaultdict
+from zipfile import ZipFile
 import subprocess
 import itertools
 import functools
@@ -23,7 +24,8 @@ from pbcore.io import (SubreadSet, HdfSubreadSet, FastaReader, FastaWriter,
                        GmapReferenceSet)
 from pbcommand.engine import run_cmd
 from pbcommand.cli import registry_builder, registry_runner, QuickOpt
-from pbcommand.models import FileTypes, SymbolTypes, OutputFileType, DataStore
+from pbcommand.models import FileTypes, SymbolTypes, OutputFileType, DataStore, DataStoreFile
+from pbcommand.utils import walker
 
 log = logging.getLogger(__name__)
 
@@ -39,6 +41,8 @@ class Constants(object):
 
     # default filter applied to output of 'lima'
     BARCODE_QUALITY_GREATER_THAN = 26
+    ALLOWED_BC_TYPES = set([f.file_type_id for f in
+                            [FileTypes.DS_SUBREADS, FileTypes.DS_CCS]])
 
 
 registry = registry_builder(Constants.TOOL_NAMESPACE, Constants.DRIVER_BASE)
@@ -99,8 +103,12 @@ def run_bax_to_bam(input_file_name, output_file_name):
     return 0
 
 
-def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
-                   nproc=1, score_mode="symmetric"):
+# XXX no longer used
+def _run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
+                    nproc=1, score_mode="symmetric"):
+    """
+    Run legacy barcoding with bam2bam (requires separate installation).
+    """
     if not score_mode in ["symmetric", "asymmetric", "tailed"]:
         raise ValueError("Unrecognized score mode '{m}'".format(m=score_mode))
     bc = BarcodeSet(barcode_set_file)
@@ -143,7 +151,10 @@ def run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
     return 0
 
 
-def _unzip_fastx(gzip_file_name, fastx_file_name):
+def _ungzip_fastx(gzip_file_name, fastx_file_name):
+    """
+    Decompress an output from bam2fastx.
+    """
     with gzip.open(gzip_file_name, "rb") as gz_in:
         with open(fastx_file_name, "wb") as fastx_out:
             def _fread():
@@ -154,31 +165,20 @@ def _unzip_fastx(gzip_file_name, fastx_file_name):
 
 def archive_files(input_file_names, output_file_name, remove_path=True):
     """
-    Create a gzipped tarball from a list of input files.
+    Create a zipfile from a list of input files.
 
     :param remove_path: if True, the directory will be removed from the input
                         file names before archiving.  All inputs and the output
                         file must be in the same directory for this to work.
     """
+    archive_file_names = input_file_names
     if remove_path:
-        input_file_names = [op.basename(fn) for fn in input_file_names]
-    args = ["tar", "-czf", output_file_name] + input_file_names
-    log.info("Running '{a}'".format(a=" ".join(args)))
-    _cwd = os.getcwd()
-    try:
-        # we want the files to have no leading path
-        os.chdir(op.dirname(output_file_name))
-        result = run_cmd(" ".join(args),
-                         stdout_fh=sys.stdout,
-                         stderr_fh=sys.stderr)
-    except Exception:
-        raise
-    else:
-        if result.exit_code != 0:
-            return result.exit_code
-    finally:
-        os.chdir(_cwd)
-    assert op.isfile(output_file_name)
+        archive_file_names = [op.basename(fn) for fn in archive_file_names]
+    log.info("Creating zip file %s", output_file_name)
+    with ZipFile(output_file_name, "w", allowZip64=True) as zip_out:
+        for file_name, archive_file_name in zip(input_file_names,
+                                                archive_file_names):
+            zip_out.write(file_name, archive_file_name)
     return 0
 
 
@@ -189,12 +189,12 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
     Can take a subreadset or consensusreadset as input.
     Will convert to either fasta or fastq.
     If the dataset is barcoded, it will split the fastx files per-barcode.
-    If the output file is .tar.gz, the fastx file(s) will be archived accordingly.
+    If the output file is .zip, the fastx file(s) will be archived accordingly.
     """
     assert isinstance(program_name, basestring)
     barcode_mode = False
     barcode_sets = set()
-    if output_file_name.endswith(".tar.gz"):
+    if output_file_name.endswith(".zip"):
         with openDataSet(input_file_name) as ds_in:
             barcode_mode = ds_in.isBarcoded
             if barcode_mode:
@@ -221,7 +221,10 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                 log.warn("  %s", fn)
         else:
             log.info("No barcode labels available")
+    base_ext = re.sub("bam2", "", program_name)
+    suffix = "{f}.gz".format(f=base_ext)
     tmp_out_prefix = tempfile.NamedTemporaryFile(dir=tmp_dir).name
+    tmp_out_dir = op.dirname(tmp_out_prefix)
     args = [
         program_name,
         "-o", tmp_out_prefix,
@@ -233,20 +236,18 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
     result = run_cmd(" ".join(args),
                      stdout_fh=sys.stdout,
                      stderr_fh=sys.stderr)
-    if result.exit_code != 0:
-        return result.exit_code
-    else:
-        base_ext = re.sub("bam2", "", program_name)
-        if output_file_name.endswith(".tar.gz"):
-            suffix = "{f}.gz".format(f=base_ext)
-            tmp_out_dir = op.dirname(tmp_out_prefix)
-            tc_out_dir = op.dirname(output_file_name)
-            fastx_file_names = []
-            # find the barcoded FASTX files and unzip them to the same
-            # output directory and file prefix as the ultimate output
-            for fn in os.listdir(tmp_out_dir):
-                fn = op.join(tmp_out_dir, fn)
-                if fn.startswith(tmp_out_prefix) and fn.endswith(suffix):
+    def _is_fastx_file(fn):
+        return fn.startswith(tmp_out_prefix) and fn.endswith(suffix)
+    try:
+        if result.exit_code != 0:
+            return result.exit_code
+        else:
+            if output_file_name.endswith(".zip"):
+                tc_out_dir = op.dirname(output_file_name)
+                fastx_file_names = []
+                # find the barcoded FASTX files and un-gzip them to the same
+                # output directory and file prefix as the ultimate output
+                for fn in walker(tmp_out_dir, _is_fastx_file):
                     if barcode_mode:
                         # bam2fastx outputs files with the barcode indices
                         # encoded in the file names; here we attempt to
@@ -273,17 +274,19 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                         suffix2 = ".{l}.{t}".format(l=bc_label, t=base_ext)
                     else:
                         suffix2 = '.' + base_ext
-                    fn_out = re.sub(".tar.gz$", suffix2, output_file_name)
+                    fn_out = re.sub(".zip$", suffix2, op.basename(output_file_name))
                     fastx_out = op.join(tc_out_dir, fn_out)
-                    _unzip_fastx(fn, fastx_out)
-                    fastx_file_names.append(fn_out)
-                    os.remove(fn)
-            assert len(fastx_file_names) > 0
-            return archive_files(fastx_file_names, output_file_name)
-        else:
-            tmp_out = "{p}.{b}.gz".format(p=tmp_out_prefix, b=base_ext)
-            _unzip_fastx(tmp_out, output_file_name)
-            os.remove(tmp_out)
+                    _ungzip_fastx(fn, fastx_out)
+                    fastx_file_names.append(fastx_out)
+                assert len(fastx_file_names) > 0
+                return archive_files(fastx_file_names, output_file_name)
+            else:
+                tmp_out = "{p}.{b}.gz".format(p=tmp_out_prefix, b=base_ext)
+                _ungzip_fastx(tmp_out, output_file_name)
+                os.remove(tmp_out)
+    finally:
+        for fn in walker(tmp_out_dir, _is_fastx_file):
+            os.remove(fn)
     return 0
 
 
@@ -310,15 +313,13 @@ def split_laa_fastq(input_file_name, output_file_base):
 
 def split_laa_fastq_archived(input_file_name, output_file_name):
     """
-    Split an LAA FASTQ file into one file per barcode and package as tar.gz.
+    Split an LAA FASTQ file into one file per barcode and package as zip.
     """
     base, ext = op.splitext(output_file_name)
-    assert (ext == ".gz")
-    if base.endswith(".tar"):
-        base, ext2 = op.splitext(base)
-    fastq_files = [op.basename(fn) for fn in split_laa_fastq(input_file_name, base)]
+    assert (ext == ".zip")
+    fastq_files = list(split_laa_fastq(input_file_name, base))
     if len(fastq_files) == 0: # workaround for empty input
-        with open(output_file_name, "wb") as tar_out:
+        with ZipFile(output_file_name, "w", allowZip64=True) as zip_out:
             return 0
     return archive_files(fastq_files, output_file_name)
 
@@ -412,57 +413,17 @@ subreads_barcoded_file_type = OutputFileType(FileTypes.DS_SUBREADS.file_type_id,
 def run_bax2bam(rtc):
     return run_bax_to_bam(rtc.task.input_files[0], rtc.task.output_files[0])
 
-score_mode_opt = QuickOpt(["symmetric","asymmetric","tailed"], "Score Mode", 
-                           "Select method of barcode pairing and orientation. "
-                           "For Barcode Universal Primers use 'asymmetric' with the "
-                           "universal BarcodeSet or 'tailed' with the normal BarcodeSet")
-
-@registry("bam2bam_barcode", "0.2.0",
-          (FileTypes.DS_SUBREADS, FileTypes.DS_BARCODE),
-          subreads_barcoded_file_type,
-          is_distributed=True,
-          nproc=SymbolTypes.MAX_NPROC,
-          options={"score_mode":score_mode_opt})
-def run_bam2bam(rtc):
-    return run_bam_to_bam(
-        subread_set_file=rtc.task.input_files[0],
-        barcode_set_file=rtc.task.input_files[1],
-        output_file_name=rtc.task.output_files[0],
-        nproc=rtc.task.nproc,
-        score_mode=rtc.task.options["pbcoretools.task_options.score_mode"])
-
 
 fasta_file_type = OutputFileType(FileTypes.FASTA.file_type_id, "fasta", "FASTA file",
                                  "Reads in FASTA format", "reads")
 fastq_file_type = OutputFileType(FileTypes.FASTQ.file_type_id, "fastq", "FASTQ file",
                                  "Reads in FASTQ format", "reads")
-fasta_gzip_file_type = OutputFileType(FileTypes.TGZ.file_type_id, "fasta_gz",
-                                      "FASTA file(s)",
-                                      "Seqeunce data converted to FASTA Format",
-                                      "reads.fasta")
-fastq_gzip_file_type = OutputFileType(FileTypes.TGZ.file_type_id, "fastq",
-                                      "FASTQ file(s)",
-                                      "Sequence data converted to FASTQ format",
-                                      "reads.fastq")
+
 
 @registry("bam2fastq", "0.1.0",
           FileTypes.DS_SUBREADS,
           fastq_file_type, is_distributed=True, nproc=1)
 def run_bam2fastq(rtc):
-    return run_bam_to_fastq(rtc.task.input_files[0], rtc.task.output_files[0])
-
-
-@registry("bam2fasta_archive", "0.2.0",
-          FileTypes.DS_SUBREADS,
-          fasta_gzip_file_type, is_distributed=True, nproc=1)
-def run_bam2fasta_archive(rtc):
-    return run_bam_to_fasta(rtc.task.input_files[0], rtc.task.output_files[0])
-
-
-@registry("bam2fastq_archive", "0.2.0",
-          FileTypes.DS_SUBREADS,
-          fastq_gzip_file_type, is_distributed=True, nproc=1)
-def run_bam2fastq_archive(rtc):
     return run_bam_to_fastq(rtc.task.input_files[0], rtc.task.output_files[0])
 
 
@@ -531,49 +492,20 @@ def _run_fasta_to_gmap_reference(rtc):
         ploidy=rtc.task.options["pbcoretools.task_options.ploidy"])
 
 
-fasta_ccs_file_type = OutputFileType(FileTypes.TGZ.file_type_id, "fasta_gz",
-                                     "Consensus Sequences (FASTA)",
-                                     "Consensus sequences generated from CCS2",
-                                     "ccs.fasta")
-fastq_ccs_file_type = OutputFileType(FileTypes.TGZ.file_type_id, "fastq_gz",
-                                     "Consensus Sequences (FASTQ)",
-                                     "Consensus sequences generated from CCS2",
-                                     "ccs.fastq")
+consensus_zip_ftype = OutputFileType(FileTypes.ZIP.file_type_id,
+                                     "fastq_split_zip",
+                                     "Consensus Amplicons",
+                                     "Consensus amplicons in FASTQ format, split by barcode",
+                                     "consensus_fastq")
+chimera_zip_ftype = OutputFileType(FileTypes.ZIP.file_type_id,
+                                   "fastq_split_zip",
+                                   "Chimeric/Noise Sequences by barcode",
+                                   "Chimeric and noise sequences in FASTQ format, split by barcode",
+                                   "chimera_fastq")
 
-@registry("bam2fastq_ccs", "0.1.0",
-          FileTypes.DS_CCS,
-          fastq_ccs_file_type, is_distributed=True, nproc=1)
-def run_bam2fastq_ccs(rtc):
-    """
-    Duplicate of run_bam2fastq, but with ConsensusReadSet as input.
-    """
-    return run_bam_to_fastq(rtc.task.input_files[0], rtc.task.output_files[0])
-
-
-@registry("bam2fasta_ccs", "0.1.0",
-          FileTypes.DS_CCS,
-          fasta_ccs_file_type, is_distributed=True, nproc=1)
-def run_bam2fasta_ccs(rtc):
-    """
-    Duplicate of run_bam2fasta, but with ConsensusReadSet as input.
-    """
-    return run_bam_to_fasta(rtc.task.input_files[0], rtc.task.output_files[0])
-
-
-consensus_gz_ftype = OutputFileType(FileTypes.TGZ.file_type_id,
-                                    "fastq_split_gz",
-                                    "Consensus Amplicons",
-                                    "Consensus amplicons in FASTQ format, split by barcode",
-                                    "consensus_fastq")
-chimera_gz_ftype = OutputFileType(FileTypes.TGZ.file_type_id,
-                                  "fastq_split_gz",
-                                  "Chimeric/Noise Sequences by barcode",
-                                  "Chimeric and noise sequences in FASTQ format, split by barcode",
-                                  "chimera_fastq")
-
-@registry("split_laa_fastq", "0.2.0",
+@registry("split_laa_fastq", "0.3.0",
           (FileTypes.FASTQ, FileTypes.FASTQ),
-          (consensus_gz_ftype, chimera_gz_ftype),
+          (consensus_zip_ftype, chimera_zip_ftype),
           is_distributed=True, nproc=1)
 def _run_split_laa_fastq(rtc):
     # XXX a bit of a hack to support unique file names for the FASTQ tarballs
@@ -656,14 +588,14 @@ def run_slimbam(rtc):
     return 0
 
 
-def _iterate_datastore_subread_sets(datastore_file):
+def _iterate_datastore_read_set_files(datastore_file):
     """
-    Iterate over SubreadSet files listed in a datastore JSON.
+    Iterate over SubreadSet or ConsensusReadSet files listed in a datastore JSON.
     """
     ds = DataStore.load_from_json(datastore_file)
     files = ds.files.values()
     for f in files:
-        if f.file_type_id == FileTypes.DS_SUBREADS.file_type_id:
+        if f.file_type_id in Constants.ALLOWED_BC_TYPES:
             yield f
 
 
@@ -673,7 +605,7 @@ def _iterate_datastore_subread_sets(datastore_file):
           is_distributed=False,
           nproc=1)
 def run_datastore_to_subreads(rtc):
-    datasets = list(_iterate_datastore_subread_sets(rtc.task.input_files[0]))
+    datasets = list(_iterate_datastore_read_set_files(rtc.task.input_files[0]))
     if len(datasets) > 0:
         with SubreadSet(*[f.path for f in datasets], strict=True) as ds:
             ds.newUuid()
@@ -726,8 +658,11 @@ def get_ds_name(ds, base_name, barcode_label):
     return "{n} {s}".format(n=base_name, s=suffix)
 
 
-def update_barcoded_sample_metadata(base_dir, datastore_file, input_subreads,
-                                    barcode_set):
+def update_barcoded_sample_metadata(base_dir,
+                                    datastore_file,
+                                    input_reads,
+                                    barcode_set,
+                                    isoseq_mode=False):
     """
     Given a datastore JSON of SubreadSets produced by barcoding, apply the
     following updates to each:
@@ -740,12 +675,15 @@ def update_barcoded_sample_metadata(base_dir, datastore_file, input_subreads,
     with BarcodeSet(barcode_set) as bc_in:
         for rec in bc_in:
             barcode_names.append(rec.id)
-    parent_ds = SubreadSet(input_subreads)
-    for f in _iterate_datastore_subread_sets(datastore_file):
+    parent_ds = openDataSet(input_reads)
+    for f in _iterate_datastore_read_set_files(datastore_file):
         ds_out = op.join(base_dir, op.basename(f.path))
-        with SubreadSet(f.path, strict=True) as ds:
+        with openDataSet(f.path, strict=True) as ds:
+            assert ds.datasetType in Constants.ALLOWED_BC_TYPES, ds.datasetType
             barcode_label = None
             ds_barcodes = sorted(list(set(zip(ds.index.bcForward, ds.index.bcReverse))))
+            if isoseq_mode:
+                ds_barcodes = sorted(list(set([tuple(sorted(bcs)) for bcs in ds_barcodes])))
             if len(ds_barcodes) == 1:
                 bcf, bcr = ds_barcodes[0]
                 barcode_label = "{f}--{r}".format(f=barcode_names[bcf],
@@ -776,7 +714,7 @@ def update_barcoded_sample_metadata(base_dir, datastore_file, input_subreads,
     return DataStore(datastore_files)
 
 
-@registry("update_barcoded_sample_metadata", "0.1.3",
+@registry("update_barcoded_sample_metadata", "0.2.0",
           (FileTypes.JSON, FileTypes.DS_SUBREADS, FileTypes.DS_BARCODE),
           FileTypes.DATASTORE,
           is_distributed=False,
@@ -786,8 +724,26 @@ def _run_update_barcoded_sample_metadata(rtc):
     datastore = update_barcoded_sample_metadata(
         base_dir=op.dirname(rtc.task.output_files[0]),
         datastore_file=rtc.task.input_files[0],
-        input_subreads=rtc.task.input_files[1],
-        barcode_set=rtc.task.input_files[2])
+        input_reads=rtc.task.input_files[1],
+        barcode_set=rtc.task.input_files[2],
+        isoseq_mode=False)
+    datastore.write_json(rtc.task.output_files[0])
+    return 0
+
+
+@registry("update_barcoded_sample_metadata_ccs", "0.1.0",
+          (FileTypes.JSON, FileTypes.DS_CCS, FileTypes.DS_BARCODE),
+          FileTypes.DATASTORE,
+          is_distributed=False,
+          nproc=1)
+def _run_update_barcoded_sample_metadata(rtc):
+    base_dir = op.dirname(rtc.task.output_files[0])
+    datastore = update_barcoded_sample_metadata(
+        base_dir=op.dirname(rtc.task.output_files[0]),
+        datastore_file=rtc.task.input_files[0],
+        input_reads=rtc.task.input_files[1],
+        barcode_set=rtc.task.input_files[2],
+        isoseq_mode=True)
     datastore.write_json(rtc.task.output_files[0])
     return 0
 
@@ -815,6 +771,37 @@ def _run_reparent_subreads(rtc):
         ds_in.newUuid(random=True)
         ds_in.write(rtc.task.output_files[0])
     return 0
+
+
+def _ds_to_datastore(dataset_file, datastore_file,
+                     source_id="pbcoretools.tasks.converters-out-0"):
+    with openDataSet(dataset_file, strict=True) as ds:
+        ds_file = DataStoreFile(ds.uniqueId, source_id, ds.datasetType, dataset_file)
+        ds_out = DataStore([ds_file])
+        ds_out.write_json(datastore_file)
+    return 0
+
+
+@registry("subreads_to_datastore", "0.1.0",
+          FileTypes.DS_SUBREADS,
+          FileTypes.JSON,
+          is_distributed=False,
+          nproc=1)
+def _run_subreads_to_datastore(rtc):
+    return _ds_to_datastore(rtc.task.input_files[0],
+                            rtc.task.output_files[0],
+                            source_id=rtc.task.task_id + "-out-0")
+
+
+@registry("ccs_to_datastore", "0.1.0",
+          FileTypes.DS_CCS,
+          FileTypes.JSON,
+          is_distributed=False,
+          nproc=1)
+def _run_ccs_to_datastore(rtc):
+    return _ds_to_datastore(rtc.task.input_files[0],
+                            rtc.task.output_files[0],
+                            source_id=rtc.task.task_id + "-out-0")
 
 
 if __name__ == '__main__':

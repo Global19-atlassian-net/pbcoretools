@@ -1,11 +1,10 @@
 
+from zipfile import ZipFile
 import subprocess
 import tempfile
 import unittest
-import tarfile
 import logging
 import uuid
-import gzip
 import os.path as op
 import os
 import sys
@@ -21,7 +20,7 @@ import pbtestdata
 from pbcoretools.tasks.converters import (
     split_laa_fastq,
     split_laa_fastq_archived,
-    run_bam_to_bam,
+    _run_bam_to_bam,
     get_ds_name,
     update_barcoded_sample_metadata,
     discard_bio_samples)
@@ -49,7 +48,7 @@ def _to_skip_msg(exe):
 
 # XXX hacks to make sure tools are actually available
 HAVE_BAX2BAM = which(Constants.BAX2BAM) is not None
-HAVE_BAM2BAM = which(Constants.BAM2BAM) is not None
+HAVE_BAM2BAM = False #XXX disabled #which(Constants.BAM2BAM) is not None
 HAVE_BAM2FASTX = which(Constants.BAM2FASTA) is not None
 HAVE_FASTA2REF = which(Constants.FASTA2REF) is not None
 HAVE_FASTA2GMAP = which(Constants.FASTA2GMAP) is not None
@@ -155,23 +154,8 @@ class TestBam2Bam(unittest.TestCase, Bam2BamCore):
 
     def test_run_bam_to_bam(self):
         tmp_out = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
-        run_bam_to_bam(self.SUBREADS, self.BARCODES, tmp_out)
+        _run_bam_to_bam(self.SUBREADS, self.BARCODES, tmp_out)
         self._validate_subreads(tmp_out)
-
-
-@skip_unless_bam2bam
-class TestBam2BamTask(PbTestApp, Bam2BamCore):
-    TASK_ID = "pbcoretools.tasks.bam2bam_barcode"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
-    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
-    INPUT_FILES = [Bam2BamCore.SUBREADS, Bam2BamCore.BARCODES]
-    MAX_NPROC = 8
-    RESOLVED_NPROC = 8
-    IS_DISTRIBUTED = True
-    RESOLVED_IS_DISTRIBUTED = True
-
-    def run_after(self, rtc, output_dir):
-        self._validate_subreads(rtc.task.output_files[0])
 
 
 class _BaseTestBam2Fasta(PbTestApp):
@@ -283,16 +267,20 @@ class TestBam2FastqFiltered(_BaseTestBam2Fasta):
         super(TestBam2FastqFiltered, cls).setUpClass()
 
 
-def _get_tarred_fastx_file(tar_gz_file):
-    file_name = tarfile.TarFile(fileobj=gzip.open(tar_gz_file)).getnames()[0]
-    dir_name = op.dirname(tar_gz_file)
-    return op.join(dir_name, file_name)
+def _get_zipped_fastx_file(zip_file):
+    with ZipFile(zip_file, "r") as zip_in:
+        file_name = zip_in.namelist()[0]
+        dir_name = op.dirname(zip_file)
+        zip_in.extractall(dir_name)
+        return op.join(dir_name, file_name)
 
 
 @skip_unless_bam2fastx
 class TestBam2FastaArchive(_BaseTestBam2Fasta):
     TASK_ID = "pbcoretools.tasks.bam2fasta_archive"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fasta_archive"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fasta_archive --emit-tool-contract"
+    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fasta_archive --resolved-tool-contract"
     NRECORDS_EXPECTED = 117
     SRC_FILE = pbtestdata.get_file("subreads-xml")
 
@@ -303,46 +291,51 @@ class TestBam2FastaArchive(_BaseTestBam2Fasta):
         super(TestBam2FastaArchive, cls).setUpClass()
 
     def _get_output_file(self, rtc):
-        return _get_tarred_fastx_file(rtc.task.output_files[0])
+        return _get_zipped_fastx_file(rtc.task.output_files[0])
 
 
 @skip_unless_bam2fastx
 class TestBam2FastqArchive(TestBam2Fastq):
     TASK_ID = "pbcoretools.tasks.bam2fastq_archive"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fastq_archive"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fastq_archive --emit-tool-contract"
+    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fastq_archive --resolved-tool-contract"
 
     def _get_output_file(self, rtc):
-        return gzip.open(rtc.task.output_files[0])
+        return _get_zipped_fastx_file(rtc.task.output_files[0])
 
 
 @skip_unless_bam2fastx
 class TestBam2FastaCCS(_BaseTestBam2Fasta):
     TASK_ID = "pbcoretools.tasks.bam2fasta_ccs"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fasta_ccs"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fasta_ccs --emit-tool-contract"
+    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fasta_ccs --resolved-tool-contract"
     INPUT_FILES = [pbtestdata.get_file("rsii-ccs")]
     READER_CLASS = FastaReader
     NRECORDS_EXPECTED = None
 
     def _get_output_file(self, rtc):
-        return _get_tarred_fastx_file(rtc.task.output_files[0])
+        return _get_zipped_fastx_file(rtc.task.output_files[0])
 
 
 @skip_unless_bam2fastx
 class TestBam2FastqCCS(TestBam2FastaCCS):
     TASK_ID = "pbcoretools.tasks.bam2fastq_ccs"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fastq_ccs"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fastq_ccs --emit-tool-contract"
+    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fastq_ccs --resolved-tool-contract"
     READER_CLASS = FastqReader
     NRECORDS_EXPECTED = None
 
     def _get_output_file(self, rtc):
-        return _get_tarred_fastx_file(rtc.task.output_files[0])
+        return _get_zipped_fastx_file(rtc.task.output_files[0])
 
 
 @skip_unless_bam2fastx
 class TestBam2FastaBarcoded(PbTestApp):
     TASK_ID = "pbcoretools.tasks.bam2fasta_archive"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
-    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fasta_archive"
     INPUT_FILES = [pbtestdata.get_file("barcoded-subreadset")]
     MAX_NPROC = 24
     RESOLVED_NPROC = 1
@@ -353,9 +346,9 @@ class TestBam2FastaBarcoded(PbTestApp):
 
     def _get_expected_file_names(self):
         return [
-            "reads.{e}.lbc1__lbc1.{e}".format(e=self.EXT),
-            "reads.{e}.lbc3__lbc3.{e}".format(e=self.EXT),
-            "reads.{e}.unbarcoded.{e}".format(e=self.EXT)
+            "subreads_{e}.lbc1__lbc1.{e}".format(e=self.EXT),
+            "subreads_{e}.lbc3__lbc3.{e}".format(e=self.EXT),
+            "subreads_{e}.unbarcoded.{e}".format(e=self.EXT)
         ]
 
     def run_after(self, rtc, output_dir):
@@ -363,8 +356,7 @@ class TestBam2FastaBarcoded(PbTestApp):
         _cwd = os.getcwd()
         try:
             os.chdir(tmp_dir)
-            args = ["tar", "xzf", rtc.task.output_files[0]]
-            self.assertEqual(subprocess.call(args), 0)
+            ZipFile(rtc.task.output_files[0], "r").extractall()
             file_names = sorted(os.listdir(tmp_dir))
             self.assertEqual(file_names, self._get_expected_file_names())
             fastx_ids = ["m54008_160219_003234/74056024/3985_5421", # bc 0
@@ -391,19 +383,22 @@ class TestBam2FastaBarcodedNoLabels(TestBam2FastaBarcoded):
                 bam_files.append(er.bam)
         with SubreadSet(*bam_files, strict=True) as ds_out:
             ds_out.write(cls.INPUT_FILES[0])
+        super(TestBam2FastaBarcodedNoLabels, cls).setUpClass()
+
     def _get_expected_file_names(self):
         return [
-            "reads.{e}.0__0.{e}".format(e=self.EXT),
-            "reads.{e}.2__2.{e}".format(e=self.EXT),
-            "reads.{e}.unbarcoded.{e}".format(e=self.EXT)
+            "subreads_{e}.0__0.{e}".format(e=self.EXT),
+            "subreads_{e}.2__2.{e}".format(e=self.EXT),
+            "subreads_{e}.unbarcoded.{e}".format(e=self.EXT)
         ]
-
 
 
 @skip_unless_bam2fastx
 class TestBam2FastqBarcoded(TestBam2FastaBarcoded):
     TASK_ID = "pbcoretools.tasks.bam2fastq_archive"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fastq_archive"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fastq_archive --emit-tool-contract"
+    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fastq_archive --resolved-tool-contract"
     READER_CLASS = FastqReader
     EXT = "fastq"
 
@@ -411,7 +406,9 @@ class TestBam2FastqBarcoded(TestBam2FastaBarcoded):
 @skip_unless_bam2fastx
 class TestBam2FastqBarcodedNoLabels(TestBam2FastaBarcodedNoLabels):
     TASK_ID = "pbcoretools.tasks.bam2fastq_archive"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fastq_archive"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fastq_archive --emit-tool-contract"
+    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fastq_archive --resolved-tool-contract"
     READER_CLASS = FastqReader
     EXT = "fastq"
 
@@ -525,11 +522,11 @@ class TestSplitLAA(unittest.TestCase):
 
     def test_split_laa_fastq_archived(self):
         ifn = self.input_file_name
-        ofn = tempfile.NamedTemporaryFile(suffix=".gz").name
+        ofn = tempfile.NamedTemporaryFile(suffix=".zip").name
         rc = split_laa_fastq_archived(ifn, ofn)
         self.assertEqual(rc, 0)
         # now with a different extension
-        ofn = tempfile.NamedTemporaryFile(suffix=".tar.gz").name
+        ofn = tempfile.NamedTemporaryFile(suffix=".zip").name
         rc = split_laa_fastq_archived(ifn, ofn)
         self.assertEqual(rc, 0)
 
@@ -602,6 +599,25 @@ class TestDataStoreToSubreads(PbTestApp):
         ds.write_json(cls.INPUT_FILES[0])
 
 
+def _split_barcoded_dataset(file_name, ext=".subreadset.xml"):
+    from pbcoretools.bamSieve import filter_reads
+    ds_in = openDataSet(file_name)
+    ds_dir = tempfile.mkdtemp()
+    ds_files = []
+    for bc, label in zip([0,2], ["lbc1--lbc1", "lbc3--lbc3"]):
+        ds_tmp = op.join(ds_dir, "lima_output.{l}{e}".format(l=label, e=ext))
+        filter_reads(
+            input_bam=file_name,
+            output_bam=ds_tmp,
+            whitelist=[bc],
+            use_barcodes=True)
+        ds_files.append(DataStoreFile(uuid.uuid4(),
+                                      "barcoding.tasks.lima-out-0",
+                                      ds_in.datasetType,
+                                      ds_tmp))
+    return DataStore(ds_files)
+
+
 class TestUpdateBarcodedSampleMetadata(PbTestApp):
     TASK_ID = "pbcoretools.tasks.update_barcoded_sample_metadata"
     DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
@@ -614,21 +630,7 @@ class TestUpdateBarcodedSampleMetadata(PbTestApp):
 
     @classmethod
     def setUpClass(cls):
-        from pbcoretools.bamSieve import filter_reads
-        ds_dir = tempfile.mkdtemp()
-        ds_files = []
-        for bc, label in zip([0,2], ["lbc1--lbc1", "lbc3--lbc3"]):
-            ds_tmp = op.join(ds_dir, "lima_output.%s.subreadset.xml" % label)
-            filter_reads(
-                input_bam=cls.INPUT_FILES[1],
-                output_bam=ds_tmp,
-                whitelist=[bc],
-                use_barcodes=True)
-            ds_files.append(DataStoreFile(uuid.uuid4(),
-                                          "barcoding.tasks.lima-out-0",
-                                          FileTypes.DS_SUBREADS.file_type_id,
-                                          ds_tmp))
-        ds = DataStore(ds_files)
+        ds = _split_barcoded_dataset(cls.INPUT_FILES[1])
         ds.write_json(cls.INPUT_FILES[0])
 
     def run_after(self, rtc, output_dir):
@@ -717,6 +719,22 @@ class TestUpdateBarcodedSampleMetadata(PbTestApp):
                 self.assertEqual(ds.uuid, f.uuid)
 
 
+class TestUpdateBarcodedSampleMetadataCCS(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.update_barcoded_sample_metadata_ccs"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [
+        tempfile.NamedTemporaryFile(suffix=".datastore.json").name,
+        pbtestdata.get_file("ccs-barcoded"),
+        pbtestdata.get_file("barcodeset")
+    ]
+
+    @classmethod
+    def setUpClass(cls):
+        ds = _split_barcoded_dataset(cls.INPUT_FILES[1], ".consensusreadset.xml")
+        ds.write_json(cls.INPUT_FILES[0])
+
+
 class TestReparentSubreads(PbTestApp):
     TASK_ID = "pbcoretools.tasks.reparent_subreads"
     DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
@@ -727,3 +745,17 @@ class TestReparentSubreads(PbTestApp):
     def run_after(self, rtc, output_dir):
         with SubreadSet(rtc.task.output_files[0]) as ds_out:
             self.assertEqual(ds_out.name, "My Data")
+
+
+class TestSubreadsToDataStore(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.subreads_to_datastore"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [pbtestdata.get_file("subreads-sequel")]
+
+
+class TestCCSToDataStore(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.ccs_to_datastore"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [pbtestdata.get_file("rsii-ccs")]

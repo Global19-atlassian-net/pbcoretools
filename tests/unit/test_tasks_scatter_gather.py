@@ -33,7 +33,7 @@ from pbcommand.models import PipelineChunk
 import pbcommand.testkit.core
 from pbcore.io import SubreadSet, ContigSet, FastaReader, FastqReader, \
     ConsensusReadSet, AlignmentSet, ConsensusAlignmentSet, HdfSubreadSet, \
-    ReferenceSet, BarcodeSet
+    ReferenceSet, BarcodeSet, TranscriptSet
 
 import pbtestdata
 
@@ -284,23 +284,10 @@ class TestScatterSubreadBarcodes(pbcommand.testkit.core.PbTestScatterApp):
     CHUNK_KEYS = ("$chunk.subreadset_id", )
 
 
-class TestScatterSubreadsBarcoding(pbcommand.testkit.core.PbTestScatterApp):
-    DRIVER_BASE = "python -m pbcoretools.tasks.scatter_subreads_bam2bam"
-    INPUT_FILES = [
-        # XXX not actually barcoded data, but it doesn't matter here
-        pbtestdata.get_file("subreads-bam"),
-        pbtestdata.get_file("barcodeset")
-    ]
-    MAX_NCHUNKS = 8
-    RESOLVED_MAX_NCHUNKS = 8
-    NCHUNKS_EXPECTED = 2
-    CHUNK_KEYS = ("$chunk.subreadset_id", "$chunk.barcodeset_id")
-
-
-DATA_MV = "/pbi/dept/secondary/siv/testdata/minorseq-test"
-@unittest.skipUnless(op.isdir(DATA_MV), "Missing {d}".format(d=DATA_MV))
+@skip_if_missing_testdata
 class TestScatterMinorVariants(pbcommand.testkit.core.PbTestScatterApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.scatter_ccs_aligned_barcodes"
+    DATA_MV = "/pbi/dept/secondary/siv/testdata/minorseq-test"
     INPUT_FILES = [
         op.join(DATA_MV, "barcoded", "aligned.consensusalignmentset.xml"),
         op.join(DATA_MV, "hxb2.referenceset.xml"),
@@ -312,6 +299,19 @@ class TestScatterMinorVariants(pbcommand.testkit.core.PbTestScatterApp):
     CHUNK_KEYS = (CU.Constants.CHUNK_KEY_CCS_ALNSET,
                   CU.Constants.CHUNK_KEY_REF,
                   CU.Constants.CHUNK_KEY_CCSSET)
+
+
+class TestScatterTranscripts(pbcommand.testkit.core.PbTestScatterApp):
+    DRIVER_BASE = "python -m pbcoretools.tasks.scatter_transcripts"
+    INPUT_FILES = [
+        "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/polished_transcripts.transcriptset.xml",
+        pbtestdata.get_file("subreads-sequel")
+    ]
+    MAX_NCHUNKS = 4
+    RESOLVED_MAX_NCHUNKS = 4
+    NCHUNKS_EXPECTED = 4
+    CHUNK_KEYS = (CU.Constants.CHUNK_KEY_TRANSCRIPT,
+                  CU.Constants.CHUNK_KEY_SUBSET)
 
 
 ########################################################################
@@ -773,7 +773,7 @@ class TestGatherBigwig(_SetupGatherApp):
         for rec in _records:
             seqid = rec[0]
             pos = rec[1]
-            ranges.setdefault(seqid, (sys.maxint, 0))
+            ranges.setdefault(seqid, (sys.maxsize, 0))
             ranges[seqid] = (min(ranges[seqid][0], pos),
                              max(ranges[seqid][1], pos))
         bw = pyBigWig.open(fn, "w")
@@ -828,3 +828,14 @@ class TestGatherZip(_SetupGatherApp):
                 d = json.loads(gathered.open(member).read())
                 uuids.add(d["uuid"])
         self.assertEqual(len(uuids), 4)
+
+
+@skip_if_missing_testdata
+class TestGatherTranscripts(_SetupGatherApp):
+    DRIVER_BASE = "python -m pbcoretools.tasks.gather_transcripts"
+    NCHUNKS = 2
+    READER_CLASS = TranscriptSet
+    BASE_INPUT = "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/polished.bam"
+
+    def _generate_chunk_output_file(self, i=None):
+        return self._copy_mock_output_file(self.BASE_INPUT)

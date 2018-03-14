@@ -7,7 +7,7 @@ import csv
 
 from pbcore.io import (FastaWriter, FastaReader, FastqReader, FastqWriter,
                        AlignmentSet, HdfSubreadSet, SubreadSet, ReferenceSet,
-                       ConsensusReadSet, ContigSet, FastaRecord)
+                       ConsensusReadSet, ContigSet, FastaRecord, TranscriptSet)
 from pbcommand.pb_io.common import write_pipeline_chunks
 from pbcommand.pb_io.report import fofn_to_report
 from pbcommand.models import PipelineChunk
@@ -24,6 +24,7 @@ class Constants(object):
     CHUNK_KEY_REF = "$chunk.reference_id"
     CHUNK_KEY_CONTIGSET = "$chunk.contigset_id"
     CHUNK_KEY_CCS_ALNSET = "$chunk.ccs_alignmentset_id"
+    CHUNK_KEY_TRANSCRIPT = "$chunk.transcriptset_id"
     CHUNK_KEY_FASTA = "$chunk.fasta_id"
     CHUNK_KEY_FASTQ = "$chunk.fastq_id"
     CHUNK_KEY_FOFN = "$chunk.fofn_id"
@@ -116,7 +117,7 @@ def write_chunked_csv(chunk_key, csv_path, max_total_nchunks, dir_name, base_nam
                 if i != max_total_nchunks:
                     for _ in xrange(n):
                         nchunk_records += 1
-                        writer.writerow(it.next())
+                        writer.writerow(next(it))
                 else:
                     for x in it:
                         nchunk_records += 1
@@ -202,7 +203,7 @@ def __to_chunked_fastx_files(write_records_func, pbcore_reader_class, pbcore_wri
                 if n_left < 0 or (n_left == 0 and nchunks != 1):
                     break
                 for _ in xrange(min(n_per_chunk, n_left)):
-                    records.append(it.next())
+                    records.append(next(it))
             else:
                 for x in it:
                     records.append(x)
@@ -415,6 +416,8 @@ to_zmw_chunked_subreadset_files = functools.partial(
     _to_zmw_chunked_dataset_files, SubreadSet)
 to_zmw_chunked_ccsset_files = functools.partial(
     _to_zmw_chunked_dataset_files, ConsensusReadSet)
+to_zmw_chunked_transcriptset_files = functools.partial(
+    _to_zmw_chunked_dataset_files, TranscriptSet)
 
 
 def _to_bam_chunked_dataset_files(dataset_type, dataset_path,
@@ -471,6 +474,9 @@ write_ccsset_zmw_chunks_to_file = functools.partial(
 write_subreadset_bam_chunks_to_file = functools.partial(
     _write_dataset_chunks_to_file, to_bam_chunked_subreadset_files,
     Constants.CHUNK_KEY_SUBSET)
+write_transcriptset_zmw_chunks_to_file = functools.partial(
+    _write_dataset_chunks_to_file, to_zmw_chunked_transcriptset_files,
+    Constants.CHUNK_KEY_TRANSCRIPT)
 
 
 def write_hdfsubreadset_chunks_to_file(chunk_file, hdfsubreadset_path,
