@@ -68,13 +68,13 @@ class TestFilterDataSetBq(TestFilterDataSet):
     TASK_OPTIONS = {"pbcoretools.task_options.other_filters": "length >= 10 AND bq >= 10"}
     RESOLVED_TASK_OPTIONS = TASK_OPTIONS
     N_EXPECTED = 2
-    EXPECTED_FILTER_STR = "( length >= 10 AND bq >= 10 )"
+    EXPECTED_FILTER_STR = "( bq >= 10 AND length >= 10 )"
 
     @classmethod
     def setUpClass(cls):
         ds = SubreadSet(pbtestdata.get_file("barcoded-subreadset"),
                         strict=True)
-        ds.filters.addRequirement(bq=[('>', 30)])
+        ds.filters.addRequirement(bq=[('>=', 31)])
         assert len(ds) == 1
         ds.write(cls.INPUT_FILES[0])
 

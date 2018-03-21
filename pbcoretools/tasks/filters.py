@@ -44,14 +44,18 @@ def sanitize_read_length(read_length):
 
 
 def combine_filters(ds, filters):
-    for name, options in filters.items():
-        ds.filters.removeRequirement(name)
     if len(ds.filters) > 0:
         for old_filter in ds.filters:
             log.info("Combining user-supplied filters with existing filter '%s", old_filter)
             for name, options in filters.items():
                 for oper, value in options:
-                    old_filter.addRequirement(name, oper, value)
+                    have_req = False
+                    for old_prop in old_filter.plist:
+                        if old_prop.name == name and old_prop.operator == oper:
+                            old_prop.value = value
+                            have_req = True
+                    if not have_req:
+                        old_filter.addRequirement(name, oper, value)
         ds.filters._runCallbacks()
     else:
         ds.filters.addFilter(**filters)
@@ -68,9 +72,9 @@ def run_filter_dataset(in_file, out_file, read_length, other_filters):
         else:
             filters = parse_filter_list(str(other_filters).split(','))
         log.info("{i} other filters will be added".format(i=len(filters)))
-    if rlen:
-        filters['length'] = [('>=', rlen)]
     combine_filters(dataSet, filters)
+    if rlen:
+        combine_filters(dataSet, {'length': [('>=', rlen)]})
     dataSet.updateCounts()
     if not "(filtered)" in dataSet.name:
         dataSet.name = dataSet.name + " (filtered)"
