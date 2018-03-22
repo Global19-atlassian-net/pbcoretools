@@ -57,7 +57,8 @@ class Constants (object):
     QSTART_QEND_TAGS = ["qs", "qe"]
     SC_TAG = "SC"
     SC_TAG_VALUES = ["A", "B", "L"]
-    REQUIRED_ALIGNMENT_TAGS = ["zm", "np", "rq", "sn"]
+    REQUIRED_BASIC_TAGS = ["zm"]
+    REQUIRED_ALIGNMENT_TAGS = ["np", "rq", "sn"]
     REQUIRED_BARCODE_TAGS = ["bc", "bq"]
     CODEC_NAMES = ["FRAMES", "CODECV1"]
     PULSE_FEATURE_KEYS = ["IPD", "PULSEWIDTH"]
@@ -76,6 +77,7 @@ class Constants (object):
     # pbcore.io seems really broken to me
     READ_TYPE_SUBREAD_FILE = "standard"  # XXX file-level readType
     READ_TYPE_CCS = "CCS"
+    READ_TYPE_TRANSCRIPT = "TRANSCRIPT"
     READ_TYPE_SCRAP = "SCRAP"
     READ_TYPE_MIXED = "mixed"
     SORT_ORDER_UNKNOWN = "unknown"
@@ -492,9 +494,10 @@ class ValidateReadGroupBasecaller (ValidateReadGroup):
     VERSIONS = [k[-1] for k in __VERSION_KEYS]
 
     def _get_errors(self, rg):
-        version = _get_basecaller_version(rg)
-        if not version in self.VERSIONS:
-            return [BasecallerVersionError.from_args(rg, version, rg['ID'])]
+        if _get_read_type(rg) != Constants.READ_TYPE_TRANSCRIPT:
+            version = _get_basecaller_version(rg)
+            if not version in self.VERSIONS:
+                return [BasecallerVersionError.from_args(rg, version, rg['ID'])]
         return []
 
 
@@ -561,18 +564,19 @@ class ValidateReadGroupChemistry (ValidateReadGroup):
     """
 
     def _get_errors(self, rg):
-        ds_dict = _get_key_value_pairs_dict(rg.get("DS", ""))
-        fields = []
-        for tag in Constants.CHEMISTRY_TAGS:
-            val = ".".join(ds_dict.get(tag, "None.None").split(".")[0:2])
-            fields.append(val)
-        if None in fields:
-            return [ReadGroupChemistryError.from_args(rg, rg['ID'],
-                                                      tuple(fields))]
-        decoded = pbcore.chemistry.decodeTriple(*fields) # pylint: disable=no-value-for-parameter
-        if decoded == "unknown":
-            return [ReadGroupChemistryError.from_args(rg, rg['ID'],
-                                                      tuple(fields))]
+        if _get_read_type(rg) != Constants.READ_TYPE_TRANSCRIPT:
+            ds_dict = _get_key_value_pairs_dict(rg.get("DS", ""))
+            fields = []
+            for tag in Constants.CHEMISTRY_TAGS:
+                val = ".".join(ds_dict.get(tag, "None.None").split(".")[0:2])
+                fields.append(val)
+            if None in fields:
+                return [ReadGroupChemistryError.from_args(rg, rg['ID'],
+                                                          tuple(fields))]
+            decoded = pbcore.chemistry.decodeTriple(*fields) # pylint: disable=no-value-for-parameter
+            if decoded == "unknown":
+                return [ReadGroupChemistryError.from_args(rg, rg['ID'],
+                                                          tuple(fields))]
         return []
 
 
@@ -712,6 +716,8 @@ class ValidateReadQname (ValidateReadBase):
     """
 
     def _get_errors(self, aln):
+        if aln.isTranscript:
+            return []
         # XXX the regex is convenient, but it may be checking too many things
         # at once - should we just use qName.split("/") and check each field
         # separately?
@@ -762,7 +768,7 @@ class ValidateReadLength (ValidateReadBase):
 
     def _get_errors(self, aln):
         rg = aln.readGroupInfo
-        if rg.ReadType != Constants.READ_TYPE_CCS:
+        if not rg.ReadType in [Constants.READ_TYPE_CCS, Constants.READ_TYPE_TRANSCRIPT]:
             qlen = aln.qEnd - aln.qStart
             seq_len = len(aln.peer.seq)
             if seq_len != qlen:
@@ -782,7 +788,7 @@ class ValidateReadTags (ValidateReadBase):
     def _get_errors(self, aln):
         rg = aln.readGroupInfo
         errors = []
-        for tag in Constants.REQUIRED_ALIGNMENT_TAGS:
+        def _get_tag_errors(tag):
             if not _has_tag(aln.peer, tag):
                 errors.append(
                     MissingAlignmentTagError.from_args(aln, aln.qName, tag, rg.ReadType))
@@ -797,6 +803,11 @@ class ValidateReadTags (ValidateReadBase):
                         errors.append(
                             TagValueError.from_args(aln, aln.peer.opt("rq"), "rq",
                                                     aln.qName))
+        for tag in Constants.REQUIRED_BASIC_TAGS:
+            _get_tag_errors(tag)
+        if not aln.isTranscript:
+            for tag in Constants.REQUIRED_ALIGNMENT_TAGS:
+                _get_tag_errors(tag)
         return errors
 
 
@@ -811,7 +822,7 @@ class ValidateReadTagsMisc (ValidateReadTags):
                 return [MissingAlignmentTagError.from_args(
                     aln, aln.qName, 'cx', Constants.READ_TYPE_SUBREAD)]
             localContext = aln.peer.opt("cx")
-        if rg.ReadType != Constants.READ_TYPE_CCS:
+        if not rg.ReadType in [Constants.READ_TYPE_CCS, Constants.READ_TYPE_TRANSCRIPT]:
             for tag in Constants.QSTART_QEND_TAGS:
                 if not _has_tag(aln.peer, tag):
                     errors.append(MissingAlignmentTagError.from_args(aln,
