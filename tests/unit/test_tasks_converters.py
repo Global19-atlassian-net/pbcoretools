@@ -77,7 +77,7 @@ skip_unless_slimbam = unittest.skipUnless(HAVE_SLIMBAM, SKIP_MSG_SLIMBAM)
 def _validate_dataset_xml(file_name):
     if HAVE_XMLLINT and "PB_DATASET_XSD" in os.environ:
         args = ["xmllint", "--schema", os.environ["PB_DATASET_XSD"], file_name]
-        subprocess.check_output(args)
+        subprocess.check_output(args, stderr=subprocess.STDOUT)
 
 
 def _get_bax2bam_inputs():
