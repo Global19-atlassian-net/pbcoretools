@@ -38,6 +38,7 @@ class Constants(object):
     FASTA2REF = "fasta-to-reference"
     FASTA2GMAP = "fasta-to-gmap-reference"
     SLIMBAM = "slimbam"
+    XMLLINT = "xmllint"
 
 
 SIV_DATA_DIR = "/pbi/dept/secondary/siv/testdata"
@@ -56,6 +57,7 @@ HAVE_SLIMBAM = which(Constants.SLIMBAM) is not None
 HAVE_DATA_DIR = op.isdir(SIV_DATA_DIR)
 HAVE_DATA_AND_BAX2BAM = HAVE_BAX2BAM and HAVE_DATA_DIR
 HAVE_DATA_AND_BAM2BAM = HAVE_BAM2BAM and HAVE_DATA_DIR
+HAVE_XMLLINT = which(Constants.XMLLINT)
 
 SKIP_MSG_BAX2BAM = _to_skip_msg(Constants.BAX2BAM)
 SKIP_MSG_BAM2FX = _to_skip_msg(Constants.BAM2FASTA)
@@ -70,6 +72,12 @@ skip_unless_bam2bam = unittest.skipUnless(HAVE_DATA_AND_BAM2BAM, SKIP_MSG_BAM2BA
 skip_unless_fasta2ref = unittest.skipUnless(HAVE_FASTA2REF, SKIP_MSG_FASTA2REF)
 skip_unless_fasta2gmap = unittest.skipUnless(HAVE_FASTA2GMAP, SKIP_MSG_FASTA2GMAP)
 skip_unless_slimbam = unittest.skipUnless(HAVE_SLIMBAM, SKIP_MSG_SLIMBAM)
+
+
+def _validate_dataset_xml(file_name):
+    if HAVE_XMLLINT and "PB_DATASET_XSD" in os.environ:
+        args = ["xmllint", "--schema", os.environ["PB_DATASET_XSD"], file_name]
+        subprocess.check_output(args, stderr=subprocess.STDOUT)
 
 
 def _get_bax2bam_inputs():
@@ -717,6 +725,10 @@ class TestUpdateBarcodedSampleMetadata(PbTestApp):
                 self.assertEqual(ds.name, "{n} ({s})".format(n=ds_in.name,
                                                              s=bio_name))
                 self.assertEqual(ds.uuid, f.uuid)
+                md_tags = [r['tag'] for r in ds.metadata.record['children']]
+                self.assertEqual(md_tags[0:4],
+                                 ["TotalLength", "NumRecords", "Provenance", "Collections"])
+                _validate_dataset_xml(f.path)
 
 
 class TestUpdateBarcodedSampleMetadataCCS(PbTestApp):

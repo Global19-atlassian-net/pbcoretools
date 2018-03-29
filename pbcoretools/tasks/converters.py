@@ -714,7 +714,7 @@ def update_barcoded_sample_metadata(base_dir,
     return DataStore(datastore_files)
 
 
-@registry("update_barcoded_sample_metadata", "0.2.0",
+@registry("update_barcoded_sample_metadata", "0.3.0",
           (FileTypes.JSON, FileTypes.DS_SUBREADS, FileTypes.DS_BARCODE),
           FileTypes.DATASTORE,
           is_distributed=False,
