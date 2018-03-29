@@ -304,7 +304,7 @@ class TestScatterMinorVariants(pbcommand.testkit.core.PbTestScatterApp):
 class TestScatterTranscripts(pbcommand.testkit.core.PbTestScatterApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.scatter_transcripts"
     INPUT_FILES = [
-        "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/polished_transcripts.transcriptset.xml",
+        "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/unpolished.transcriptset.xml",
         pbtestdata.get_file("subreads-sequel")
     ]
     MAX_NCHUNKS = 4
@@ -835,7 +835,7 @@ class TestGatherTranscripts(_SetupGatherApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.gather_transcripts"
     NCHUNKS = 2
     READER_CLASS = TranscriptSet
-    BASE_INPUT = "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/polished.bam"
+    BASE_INPUT = "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/unpolished.bam"
 
     def _generate_chunk_output_file(self, i=None):
         return self._copy_mock_output_file(self.BASE_INPUT)
