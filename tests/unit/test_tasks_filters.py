@@ -1,4 +1,5 @@
 
+import tempfile
 import logging
 import os.path as op
 
@@ -6,6 +7,8 @@ from pbcore.io import (FastaReader, FastqReader, openDataSet, HdfSubreadSet,
                        SubreadSet, ConsensusReadSet)
 import pbcore.data.datasets as data
 from pbcommand.testkit import PbTestApp
+
+from pbcoretools.tasks.filters import combine_filters, run_filter_dataset
 
 from base import get_temp_file
 
@@ -65,12 +68,49 @@ class TestFilterDataSetBq(TestFilterDataSet):
     TASK_OPTIONS = {"pbcoretools.task_options.other_filters": "length >= 10 AND bq >= 10"}
     RESOLVED_TASK_OPTIONS = TASK_OPTIONS
     N_EXPECTED = 2
-    EXPECTED_FILTER_STR = "( length >= 10 AND bq >= 10 )"
+    EXPECTED_FILTER_STR = "( bq >= 10 AND length >= 10 )"
 
     @classmethod
     def setUpClass(cls):
         ds = SubreadSet(pbtestdata.get_file("barcoded-subreadset"),
                         strict=True)
-        ds.filters.addRequirement(bq=[('>', 30)])
+        ds.filters.addRequirement(bq=[('>=', 31)])
         assert len(ds) == 1
         ds.write(cls.INPUT_FILES[0])
+
+
+class TestCombineFilters(TestFilterDataSet):
+    TASK_OPTIONS = {"pbcoretools.task_options.other_filters": "rq >= 0.901"}
+    RESOLVED_TASK_OPTIONS = TASK_OPTIONS
+    N_EXPECTED = 12
+    N_EXPECTED_2 = 48
+    EXPECTED_FILTER_STR = "( length >= 1000 AND rq >= 0.901 )"
+
+    @classmethod
+    def setUpClass(cls):
+        with SubreadSet(pbtestdata.get_file("subreads-xml"), strict=True) as ds:
+            assert len(ds) == 117 and len(ds.filters) == 0
+            ds.filters.addRequirement(length=[('>=', 1000)])
+            assert len(ds) == 13
+            ds.write(cls.INPUT_FILES[0])
+
+    def test_combine_filters(self):
+        with openDataSet(self.INPUT_FILES[0], strict=True) as ds:
+            filters = {"rq": [(">=", 0.901)]}
+            combine_filters(ds, filters)
+            ds.updateCounts()
+            self.assertEqual(len(ds), self.N_EXPECTED)
+            filters = {"rq": [(">=", 0.8)], "length": [(">=", 500)]}
+            combine_filters(ds, filters)
+            self.assertEqual(len(ds), self.N_EXPECTED_2)
+
+    def test_run_filter_dataset(self):
+        my_filters = "rq >= 0.901"
+        ds_ofile = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
+        run_filter_dataset(self.INPUT_FILES[0], ds_ofile, 0, my_filters)
+        with openDataSet(ds_ofile, strict=True) as ds_out:
+            self.assertEqual(len(ds_out), self.N_EXPECTED)
+        my_filters = "rq >= 0.8"
+        run_filter_dataset(self.INPUT_FILES[0], ds_ofile, 500, my_filters)
+        with openDataSet(ds_ofile, strict=True) as ds_out:
+            self.assertEqual(len(ds_out), self.N_EXPECTED_2)

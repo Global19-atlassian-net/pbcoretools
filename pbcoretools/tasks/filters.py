@@ -42,25 +42,40 @@ def sanitize_read_length(read_length):
         except ValueError:
             return int(float(read_length))
 
+
+def combine_filters(ds, filters):
+    if len(ds.filters) > 0:
+        for old_filter in ds.filters:
+            log.info("Combining user-supplied filters with existing filter '%s", old_filter)
+            for name, options in filters.items():
+                for oper, value in options:
+                    have_req = False
+                    for old_prop in old_filter.plist:
+                        if old_prop.name == name and old_prop.operator == oper:
+                            old_prop.value = value
+                            have_req = True
+                    if not have_req:
+                        old_filter.addRequirement(name, oper, value)
+        ds.filters._runCallbacks()
+    else:
+        ds.filters.addFilter(**filters)
+
+
 def run_filter_dataset(in_file, out_file, read_length, other_filters):
     dataSet = openDataSet(in_file)
     dataSet.updateCounts() # just in case
+    rlen = sanitize_read_length(read_length)
+    filters = {}
     if other_filters and other_filters != "None":
         if ' AND ' in str(other_filters):
             filters = parse_filter_list(str(other_filters).split(' AND '))
         else:
             filters = parse_filter_list(str(other_filters).split(','))
-        if "bq" in filters:
-            log.warn("Removing any and all existing 'bq' filters")
-            dataSet.filters.removeRequirement("bq")
-        dataSet.filters.addFilter(**filters)
-        log.info("{i} other filters added".format(i=len(filters)))
-    rlen = sanitize_read_length(read_length)
+        log.info("{i} other filters will be added".format(i=len(filters)))
+    combine_filters(dataSet, filters)
     if rlen:
-        dataSet.filters.addRequirement(
-            length=[('>=', rlen)])
-    if rlen or other_filters:
-        dataSet.updateCounts()
+        combine_filters(dataSet, {'length': [('>=', rlen)]})
+    dataSet.updateCounts()
     if not "(filtered)" in dataSet.name:
         dataSet.name = dataSet.name + " (filtered)"
     if dataSet.tags.strip() == "":
@@ -71,7 +86,7 @@ def run_filter_dataset(in_file, out_file, read_length, other_filters):
     dataSet.write(out_file)
     return 0
 
-@registry("filterdataset", "0.1.0",
+@registry("filterdataset", "0.2.0",
           FileTypes.DS_SUBREADS,
           subreads_file_type, is_distributed=True, nproc=1,
           options={"read_length":rl_opt,
