@@ -20,6 +20,8 @@ from pbcoretools.pbvalidate.bam import ValidateReadGroup
 from pbcoretools.pbvalidate import bam
 import pbcore.io
 
+TESTDATA = "/pbi/dept/secondary/siv/testdata"
+
 # of course PacBio's real reads are MUCH longer
 rec1 = "movie1/54130/0_10\t2\tecoliK12_pbi_March2013_2955000_to_2980000\t2\t10\t%(cigar)s\t*\t0\t0\tAATGAGGAGA\t*\tRG:Z:%(rg_id)s\tdq:Z:2222'$22'2\tdt:Z:NNNNAGNNGN\tip:B:C,255,2,0,10,22,34,0,2,3,0,16\tiq:Z:(+#1'$#*1&\tmq:Z:&1~51*5&~2\tnp:i:1\tqe:i:10\tqs:i:%(qs)d\trq:f:%(rq)s\tsn:B:f,%(sn)s\tsq:Z:<32<4<<<<3\tzm:i:54130\tAS:i:-3020\tNM:i:134\tcx:i:2"
 sam_str_ = """\
@@ -317,6 +319,12 @@ class TestCase (unittest.TestCase):
         file_name = op.join(DATA_DIR, "tst_s_subreads.bam")
         rc = subprocess.call(["pbvalidate", file_name])
         self.assertEqual(rc, 1)
+
+    @unittest.skipUnless(op.isdir(TESTDATA), "Testdata not found")
+    def test_transcript_bam(self):
+        BAM = "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/unpolished.bam"
+        e, c = bam.validate_bam(BAM)
+        self.assertEqual(len(e), 0)
 
 
 if __name__ == "__main__":

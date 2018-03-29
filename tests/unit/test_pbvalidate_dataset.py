@@ -17,7 +17,8 @@ from pbcoretools.pbvalidate.dataset import *
 
 import pbtestdata
 
-TESTDATA_DIR = op.join(op.dirname(op.dirname(__file__)), "data")
+TESTDATA_DIR = "/pbi/dept/secondary/siv/testdata"
+LOCAL_DATA_DIR = op.join(op.dirname(op.dirname(__file__)), "data")
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 skip_if_no_pyxb = unittest.skipUnless(pyxb is not None, "pyxb not available")
@@ -45,14 +46,14 @@ class TestCase (unittest.TestCase):
 
     def test_reader(self):
         n_aln = 0
-        ds_file = os.path.join(TESTDATA_DIR, "tst_2_subreads.xml")
+        ds_file = os.path.join(LOCAL_DATA_DIR, "tst_2_subreads.xml")
         with DatasetReader(pbcore.io.AlignmentSet, ds_file) as f:
             for aln in f:
                 n_aln += 1
         self.assertEqual(n_aln, 4)
 
     def test_api(self):
-        ds_file = os.path.join(TESTDATA_DIR, "tst_1.alignmentset.xml")
+        ds_file = os.path.join(LOCAL_DATA_DIR, "tst_1.alignmentset.xml")
         ds = pbcore.io.openDataSet(ds_file)
         self.assertTrue(ValidateNamespace().validate(ds))
         ds2 = DatasetReader(pbcore.io.AlignmentSet, ds_file)
@@ -61,7 +62,7 @@ class TestCase (unittest.TestCase):
 
     def test_bad_subreadset(self):
         # bad file
-        ds_file = os.path.join(TESTDATA_DIR, "tst_2_subreads.xml")
+        ds_file = os.path.join(LOCAL_DATA_DIR, "tst_2_subreads.xml")
         ds = pbcore.io.openDataSet(ds_file)
         v = ValidateContents(aligned=None, content_type=None)
         self.assertTrue(v.validate(ds))
@@ -81,7 +82,7 @@ class TestCase (unittest.TestCase):
 
     def test_file_name_and_contents_consistency(self):
         # file name/content type mismatch
-        ds_file = os.path.join(TESTDATA_DIR, "tst_1.ccs.xml")
+        ds_file = os.path.join(LOCAL_DATA_DIR, "tst_1.ccs.xml")
         ds = pbcore.io.DataSet(ds_file)
         v = ValidateFileName("tst_1.ccs.xml")
         self.assertFalse(v.validate(ds))
@@ -90,22 +91,22 @@ class TestCase (unittest.TestCase):
 
     def test_root_tag_type(self):
         # MetaType wrong
-        file_name = os.path.join(TESTDATA_DIR, "tst_1b_subreads.xml")
+        file_name = os.path.join(LOCAL_DATA_DIR, "tst_1b_subreads.xml")
         self.assertFalse(ValidateRootTag().validate(file_name))
 
     def test_validate_encoding(self):
         # good file
-        file_name = os.path.join(TESTDATA_DIR, "tst_1.subreadset.xml")
+        file_name = os.path.join(LOCAL_DATA_DIR, "tst_1.subreadset.xml")
         self.assertTrue(ValidateEncoding().validate(file_name))
         # no header
-        file_name = os.path.join(TESTDATA_DIR, "tst_1b.subreadset.xml")
+        file_name = os.path.join(LOCAL_DATA_DIR, "tst_1b.subreadset.xml")
         self.assertFalse(ValidateEncoding().validate(file_name))
-        file_name = os.path.join(TESTDATA_DIR, "tst_1c.subreadset.xml")
+        file_name = os.path.join(LOCAL_DATA_DIR, "tst_1c.subreadset.xml")
         self.assertFalse(ValidateEncoding().validate(file_name))
 
     @skip_if_no_pyxb
     def test_validate_xml_pyxb(self):
-        file_name = os.path.join(TESTDATA_DIR, "tst_1d.subreadset.xml")
+        file_name = os.path.join(LOCAL_DATA_DIR, "tst_1d.subreadset.xml")
         ds = pbcore.io.SubreadSet(file_name)
         v = ValidateXML()
         self.assertFalse(v.validate(file_name))
@@ -116,6 +117,11 @@ class TestCase (unittest.TestCase):
         xml = pbtestdata.get_file("subreads-sequel")
         rc = subprocess.call(["pbvalidate", xml])
         self.assertEqual(rc, 0)
+
+    @unittest.skipUnless(os.path.isdir(TESTDATA_DIR), "Testdata not available")
+    def test_validate_transcriptset(self):
+        DS = "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/unpolished.transcriptset.xml"
+        self.assertEqual(subprocess.call(["pbvalidate", DS]), 0)
 
 
 class TestToolContract(pbcommand.testkit.PbTestApp):
