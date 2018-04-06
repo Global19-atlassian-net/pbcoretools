@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 class Constants(object):
     TOOL_ID = "pbcoretools.tasks.bam2fasta_ccs"
-    VERSION = "0.3.0"
+    VERSION = "0.3.1"
     DRIVER = "python -m pbcoretools.tasks.bam2fasta_ccs --resolved-tool-contract"
     FILE_TYPE = FileTypes.DS_CCS
     FORMAT_NAME = "fasta"

@@ -20,7 +20,6 @@ import pbtestdata
 from pbcoretools.tasks.converters import (
     split_laa_fastq,
     split_laa_fastq_archived,
-    _run_bam_to_bam,
     get_ds_name,
     update_barcoded_sample_metadata,
     discard_bio_samples)
@@ -34,7 +33,6 @@ log = logging.getLogger(__name__)
 class Constants(object):
     BAX2BAM = "bax2bam"
     BAM2FASTA = "bam2fasta"
-    BAM2BAM = "bam2bam"
     FASTA2REF = "fasta-to-reference"
     FASTA2GMAP = "fasta-to-gmap-reference"
     SLIMBAM = "slimbam"
@@ -49,26 +47,22 @@ def _to_skip_msg(exe):
 
 # XXX hacks to make sure tools are actually available
 HAVE_BAX2BAM = which(Constants.BAX2BAM) is not None
-HAVE_BAM2BAM = False #XXX disabled #which(Constants.BAM2BAM) is not None
 HAVE_BAM2FASTX = which(Constants.BAM2FASTA) is not None
 HAVE_FASTA2REF = which(Constants.FASTA2REF) is not None
 HAVE_FASTA2GMAP = which(Constants.FASTA2GMAP) is not None
 HAVE_SLIMBAM = which(Constants.SLIMBAM) is not None
 HAVE_DATA_DIR = op.isdir(SIV_DATA_DIR)
 HAVE_DATA_AND_BAX2BAM = HAVE_BAX2BAM and HAVE_DATA_DIR
-HAVE_DATA_AND_BAM2BAM = HAVE_BAM2BAM and HAVE_DATA_DIR
 HAVE_XMLLINT = which(Constants.XMLLINT)
 
 SKIP_MSG_BAX2BAM = _to_skip_msg(Constants.BAX2BAM)
 SKIP_MSG_BAM2FX = _to_skip_msg(Constants.BAM2FASTA)
-SKIP_MSG_BAM2BAM = _to_skip_msg(Constants.BAM2BAM)
 SKIP_MSG_FASTA2REF = _to_skip_msg(Constants.FASTA2REF)
 SKIP_MSG_FASTA2GMAP = _to_skip_msg(Constants.FASTA2GMAP)
 SKIP_MSG_SLIMBAM = _to_skip_msg(Constants.SLIMBAM)
 
 skip_unless_bax2bam = unittest.skipUnless(HAVE_DATA_AND_BAX2BAM, SKIP_MSG_BAX2BAM)
 skip_unless_bam2fastx = unittest.skipUnless(HAVE_BAM2FASTX, SKIP_MSG_BAM2FX)
-skip_unless_bam2bam = unittest.skipUnless(HAVE_DATA_AND_BAM2BAM, SKIP_MSG_BAM2BAM)
 skip_unless_fasta2ref = unittest.skipUnless(HAVE_FASTA2REF, SKIP_MSG_FASTA2REF)
 skip_unless_fasta2gmap = unittest.skipUnless(HAVE_FASTA2GMAP, SKIP_MSG_FASTA2GMAP)
 skip_unless_slimbam = unittest.skipUnless(HAVE_SLIMBAM, SKIP_MSG_SLIMBAM)
@@ -122,48 +116,6 @@ class TestBax2Bam(PbTestApp):
         with SubreadSet(rtc.task.output_files[0]) as ds_out:
             self.assertEqual(len(ds_out.toExternalFiles()), 2)
             self.assertEqual(ds_out.name, "lambda_rsii")
-
-
-class Bam2BamCore(object):
-    SUBREADS = "/pbi/dept/secondary/siv/testdata/SA3-Sequel/phi29/315/3150101/r54008_20160219_002905/1_A01_micro/m54008_160219_003234_micro.subreadset.xml"
-    BARCODES = "/pbi/dept/secondary/siv/barcodes/pacbio_barcodes_384/pacbio_barcodes_384.barcodeset.xml"
-
-    def _validate_subreads(self, output_file):
-        err, metrics = pbvalidate.validate_dataset(
-            file_name=output_file,
-            dataset_type="SubreadSet",
-            quick=False,
-            validate_index=True,
-            strict=True)
-        self.assertEqual(len(err), 0)
-        with SubreadSet(output_file) as ds:
-            self.assertEqual(len(ds.externalResources), 1)
-            # make sure metadata are propagated
-            md = ds.metadata
-            self.assertEqual(
-                md.collections.submetadata[0].attrib['InstrumentName'],
-                "Inst54008")
-            self.assertTrue(ds.externalResources[0].scraps is not None)
-            self.assertEqual(ds.externalResources[0].barcodes, self.BARCODES)
-            rr = ds.resourceReaders()[0]
-            self.assertTrue(rr.pbi.hasBarcodeInfo)
-            self.assertTrue("barcoded" in ds.name)
-            self.assertTrue("barcoded" in ds.tags)
-            #self.assertEqual(len(rr.pbi.bcReverse), 13194)
-
-
-@skip_unless_bam2bam
-class TestBam2Bam(unittest.TestCase, Bam2BamCore):
-
-    def setUp(self):
-        # FIXME workaround for 'nose' stupidity
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
-
-    def test_run_bam_to_bam(self):
-        tmp_out = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
-        _run_bam_to_bam(self.SUBREADS, self.BARCODES, tmp_out)
-        self._validate_subreads(tmp_out)
 
 
 class _BaseTestBam2Fasta(PbTestApp):
@@ -354,9 +306,9 @@ class TestBam2FastaBarcoded(PbTestApp):
 
     def _get_expected_file_names(self):
         return [
-            "subreads_{e}.lbc1__lbc1.{e}".format(e=self.EXT),
-            "subreads_{e}.lbc3__lbc3.{e}".format(e=self.EXT),
-            "subreads_{e}.unbarcoded.{e}".format(e=self.EXT)
+            "subreads.lbc1__lbc1.{e}".format(e=self.EXT),
+            "subreads.lbc3__lbc3.{e}".format(e=self.EXT),
+            "subreads.unbarcoded.{e}".format(e=self.EXT)
         ]
 
     def run_after(self, rtc, output_dir):
@@ -395,9 +347,9 @@ class TestBam2FastaBarcodedNoLabels(TestBam2FastaBarcoded):
 
     def _get_expected_file_names(self):
         return [
-            "subreads_{e}.0__0.{e}".format(e=self.EXT),
-            "subreads_{e}.2__2.{e}".format(e=self.EXT),
-            "subreads_{e}.unbarcoded.{e}".format(e=self.EXT)
+            "subreads.0__0.{e}".format(e=self.EXT),
+            "subreads.2__2.{e}".format(e=self.EXT),
+            "subreads.unbarcoded.{e}".format(e=self.EXT)
         ]
 
 
