@@ -221,7 +221,7 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                 log.warn("  %s", fn)
         else:
             log.info("No barcode labels available")
-    base_ext = re.sub("bam2", "", program_name)
+    base_ext = "." + re.sub("bam2", "", program_name)
     suffix = "{f}.gz".format(f=base_ext)
     tmp_out_prefix = tempfile.NamedTemporaryFile(dir=tmp_dir).name
     tmp_out_dir = op.dirname(tmp_out_prefix)
@@ -271,17 +271,19 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                             bc_rev_label = _label_or_none(bc_fwd_rev[1])
                             bc_label = "{f}__{r}".format(f=bc_fwd_label,
                                                          r=bc_rev_label)
-                        suffix2 = ".{l}.{t}".format(l=bc_label, t=base_ext)
+                        suffix2 = ".{l}{t}".format(l=bc_label, t=base_ext)
                     else:
                         suffix2 = '.' + base_ext
-                    fn_out = re.sub(".zip$", suffix2, op.basename(output_file_name))
+                    fn_out = re.sub(".zip$", "", op.basename(output_file_name))
+                    if fn_out.endswith(base_ext):
+                        fn_out = re.sub(base_ext, suffix2, fn_out)
                     fastx_out = op.join(tc_out_dir, fn_out)
                     _ungzip_fastx(fn, fastx_out)
                     fastx_file_names.append(fastx_out)
                 assert len(fastx_file_names) > 0
                 return archive_files(fastx_file_names, output_file_name)
             else:
-                tmp_out = "{p}.{b}.gz".format(p=tmp_out_prefix, b=base_ext)
+                tmp_out = "{p}{b}.gz".format(p=tmp_out_prefix, b=base_ext)
                 _ungzip_fastx(tmp_out, output_file_name)
                 os.remove(tmp_out)
     finally:

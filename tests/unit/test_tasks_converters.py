@@ -354,9 +354,9 @@ class TestBam2FastaBarcoded(PbTestApp):
 
     def _get_expected_file_names(self):
         return [
-            "subreads_{e}.lbc1__lbc1.{e}".format(e=self.EXT),
-            "subreads_{e}.lbc3__lbc3.{e}".format(e=self.EXT),
-            "subreads_{e}.unbarcoded.{e}".format(e=self.EXT)
+            "subreads.lbc1__lbc1.{e}".format(e=self.EXT),
+            "subreads.lbc3__lbc3.{e}".format(e=self.EXT),
+            "subreads.unbarcoded.{e}".format(e=self.EXT)
         ]
 
     def run_after(self, rtc, output_dir):
@@ -395,9 +395,9 @@ class TestBam2FastaBarcodedNoLabels(TestBam2FastaBarcoded):
 
     def _get_expected_file_names(self):
         return [
-            "subreads_{e}.0__0.{e}".format(e=self.EXT),
-            "subreads_{e}.2__2.{e}".format(e=self.EXT),
-            "subreads_{e}.unbarcoded.{e}".format(e=self.EXT)
+            "subreads.0__0.{e}".format(e=self.EXT),
+            "subreads.2__2.{e}".format(e=self.EXT),
+            "subreads.unbarcoded.{e}".format(e=self.EXT)
         ]
 
 
