@@ -20,7 +20,6 @@ import pbtestdata
 from pbcoretools.tasks.converters import (
     split_laa_fastq,
     split_laa_fastq_archived,
-    _run_bam_to_bam,
     get_ds_name,
     update_barcoded_sample_metadata,
     discard_bio_samples)
