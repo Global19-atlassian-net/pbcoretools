@@ -103,54 +103,6 @@ def run_bax_to_bam(input_file_name, output_file_name):
     return 0
 
 
-# XXX no longer used
-def _run_bam_to_bam(subread_set_file, barcode_set_file, output_file_name,
-                    nproc=1, score_mode="symmetric"):
-    """
-    Run legacy barcoding with bam2bam (requires separate installation).
-    """
-    if not score_mode in ["symmetric", "asymmetric", "tailed"]:
-        raise ValueError("Unrecognized score mode '{m}'".format(m=score_mode))
-    bc = BarcodeSet(barcode_set_file)
-    if len(bc.resourceReaders()) > 1:
-        raise NotImplementedError("Multi-FASTA BarcodeSet input is not supported.")
-    new_prefix = re.sub(".subreadset.xml$", "", output_file_name)
-    args = [
-        "bam2bam",
-        "-j", str(nproc),
-        "-b", str(nproc),
-        "-o", new_prefix,
-        "--barcodes", barcode_set_file,
-        "--scoreMode", score_mode,
-        subread_set_file
-    ]
-    log.info(" ".join(args))
-    result = run_cmd(" ".join(args),
-                     stdout_fh=sys.stdout,
-                     stderr_fh=sys.stderr)
-    if result.exit_code != 0:
-        return result.exit_code
-    assert op.isfile(output_file_name)
-    tmp_out = op.join(op.dirname(output_file_name),
-                      "tmp_" + op.basename(output_file_name))
-    shutil.move(output_file_name, tmp_out)
-    with SubreadSet(tmp_out, strict=True) as ds:
-        with SubreadSet(subread_set_file) as ds_in:
-            ds.metadata = ds_in.metadata
-            ds_name_out = ds_in.name
-            if not "(barcoded)" in ds_name_out:
-                ds_name_out = ds_name_out + " (barcoded)"
-            ds.name = ds_name_out
-            if ds.tags.strip() == "":
-                ds.tags = "barcoded"
-            elif not "barcoded" in ds.tags:
-                ds.tags = ",".join(ds.tags.strip().split(",") + ["barcoded"])
-        ds.updateCounts()
-        ds.newUuid()
-        ds.write(output_file_name)
-    return 0
-
-
 def _ungzip_fastx(gzip_file_name, fastx_file_name):
     """
     Decompress an output from bam2fastx.
