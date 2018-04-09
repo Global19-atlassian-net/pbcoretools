@@ -185,6 +185,7 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
     if barcode_mode:
         args.insert(1, "--split-barcodes")
     log.info(" ".join(args))
+    remove_files = []
     result = run_cmd(" ".join(args),
                      stdout_fh=sys.stdout,
                      stderr_fh=sys.stderr)
@@ -233,14 +234,16 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                     fastx_out = op.join(tc_out_dir, fn_out)
                     _ungzip_fastx(fn, fastx_out)
                     fastx_file_names.append(fastx_out)
+                    remove_files.append(fn)
                 assert len(fastx_file_names) > 0
+                remove_files.extend(fastx_file_names)
                 return archive_files(fastx_file_names, output_file_name)
             else:
                 tmp_out = "{p}{b}.gz".format(p=tmp_out_prefix, b=base_ext)
                 _ungzip_fastx(tmp_out, output_file_name)
-                os.remove(tmp_out)
+                remove_files = [tmp_out]
     finally:
-        for fn in walker(tmp_out_dir, _is_fastx_file):
+        for fn in remove_files:
             os.remove(fn)
     return 0
 
