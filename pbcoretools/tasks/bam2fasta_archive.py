@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 class Constants(object):
     TOOL_ID = "pbcoretools.tasks.bam2fasta_archive"
-    VERSION = "0.4.0"
+    VERSION = "0.4.1"
     DRIVER = "python -m pbcoretools.tasks.bam2fasta_archive --resolved-tool-contract"
     FILE_TYPE = FileTypes.DS_SUBREADS
     FORMAT_NAME = "fasta"
@@ -44,7 +44,7 @@ def get_parser_impl(constants):
         "{f}_out".format(f=fmt_name),
         "{f} file(s)".format(f=fmt_name.upper()),
         description="Exported {f} as ZIP archive".format(f=fmt_name.upper()),
-        default_name="{t}_{f}".format(t=constants.READ_TYPE, f=fmt_name))
+        default_name="{t}.{f}".format(t=constants.READ_TYPE, f=fmt_name))
     return p
 
 
