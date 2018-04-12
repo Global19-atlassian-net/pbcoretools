@@ -4,6 +4,7 @@ import subprocess
 import tempfile
 import unittest
 import logging
+import shutil
 import uuid
 import os.path as op
 import os
@@ -21,6 +22,9 @@ from pbcoretools.tasks.converters import (
     split_laa_fastq,
     split_laa_fastq_archived,
     get_ds_name,
+    get_barcode_sample_mappings,
+    make_barcode_sample_csv,
+    make_combined_laa_zip,
     update_barcoded_sample_metadata,
     discard_bio_samples)
 from pbcoretools import pbvalidate
@@ -723,3 +727,49 @@ class TestCCSToDataStore(PbTestApp):
     DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
     INPUT_FILES = [pbtestdata.get_file("rsii-ccs")]
+
+
+class TestCombinedLAAZip(PbTestApp):
+    SUBREADS_IN = pbtestdata.get_file("barcoded-subreadset")
+    TASK_ID = "pbcoretools.tasks.make_combined_laa_zip"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [
+        tempfile.NamedTemporaryFile(suffix=".fastq").name,
+        tempfile.NamedTemporaryFile(suffix=".csv").name,
+        SUBREADS_IN
+    ]
+
+    @classmethod
+    def setUpClass(cls):
+        _make_fastq_inputs(_get_fastq_records(), cls.INPUT_FILES[0])
+        csv_tmp = open(cls.INPUT_FILES[1], "w")
+        csv_tmp.write("a,b\nc,d\ne,f")
+        csv_tmp.close()
+
+    def test_get_barcode_sample_mappings(self):
+        subreads = pbtestdata.get_file("barcoded-subreadset")
+        with SubreadSet(subreads) as ds:
+            # just double-checking that the XML defines more samples than are
+            # actually present in the BAM
+            assert len(ds.metadata.collections[0].wellSample.bioSamples) == 3
+        samples = get_barcode_sample_mappings(subreads)
+        self.assertEqual(samples, {'lbc3--lbc3': 'Charles',
+                                   'lbc1--lbc1': 'Alice'})
+
+    def test_make_barcode_sample_csv(self):
+        subreads = pbtestdata.get_file("barcoded-subreadset")
+        csv_file = tempfile.NamedTemporaryFile(suffix=".csv").name
+        make_barcode_sample_csv(subreads, csv_file)
+        with open(csv_file) as f:
+            self.assertEqual(f.read(), "Barcode Name,Bio Sample Name\nlbc1--lbc1,Alice\nlbc3--lbc3,Charles\n")
+
+    def test_make_combined_laa_zip(self):
+        zip_out = tempfile.NamedTemporaryFile(suffix=".zip").name
+        rc = make_combined_laa_zip(self.INPUT_FILES[0], self.INPUT_FILES[1], self.INPUT_FILES[2], zip_out)
+        self.assertEqual(rc, 0)
+        self.assertTrue(op.getsize(zip_out) != 0)
+        with ZipFile(zip_out, "r") as zip_file:
+            file_names = set(zip_file.namelist())
+            self.assertTrue("Barcoded_Sample_Names.csv" in file_names)
+            self.assertTrue(op.basename(self.INPUT_FILES[1]) in file_names)
