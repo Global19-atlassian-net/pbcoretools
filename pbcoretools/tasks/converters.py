@@ -542,9 +542,15 @@ def _run_split_laa_fastq(rtc):
                                         rtc.task.output_files[1]))
 
 
-@registry("make_combined_laa_zip", "0.1.0",
+combined_zip_ftype = OutputFileType(FileTypes.ZIP.file_type_id,
+                                    "consensus_combined_zip",
+                                    "Consensus Sequences Summary",
+                                    "Consensus Sequences Summary ZIP file",
+                                    "consensus_sequences_summary")
+
+@registry("make_combined_laa_zip", "0.1.1",
           (FileTypes.FASTQ, FileTypes.CSV, FileTypes.DS_SUBREADS),
-          FileTypes.ZIP,
+          combined_zip_ftype,
           is_distributed=True,
           nproc=1)
 def _run_make_combined_laa_zip(rtc):
