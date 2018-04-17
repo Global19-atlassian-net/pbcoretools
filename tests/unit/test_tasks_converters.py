@@ -563,6 +563,23 @@ class TestDataStoreToSubreads(PbTestApp):
         ds.write_json(cls.INPUT_FILES[0])
 
 
+class TestDataStoreToCCS(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.datastore_to_ccs"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [tempfile.NamedTemporaryFile(suffix=".datastore.json").name]
+
+    @classmethod
+    def setUpClass(cls):
+        subreads = pbtestdata.get_file("ccs-barcoded")
+        files = [
+            DataStoreFile(uuid.uuid4(), "barcoding.tasks.lima-out-0",
+                          FileTypes.DS_CCS.file_type_id, subreads)
+        ]
+        ds = DataStore(files)
+        ds.write_json(cls.INPUT_FILES[0])
+
+
 def _split_barcoded_dataset(file_name, ext=".subreadset.xml"):
     from pbcoretools.bamSieve import filter_reads
     ds_in = openDataSet(file_name)
