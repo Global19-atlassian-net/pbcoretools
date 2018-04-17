@@ -22,7 +22,7 @@ import sys
 from pbcore.io import (SubreadSet, HdfSubreadSet, FastaReader, FastaWriter,
                        FastqReader, FastqWriter, BarcodeSet, ExternalResource,
                        ExternalResources, openDataSet, ContigSet, ReferenceSet,
-                       GmapReferenceSet)
+                       GmapReferenceSet, ConsensusReadSet)
 from pbcommand.engine import run_cmd
 from pbcommand.cli import registry_builder, registry_runner, QuickOpt
 from pbcommand.models import FileTypes, SymbolTypes, OutputFileType, DataStore, DataStoreFile
@@ -659,6 +659,22 @@ def run_datastore_to_subreads(rtc):
             ds.write(rtc.task.output_files[0])
     else:
         raise ValueError("Expected one or more SubreadSets in datastore")
+    return 0
+
+
+@registry("datastore_to_ccs", "0.1.0",
+          FileTypes.DATASTORE,
+          FileTypes.DS_CCS,
+          is_distributed=False,
+          nproc=1)
+def run_datastore_to_ccs(rtc):
+    datasets = list(_iterate_datastore_read_set_files(rtc.task.input_files[0]))
+    if len(datasets) > 0:
+        with ConsensusReadSet(*[f.path for f in datasets], strict=True) as ds:
+            ds.newUuid()
+            ds.write(rtc.task.output_files[0])
+    else:
+        raise ValueError("Expected one or more ConsensusReadSets in datastore")
     return 0
 
 
