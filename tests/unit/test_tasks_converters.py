@@ -377,6 +377,54 @@ class TestBam2FastqBarcodedNoLabels(TestBam2FastaBarcodedNoLabels):
     EXT = "fastq"
 
 
+def _setup_transcripts(hq_file, lq_file):
+    from pbcoretools.tasks.filters import _split_transcripts
+    DS = "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/polished.transcriptset.xml"
+    _split_transcripts(DS, hq_file, lq_file, 0.98)
+
+
+@skip_unless_bam2fastx
+class TestBam2FastaTranscripts(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.bam2fasta_transcripts"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fasta_transcripts --emit-tool-contract"
+    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fasta_transcripts --resolved-tool-contract"
+    INPUT_FILES = [
+        tempfile.NamedTemporaryFile(suffix=".transcriptset.xml").name,
+        tempfile.NamedTemporaryFile(suffix=".transcriptset.xml").name
+    ]
+
+    @classmethod
+    def setUpClass(cls):
+        _setup_transcripts(cls.INPUT_FILES[0], cls.INPUT_FILES[1])
+
+    def run_after(self, rtc, output_dir):
+        with FastaReader(rtc.task.output_files[0]) as hq_fasta:
+            self.assertEqual(len([rec for rec in hq_fasta]), 11701)
+        with FastaReader(rtc.task.output_files[1]) as lq_fasta:
+            self.assertEqual(len([rec for rec in lq_fasta]), 44)
+
+
+@skip_unless_bam2fastx
+class TestBam2FastqTranscripts(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.bam2fastq_transcripts"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fastq_transcripts --emit-tool-contract"
+    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fastq_transcripts --resolved-tool-contract"
+    INPUT_FILES = [
+        tempfile.NamedTemporaryFile(suffix=".transcriptset.xml").name,
+        tempfile.NamedTemporaryFile(suffix=".transcriptset.xml").name
+    ]
+
+    @classmethod
+    def setUpClass(cls):
+        _setup_transcripts(cls.INPUT_FILES[0], cls.INPUT_FILES[1])
+
+    def run_after(self, rtc, output_dir):
+        with FastqReader(rtc.task.output_files[0]) as hq_fastq:
+            self.assertEqual(len([rec for rec in hq_fastq]), 11701)
+        with FastqReader(rtc.task.output_files[1]) as lq_fastq:
+            self.assertEqual(len([rec for rec in lq_fastq]), 44)
+
+
 @skip_unless_fasta2ref
 class TestFastaToReference(PbTestApp):
     TASK_ID = "pbcoretools.tasks.fasta_to_reference"
