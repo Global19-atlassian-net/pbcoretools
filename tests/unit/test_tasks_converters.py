@@ -386,8 +386,7 @@ def _setup_transcripts(hq_file, lq_file):
 @skip_unless_bam2fastx
 class TestBam2FastaTranscripts(PbTestApp):
     TASK_ID = "pbcoretools.tasks.bam2fasta_transcripts"
-    DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fasta_transcripts --emit-tool-contract"
-    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fasta_transcripts --resolved-tool-contract"
+    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fasta_transcripts"
     INPUT_FILES = [
         tempfile.NamedTemporaryFile(suffix=".transcriptset.xml").name,
         tempfile.NamedTemporaryFile(suffix=".transcriptset.xml").name
@@ -396,6 +395,7 @@ class TestBam2FastaTranscripts(PbTestApp):
     @classmethod
     def setUpClass(cls):
         _setup_transcripts(cls.INPUT_FILES[0], cls.INPUT_FILES[1])
+        super(TestBam2FastaTranscripts, cls).setUpClass()
 
     def run_after(self, rtc, output_dir):
         with FastaReader(rtc.task.output_files[0]) as hq_fasta:
@@ -407,8 +407,7 @@ class TestBam2FastaTranscripts(PbTestApp):
 @skip_unless_bam2fastx
 class TestBam2FastqTranscripts(PbTestApp):
     TASK_ID = "pbcoretools.tasks.bam2fastq_transcripts"
-    DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fastq_transcripts --emit-tool-contract"
-    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fastq_transcripts --resolved-tool-contract"
+    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fastq_transcripts"
     INPUT_FILES = [
         tempfile.NamedTemporaryFile(suffix=".transcriptset.xml").name,
         tempfile.NamedTemporaryFile(suffix=".transcriptset.xml").name
@@ -417,6 +416,7 @@ class TestBam2FastqTranscripts(PbTestApp):
     @classmethod
     def setUpClass(cls):
         _setup_transcripts(cls.INPUT_FILES[0], cls.INPUT_FILES[1])
+        super(TestBam2FastqTranscripts, cls).setUpClass()
 
     def run_after(self, rtc, output_dir):
         with FastqReader(rtc.task.output_files[0]) as hq_fastq:
