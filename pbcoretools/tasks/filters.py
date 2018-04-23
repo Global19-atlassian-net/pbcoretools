@@ -117,13 +117,23 @@ def _split_transcripts(transcripts, hq_file, lq_file, cutoff):
     return 0
 
 
+hq_file_type = OutputFileType(FileTypes.DS_TRANSCRIPT.file_type_id,
+                              "hq_transcripts",
+                              "HQ TranscriptSet",
+                              "Hiqh-Quality TranscriptSet XML",
+                              "hq_transcripts")
+lq_file_type = OutputFileType(FileTypes.DS_TRANSCRIPT.file_type_id,
+                              "lq_transcripts",
+                              "LQ TranscriptSet",
+                              "Low-Quality TranscriptSet XML",
+                              "lq_transcripts")
 hq_qv_cutoff = QuickOpt(Constants.TRANSCRIPT_QV_CUTOFF,
                         "QV cutoff for HQ transcripts",
                         "Minimum read quality required for a transcript to be considered 'high-quality'")
 
 @registry("split_transcripts", "0.1.0",
           FileTypes.DS_TRANSCRIPT,
-          (FileTypes.DS_TRANSCRIPT, FileTypes.DS_TRANSCRIPT),
+          (hq_file_type, lq_file_type),
           is_distributed=False,
           nproc=1,
           options={"hq_qv_cutoff": hq_qv_cutoff})
