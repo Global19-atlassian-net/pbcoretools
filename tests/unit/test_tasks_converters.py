@@ -4,6 +4,7 @@ import subprocess
 import tempfile
 import unittest
 import logging
+import shutil
 import uuid
 import os.path as op
 import os
@@ -21,6 +22,9 @@ from pbcoretools.tasks.converters import (
     split_laa_fastq,
     split_laa_fastq_archived,
     get_ds_name,
+    get_barcode_sample_mappings,
+    make_barcode_sample_csv,
+    make_combined_laa_zip,
     update_barcoded_sample_metadata,
     discard_bio_samples)
 from pbcoretools import pbvalidate
@@ -373,6 +377,54 @@ class TestBam2FastqBarcodedNoLabels(TestBam2FastaBarcodedNoLabels):
     EXT = "fastq"
 
 
+def _setup_transcripts(hq_file, lq_file):
+    from pbcoretools.tasks.filters import _split_transcripts
+    DS = "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/polished.transcriptset.xml"
+    _split_transcripts(DS, hq_file, lq_file, 0.98)
+
+
+@skip_unless_bam2fastx
+class TestBam2FastaTranscripts(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.bam2fasta_transcripts"
+    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fasta_transcripts"
+    INPUT_FILES = [
+        tempfile.NamedTemporaryFile(suffix=".transcriptset.xml").name,
+        tempfile.NamedTemporaryFile(suffix=".transcriptset.xml").name
+    ]
+
+    @classmethod
+    def setUpClass(cls):
+        _setup_transcripts(cls.INPUT_FILES[0], cls.INPUT_FILES[1])
+        super(TestBam2FastaTranscripts, cls).setUpClass()
+
+    def run_after(self, rtc, output_dir):
+        with FastaReader(rtc.task.output_files[0]) as hq_fasta:
+            self.assertEqual(len([rec for rec in hq_fasta]), 11701)
+        with FastaReader(rtc.task.output_files[1]) as lq_fasta:
+            self.assertEqual(len([rec for rec in lq_fasta]), 44)
+
+
+@skip_unless_bam2fastx
+class TestBam2FastqTranscripts(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.bam2fastq_transcripts"
+    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fastq_transcripts"
+    INPUT_FILES = [
+        tempfile.NamedTemporaryFile(suffix=".transcriptset.xml").name,
+        tempfile.NamedTemporaryFile(suffix=".transcriptset.xml").name
+    ]
+
+    @classmethod
+    def setUpClass(cls):
+        _setup_transcripts(cls.INPUT_FILES[0], cls.INPUT_FILES[1])
+        super(TestBam2FastqTranscripts, cls).setUpClass()
+
+    def run_after(self, rtc, output_dir):
+        with FastqReader(rtc.task.output_files[0]) as hq_fastq:
+            self.assertEqual(len([rec for rec in hq_fastq]), 11701)
+        with FastqReader(rtc.task.output_files[1]) as lq_fastq:
+            self.assertEqual(len([rec for rec in lq_fastq]), 44)
+
+
 @skip_unless_fasta2ref
 class TestFastaToReference(PbTestApp):
     TASK_ID = "pbcoretools.tasks.fasta_to_reference"
@@ -559,6 +611,23 @@ class TestDataStoreToSubreads(PbTestApp):
         ds.write_json(cls.INPUT_FILES[0])
 
 
+class TestDataStoreToCCS(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.datastore_to_ccs"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [tempfile.NamedTemporaryFile(suffix=".datastore.json").name]
+
+    @classmethod
+    def setUpClass(cls):
+        subreads = pbtestdata.get_file("ccs-barcoded")
+        files = [
+            DataStoreFile(uuid.uuid4(), "barcoding.tasks.lima-out-0",
+                          FileTypes.DS_CCS.file_type_id, subreads)
+        ]
+        ds = DataStore(files)
+        ds.write_json(cls.INPUT_FILES[0])
+
+
 def _split_barcoded_dataset(file_name, ext=".subreadset.xml"):
     from pbcoretools.bamSieve import filter_reads
     ds_in = openDataSet(file_name)
@@ -723,3 +792,49 @@ class TestCCSToDataStore(PbTestApp):
     DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
     INPUT_FILES = [pbtestdata.get_file("rsii-ccs")]
+
+
+class TestCombinedLAAZip(PbTestApp):
+    SUBREADS_IN = pbtestdata.get_file("barcoded-subreadset")
+    TASK_ID = "pbcoretools.tasks.make_combined_laa_zip"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [
+        tempfile.NamedTemporaryFile(suffix=".fastq").name,
+        tempfile.NamedTemporaryFile(suffix=".csv").name,
+        SUBREADS_IN
+    ]
+
+    @classmethod
+    def setUpClass(cls):
+        _make_fastq_inputs(_get_fastq_records(), cls.INPUT_FILES[0])
+        csv_tmp = open(cls.INPUT_FILES[1], "w")
+        csv_tmp.write("a,b\nc,d\ne,f")
+        csv_tmp.close()
+
+    def test_get_barcode_sample_mappings(self):
+        subreads = pbtestdata.get_file("barcoded-subreadset")
+        with SubreadSet(subreads) as ds:
+            # just double-checking that the XML defines more samples than are
+            # actually present in the BAM
+            assert len(ds.metadata.collections[0].wellSample.bioSamples) == 3
+        samples = get_barcode_sample_mappings(subreads)
+        self.assertEqual(samples, {'lbc3--lbc3': 'Charles',
+                                   'lbc1--lbc1': 'Alice'})
+
+    def test_make_barcode_sample_csv(self):
+        subreads = pbtestdata.get_file("barcoded-subreadset")
+        csv_file = tempfile.NamedTemporaryFile(suffix=".csv").name
+        make_barcode_sample_csv(subreads, csv_file)
+        with open(csv_file) as f:
+            self.assertEqual(f.read(), "Barcode Name,Bio Sample Name\nlbc1--lbc1,Alice\nlbc3--lbc3,Charles\n")
+
+    def test_make_combined_laa_zip(self):
+        zip_out = tempfile.NamedTemporaryFile(suffix=".zip").name
+        rc = make_combined_laa_zip(self.INPUT_FILES[0], self.INPUT_FILES[1], self.INPUT_FILES[2], zip_out)
+        self.assertEqual(rc, 0)
+        self.assertTrue(op.getsize(zip_out) != 0)
+        with ZipFile(zip_out, "r") as zip_file:
+            file_names = set(zip_file.namelist())
+            self.assertTrue("Barcoded_Sample_Names.csv" in file_names)
+            self.assertTrue(op.basename(self.INPUT_FILES[1]) in file_names)

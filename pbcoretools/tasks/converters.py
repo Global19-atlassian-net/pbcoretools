@@ -13,6 +13,7 @@ import logging
 import shutil
 import gzip
 import copy
+import csv
 import re
 import os.path as op
 import os
@@ -21,7 +22,7 @@ import sys
 from pbcore.io import (SubreadSet, HdfSubreadSet, FastaReader, FastaWriter,
                        FastqReader, FastqWriter, BarcodeSet, ExternalResource,
                        ExternalResources, openDataSet, ContigSet, ReferenceSet,
-                       GmapReferenceSet)
+                       GmapReferenceSet, ConsensusReadSet)
 from pbcommand.engine import run_cmd
 from pbcommand.cli import registry_builder, registry_runner, QuickOpt
 from pbcommand.models import FileTypes, SymbolTypes, OutputFileType, DataStore, DataStoreFile
@@ -282,6 +283,74 @@ def split_laa_fastq_archived(input_file_name, output_file_name):
     return archive_files(fastq_files, output_file_name)
 
 
+def get_barcode_sample_mappings(subreads):
+    with SubreadSet(subreads, strict=True) as ds:
+        barcoded_samples = []
+        for collection in ds.metadata.collections:
+            for bioSample in collection.wellSample.bioSamples:
+                for dnaBc in bioSample.DNABarcodes:
+                    barcoded_samples.append((dnaBc.name, bioSample.name))
+        # recover the original barcode FASTA file so we can map the barcode
+        # indices in the BAM file to the labels
+        bc_sets = {extRes.barcodes for extRes in ds.externalResources
+                   if extRes.barcodes is not None}
+        if len(bc_sets) > 1:
+            log.warn("Multiple BarcodeSets detected - further processing skipped.")
+        elif len(bc_sets) == 0:
+            log.warn("Can't find original BarcodeSet - further processing skipped.")
+        else:
+            with BarcodeSet(list(bc_sets)[0]) as bcs:
+                labels = [rec.id for rec in bcs]
+                bam_bc = set() # barcode labels actually present in BAM files
+                for rr in ds.resourceReaders():
+                    mk_lbl = lambda i,j: "{}--{}".format(labels[i], labels[j])
+                    for fw, rev in zip(rr.pbi.bcForward, rr.pbi.bcReverse):
+                        if fw == -1 or rev == -1:
+                            continue
+                        bam_bc.add(mk_lbl(fw, rev))
+                bc_filtered = []
+                bc_with_sample = set()
+                # exclude barcodes from XML that are not present in BAM
+                for bc_label, bio_sample in barcoded_samples:
+                    bc_with_sample.add(bc_label)
+                    if not bc_label in bam_bc:
+                        log.info("Leaving out %s (not present in BAM files)",
+                                 bc_label)
+                    else:
+                        bc_filtered.append((bc_label, bio_sample))
+                # add barcodes that are in the BAM but not the XML metadata
+                for bc_label in list(bam_bc):
+                    if not bc_label in bc_with_sample:
+                        log.info("Adding barcode %s with unknown sample",
+                                 bc_label)
+                        bc_filtered.append((bc_label, "unknown"))
+                barcoded_samples = bc_filtered
+        return dict(barcoded_samples)
+
+
+def make_barcode_sample_csv(subreads, csv_file):
+    headers = ["Barcode Name", "Bio Sample Name"]
+    barcoded_samples = get_barcode_sample_mappings(subreads)
+    with open(csv_file, "w") as csv_out:
+        writer = csv.writer(csv_out, delimiter=',', lineterminator="\n")
+        writer.writerow(headers)
+        for bc_label in sorted(barcoded_samples.keys()):
+            writer.writerow([bc_label, barcoded_samples[bc_label]])
+    return 0
+
+
+def make_combined_laa_zip(fastq_file, summary_csv, input_subreads, output_file_name):
+    fastq_files = split_laa_fastq(fastq_file, "consensus")
+    barcodes_csv = "Barcoded_Sample_Names.csv"
+    make_barcode_sample_csv(input_subreads, barcodes_csv)
+    all_files = fastq_files + [summary_csv, barcodes_csv]
+    try:
+        return archive_files(all_files, output_file_name)
+    finally:
+        for file_name in fastq_files + [barcodes_csv]:
+            os.remove(file_name)
+
+
 def run_fasta_to_fofn(input_file_name, output_file_name):
     args = ["echo", input_file_name, ">", output_file_name]
     log.info(" ".join(args))
@@ -473,6 +542,26 @@ def _run_split_laa_fastq(rtc):
                                         rtc.task.output_files[1]))
 
 
+combined_zip_ftype = OutputFileType(FileTypes.ZIP.file_type_id,
+                                    "consensus_combined_zip",
+                                    "Consensus Sequences Summary",
+                                    "Consensus Sequences Summary ZIP file",
+                                    "consensus_sequences_summary")
+
+@registry("make_combined_laa_zip", "0.1.1",
+          (FileTypes.FASTQ, FileTypes.CSV, FileTypes.DS_SUBREADS),
+          combined_zip_ftype,
+          is_distributed=True,
+          nproc=1)
+def _run_make_combined_laa_zip(rtc):
+    return make_combined_laa_zip(
+        fastq_file=rtc.task.input_files[0],
+        summary_csv=rtc.task.input_files[1],
+        input_subreads=rtc.task.input_files[2],
+        output_file_name=rtc.task.output_files[0])
+
+
+
 @registry("contigset2fasta", "0.1.0",
           FileTypes.DS_CONTIG,
           FileTypes.FASTA,
@@ -570,6 +659,22 @@ def run_datastore_to_subreads(rtc):
             ds.write(rtc.task.output_files[0])
     else:
         raise ValueError("Expected one or more SubreadSets in datastore")
+    return 0
+
+
+@registry("datastore_to_ccs", "0.1.0",
+          FileTypes.DATASTORE,
+          FileTypes.DS_CCS,
+          is_distributed=False,
+          nproc=1)
+def run_datastore_to_ccs(rtc):
+    datasets = list(_iterate_datastore_read_set_files(rtc.task.input_files[0]))
+    if len(datasets) > 0:
+        with ConsensusReadSet(*[f.path for f in datasets], strict=True) as ds:
+            ds.newUuid()
+            ds.write(rtc.task.output_files[0])
+    else:
+        raise ValueError("Expected one or more ConsensusReadSets in datastore")
     return 0
 
 

@@ -1,10 +1,11 @@
 
+import unittest
 import tempfile
 import logging
 import os.path as op
 
 from pbcore.io import (FastaReader, FastqReader, openDataSet, HdfSubreadSet,
-                       SubreadSet, ConsensusReadSet)
+                       SubreadSet, ConsensusReadSet, TranscriptSet)
 import pbcore.data.datasets as data
 from pbcommand.testkit import PbTestApp
 
@@ -22,6 +23,9 @@ SIV_DATA_DIR = "/pbi/dept/secondary/siv/testdata"
 
 def _to_skip_msg(exe):
     return "Missing {e} or {d}".format(d=SIV_DATA_DIR, e=exe)
+
+skip_if_no_testdata = unittest.skipUnless(op.exists(SIV_DATA_DIR),
+                                          "Missing testdata")
 
 class TestFilterDataSet(PbTestApp):
     TASK_ID = "pbcoretools.tasks.filterdataset"
@@ -114,3 +118,20 @@ class TestCombineFilters(TestFilterDataSet):
         run_filter_dataset(self.INPUT_FILES[0], ds_ofile, 500, my_filters)
         with openDataSet(ds_ofile, strict=True) as ds_out:
             self.assertEqual(len(ds_out), self.N_EXPECTED_2)
+
+
+@skip_if_no_testdata
+class TestSplitTranscripts(PbTestApp):
+    TASK_ID = "pbcoretools.tasks.split_transcripts"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.filters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.filters run-rtc '
+    TASK_OPTIONS = {"pbcoretools.task_options.hq_qv_cutoff": 0.98}
+    INPUT_FILES = [
+        "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/polished.transcriptset.xml"
+    ]
+
+    def run_after(self, rtc, output_dir):
+        with TranscriptSet(rtc.task.output_files[0], strict=True) as ds_hq:
+            self.assertEqual(len(ds_hq), 11701)
+        with TranscriptSet(rtc.task.output_files[1], strict=True) as ds_lq:
+            self.assertEqual(len(ds_lq), 44)

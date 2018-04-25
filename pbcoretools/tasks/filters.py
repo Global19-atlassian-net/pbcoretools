@@ -7,16 +7,22 @@ import sys
 import re
 
 from pbcoretools.DataSetEntryPoints import parse_filter_list
-from pbcore.io import openDataSet
+from pbcore.io import openDataSet, TranscriptSet
 from pbcommand.cli import registry_builder, registry_runner, QuickOpt
 from pbcommand.models import FileTypes, OutputFileType
 
 log = logging.getLogger(__name__)
 
-TOOL_NAMESPACE = 'pbcoretools'
-DRIVER_BASE = "python -m pbcoretools.tasks.filters "
 
-registry = registry_builder(TOOL_NAMESPACE, DRIVER_BASE)
+class Constants(object):
+    TOOL_NAMESPACE = 'pbcoretools'
+    DRIVER_BASE = "python -m pbcoretools.tasks.filters "
+
+    # Iso-Seq
+    TRANSCRIPT_QV_CUTOFF = 0.99
+
+
+registry = registry_builder(Constants.TOOL_NAMESPACE, Constants.DRIVER_BASE)
 
 
 rl_opt = QuickOpt(0, "Minimum subread length",
@@ -96,6 +102,49 @@ def run_filterDataSet(rtc):
         rtc.task.input_files[0], rtc.task.output_files[0],
         rtc.task.options["pbcoretools.task_options.read_length"],
         rtc.task.options["pbcoretools.task_options.other_filters"])
+
+
+def _split_transcripts(transcripts, hq_file, lq_file, cutoff):
+    with TranscriptSet(transcripts, strict=True) as ds_in:
+        ds_hq = ds_in.copy()
+        ds_lq = ds_in.copy()
+        combine_filters(ds_hq, {'rq': [(">=", cutoff)]})
+        combine_filters(ds_lq, {'rq': [("<", cutoff)]})
+        ds_hq.updateCounts()
+        ds_lq.updateCounts()
+        ds_hq.write(hq_file)
+        ds_lq.write(lq_file)
+    return 0
+
+
+hq_file_type = OutputFileType(FileTypes.DS_TRANSCRIPT.file_type_id,
+                              "hq_transcripts",
+                              "HQ TranscriptSet",
+                              "Hiqh-Quality TranscriptSet XML",
+                              "hq_transcripts")
+lq_file_type = OutputFileType(FileTypes.DS_TRANSCRIPT.file_type_id,
+                              "lq_transcripts",
+                              "LQ TranscriptSet",
+                              "Low-Quality TranscriptSet XML",
+                              "lq_transcripts")
+hq_qv_cutoff = QuickOpt(Constants.TRANSCRIPT_QV_CUTOFF,
+                        "QV cutoff for HQ transcripts",
+                        "Minimum read quality required for a transcript to be considered 'high-quality'")
+
+@registry("split_transcripts", "0.1.0",
+          FileTypes.DS_TRANSCRIPT,
+          (hq_file_type, lq_file_type),
+          is_distributed=False,
+          nproc=1,
+          options={"hq_qv_cutoff": hq_qv_cutoff})
+def _run_split_transcripts(rtc):
+    cutoff = rtc.task.options["pbcoretools.task_options.hq_qv_cutoff"]
+    return _split_transcripts(
+        rtc.task.input_files[0],
+        rtc.task.output_files[0],
+        rtc.task.output_files[1],
+        cutoff)
+
 
 if __name__ == '__main__':
     sys.exit(registry_runner(registry, sys.argv[1:]))
