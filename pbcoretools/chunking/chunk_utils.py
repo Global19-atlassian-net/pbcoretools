@@ -393,13 +393,17 @@ write_ccsset_barcode_chunks_to_file = functools.partial(
 
 def _to_zmw_chunked_dataset_files(dataset_type, dataset_path,
                                   max_total_nchunks, chunk_key, dir_name,
-                                  base_name, ext, extra_chunk_keys=None):
+                                  base_name, ext, extra_chunk_keys=None,
+                                  extra_split_args=None):
     """
     Similar to to_chunked_subreadset_files, but chunks reads by ZMW ranges
     for input to pbccs or pbtranscript.
     """
     dset = dataset_type(dataset_path, strict=True)
-    dset_chunks = dset.split(chunks=max_total_nchunks, zmws=True)
+    kwargs = {"chunks": max_total_nchunks, "zmws": True}
+    if extra_split_args is not None:
+        kwargs.update(extra_split_args)
+    dset_chunks = dset.split(**kwargs)
     d = {}
     for i, dset in enumerate(dset_chunks):
         chunk_id = '_'.join([base_name, str(i)])
@@ -417,7 +421,8 @@ to_zmw_chunked_subreadset_files = functools.partial(
 to_zmw_chunked_ccsset_files = functools.partial(
     _to_zmw_chunked_dataset_files, ConsensusReadSet)
 to_zmw_chunked_transcriptset_files = functools.partial(
-    _to_zmw_chunked_dataset_files, TranscriptSet)
+    _to_zmw_chunked_dataset_files, TranscriptSet,
+    extra_split_args={"targetSize": 1000})
 
 
 def _to_bam_chunked_dataset_files(dataset_type, dataset_path,
