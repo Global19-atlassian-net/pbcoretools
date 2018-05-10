@@ -837,4 +837,4 @@ class TestCombinedLAAZip(PbTestApp):
         with ZipFile(zip_out, "r") as zip_file:
             file_names = set(zip_file.namelist())
             self.assertTrue("Barcoded_Sample_Names.csv" in file_names)
-            self.assertTrue(op.basename(self.INPUT_FILES[1]) in file_names)
+            self.assertTrue("consensus_sequence_statistics.csv" in file_names)
