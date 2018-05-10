@@ -340,15 +340,19 @@ def make_barcode_sample_csv(subreads, csv_file):
 
 
 def make_combined_laa_zip(fastq_file, summary_csv, input_subreads, output_file_name):
+    tmp_dir = tempfile.mkdtemp()
+    summary_csv_tmp = op.join(tmp_dir, "consensus_sequence_statistics.csv")
+    shutil.copyfile(summary_csv, summary_csv_tmp)
     fastq_files = split_laa_fastq(fastq_file, "consensus")
     barcodes_csv = "Barcoded_Sample_Names.csv"
     make_barcode_sample_csv(input_subreads, barcodes_csv)
-    all_files = fastq_files + [summary_csv, barcodes_csv]
+    all_files = fastq_files + [summary_csv_tmp, barcodes_csv]
     try:
         return archive_files(all_files, output_file_name)
     finally:
         for file_name in fastq_files + [barcodes_csv]:
             os.remove(file_name)
+        shutil.rmtree(tmp_dir)
 
 
 def run_fasta_to_fofn(input_file_name, output_file_name):
@@ -548,7 +552,7 @@ combined_zip_ftype = OutputFileType(FileTypes.ZIP.file_type_id,
                                     "Consensus Sequences Summary ZIP file",
                                     "consensus_sequences_summary")
 
-@registry("make_combined_laa_zip", "0.1.1",
+@registry("make_combined_laa_zip", "0.1.2",
           (FileTypes.FASTQ, FileTypes.CSV, FileTypes.DS_SUBREADS),
           combined_zip_ftype,
           is_distributed=True,
