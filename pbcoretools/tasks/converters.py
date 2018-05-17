@@ -128,7 +128,8 @@ def archive_files(input_file_names, output_file_name, remove_path=True):
     if remove_path:
         archive_file_names = [op.basename(fn) for fn in archive_file_names]
     log.info("Creating zip file %s", output_file_name)
-    with ZipFile(output_file_name, "w", allowZip64=True) as zip_out:
+    with ZipFile(output_file_name, "w", zipfile.ZIP_DEFLATED,
+                 allowZip64=True) as zip_out:
         for file_name, archive_file_name in zip(input_file_names,
                                                 archive_file_names):
             zip_out.write(file_name, archive_file_name)
