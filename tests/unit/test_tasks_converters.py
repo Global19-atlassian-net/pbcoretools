@@ -166,6 +166,13 @@ class TestBam2Fasta(_BaseTestBam2Fasta):
         ds.write(cls.INPUT_FILES[0])
         super(TestBam2Fasta, cls).setUpClass()
 
+    def run_after(self, rtc, output_dir):
+        super(TestBam2Fasta, self).run_after(rtc, output_dir)
+        with SubreadSet(rtc.task.input_files[0]) as ds_in:
+            with FastaReader(rtc.task.output_files[0]) as fa_out:
+                for bam_rec, fa_rec in zip(ds_in, fa_out):
+                    self.assertEqual(fa_rec.id, bam_rec.qName)
+
 
 @skip_unless_bam2fastx
 class TestBam2FastaFiltered(_BaseTestBam2Fasta):
@@ -389,7 +396,8 @@ class TestBam2FastaTranscripts(PbTestApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.bam2fasta_transcripts"
     INPUT_FILES = [
         tempfile.NamedTemporaryFile(suffix=".transcriptset.xml").name,
-        tempfile.NamedTemporaryFile(suffix=".transcriptset.xml").name
+        tempfile.NamedTemporaryFile(suffix=".transcriptset.xml").name,
+        pbtestdata.get_file("subreads-biosample-1")
     ]
 
     @classmethod
@@ -398,10 +406,18 @@ class TestBam2FastaTranscripts(PbTestApp):
         super(TestBam2FastaTranscripts, cls).setUpClass()
 
     def run_after(self, rtc, output_dir):
+        def _compare_records(bam_file, fa_reader, transcript_type):
+            with TranscriptSet(bam_file) as bam_reader:
+                for bam_rec, fa_rec in zip(bam_reader, fa_reader):
+                    seqid = "Alice_{t}_{i}".format(t=transcript_type,
+                                                   i=bam_rec.qName)
+                    self.assertEqual(fa_rec.id, seqid)
         with FastaReader(rtc.task.output_files[0]) as hq_fasta:
             self.assertEqual(len([rec for rec in hq_fasta]), 11701)
+            _compare_records(rtc.task.input_files[0], hq_fasta, "HQ")
         with FastaReader(rtc.task.output_files[1]) as lq_fasta:
             self.assertEqual(len([rec for rec in lq_fasta]), 44)
+            _compare_records(rtc.task.input_files[1], lq_fasta, "LQ")
 
 
 @skip_unless_bam2fastx

@@ -137,7 +137,8 @@ def archive_files(input_file_names, output_file_name, remove_path=True):
 
 
 def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
-                     input_file_name, output_file_name, tmp_dir=None):
+                     input_file_name, output_file_name, tmp_dir=None,
+                     seqid_prefix=None):
     """
     Converts a dataset to a set of fastx file, possibly archived.
     Can take a subreadset or consensusreadset as input.
@@ -186,6 +187,8 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
     ]
     if barcode_mode:
         args.insert(1, "--split-barcodes")
+    if seqid_prefix is not None:
+        args.extend(["--seqid-prefix", seqid_prefix])
     log.info(" ".join(args))
     remove_files = []
     result = run_cmd(" ".join(args),
@@ -704,6 +707,20 @@ def discard_bio_samples(subreads, barcode_label):
             log.warn("Will create new BioSample and DNABarcode records")
             collection.wellSample.bioSamples.addSample(barcode_label)
             collection.wellSample.bioSamples[0].DNABarcodes.addBarcode(barcode_label)
+
+
+def get_bio_sample_name(subreads):
+    bio_samples = set()
+    for collection in subreads.metadata.collections:
+        bio_samples.update({s for s in collection.wellSample.bioSamples})
+    if len(bio_samples) == 0:
+        log.warn("No BioSample records present")
+        return "unknown"
+    elif len(bio_samples) > 1:
+        log.warn("Multiple unique BioSample records present")
+        return "multiple" # TODO confirm this
+    else:
+        return list(bio_samples)[0]
 
 
 def get_ds_name(ds, base_name, barcode_label):

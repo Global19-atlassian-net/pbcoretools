@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 
 class Constants(object):
     TOOL_ID = "pbcoretools.tasks.bam2fasta_transcripts"
-    VERSION = "0.1.0"
+    VERSION = "0.1.1"
     DRIVER = "python -m pbcoretools.tasks.bam2fasta_transcripts --resolved-tool-contract"
 
 
@@ -35,6 +35,9 @@ def get_parser():
     p.add_input_file_type(FileTypes.DS_TRANSCRIPT, "lq_transcripts",
                           "LQ Transcripts",
                           "Low-Quality TranscriptSet XML")
+    p.add_input_file_type(FileTypes.DS_SUBREAD, "subreads",
+                          "Input Subreads",
+                          "SubreadSet used to generate transcripts")
     p.add_output_file_type(FileTypes.FASTA,
                            "hq_fasta",
                            "High-Quality Transcripts",
@@ -48,19 +51,30 @@ def get_parser():
     return p
 
 
+def get_prefixes(subreads_file):
+    with SubreadSet(subreads_file) as subreads:
+        seqid_prefix = get_bio_sample_name(subreads)
+        return ("{}_HQ".format(seqid_prefix), "{}_LQ".format(seqid_prefix))
+
+
 def run_args(args):
+    hq_prefix, lq_prefix = get_prefixes(args.subreads)
     return max(
-        run_bam_to_fasta(args.hq_transcripts, args.hq_fasta),
-        run_bam_to_fasta(args.lq_transcripts, args.lq_fasta))
+        run_bam_to_fasta(args.hq_transcripts, args.hq_fasta,
+                         seqid_prefix=hq_prefix),
+        run_bam_to_fasta(args.lq_transcripts, args.lq_fasta,
+                         seqid_prefix=lq_prefix))
 
 
 def run_rtc(rtc):
+    hq_prefix, lq_prefix = get_prefixes(rtc.task.input_files[2])
     return max(
         run_bam_to_fasta(rtc.task.input_files[0], rtc.task.output_files[0],
-                         tmp_dir=rtc.task.tmpdir_resources[0].path),
+                         tmp_dir=rtc.task.tmpdir_resources[0].path,
+                         seqid_prefix=hq_prefix),
         run_bam_to_fasta(rtc.task.input_files[1], rtc.task.output_files[1],
-                         tmp_dir=rtc.task.tmpdir_resources[0].path))
-
+                         tmp_dir=rtc.task.tmpdir_resources[0].path,
+                         seqid_prefix=lq_prefix))
 
 
 def main(argv=sys.argv):
