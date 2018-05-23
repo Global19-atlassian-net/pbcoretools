@@ -11,7 +11,8 @@ import os
 import sys
 
 from pbcore.io import (FastaReader, FastqReader, openDataSet, HdfSubreadSet,
-                       SubreadSet, ConsensusReadSet, FastqWriter, FastqRecord)
+                       SubreadSet, ConsensusReadSet, FastqWriter, FastqRecord,
+                       TranscriptSet)
 from pbcommand.testkit import PbTestApp
 from pbcommand.utils import which
 from pbcommand.models.common import DataStore, DataStoreFile, FileTypes
@@ -399,6 +400,7 @@ class TestBam2FastaTranscripts(PbTestApp):
         tempfile.NamedTemporaryFile(suffix=".transcriptset.xml").name,
         pbtestdata.get_file("subreads-biosample-1")
     ]
+    READER_CLASS = FastaReader
 
     @classmethod
     def setUpClass(cls):
@@ -406,39 +408,29 @@ class TestBam2FastaTranscripts(PbTestApp):
         super(TestBam2FastaTranscripts, cls).setUpClass()
 
     def run_after(self, rtc, output_dir):
-        def _compare_records(bam_file, fa_reader, transcript_type):
+        def _compare_records(bam_file, fx_records, transcript_type):
             with TranscriptSet(bam_file) as bam_reader:
-                for bam_rec, fa_rec in zip(bam_reader, fa_reader):
+                for bam_rec, fx_rec in zip(bam_reader.__iter__(), fx_records):
                     seqid = "Alice_{t}_{i}".format(t=transcript_type,
                                                    i=bam_rec.qName)
-                    self.assertEqual(fa_rec.id, seqid)
-        with FastaReader(rtc.task.output_files[0]) as hq_fasta:
-            self.assertEqual(len([rec for rec in hq_fasta]), 11701)
-            _compare_records(rtc.task.input_files[0], hq_fasta, "HQ")
-        with FastaReader(rtc.task.output_files[1]) as lq_fasta:
-            self.assertEqual(len([rec for rec in lq_fasta]), 44)
-            _compare_records(rtc.task.input_files[1], lq_fasta, "LQ")
+                    self.assertEqual(fx_rec.id, seqid)
+        with self.READER_CLASS(rtc.task.output_files[0]) as hq_fastx:
+            records = [rec for rec in hq_fastx]
+            self.assertEqual(len(records), 11701)
+            _compare_records(rtc.task.input_files[0], records, "HQ")
+        with self.READER_CLASS(rtc.task.output_files[1]) as lq_fastx:
+            records = [rec for rec in lq_fastx]
+            self.assertEqual(len(records), 44)
+            _compare_records(rtc.task.input_files[1], records, "LQ")
 
 
 @skip_unless_bam2fastx
-class TestBam2FastqTranscripts(PbTestApp):
+class TestBam2FastqTranscripts(TestBam2FastaTranscripts):
     TASK_ID = "pbcoretools.tasks.bam2fastq_transcripts"
     DRIVER_BASE = "python -m pbcoretools.tasks.bam2fastq_transcripts"
-    INPUT_FILES = [
-        tempfile.NamedTemporaryFile(suffix=".transcriptset.xml").name,
-        tempfile.NamedTemporaryFile(suffix=".transcriptset.xml").name
-    ]
-
-    @classmethod
-    def setUpClass(cls):
-        _setup_transcripts(cls.INPUT_FILES[0], cls.INPUT_FILES[1])
-        super(TestBam2FastqTranscripts, cls).setUpClass()
-
-    def run_after(self, rtc, output_dir):
-        with FastqReader(rtc.task.output_files[0]) as hq_fastq:
-            self.assertEqual(len([rec for rec in hq_fastq]), 11701)
-        with FastqReader(rtc.task.output_files[1]) as lq_fastq:
-            self.assertEqual(len([rec for rec in lq_fastq]), 44)
+    DRIVER_EMIT = DRIVER_BASE + " --emit-tool-contract"
+    DRIVER_RESOLVE = DRIVER_BASE + " --resolved-tool-contract"
+    READER_CLASS = FastqReader
 
 
 @skip_unless_fasta2ref

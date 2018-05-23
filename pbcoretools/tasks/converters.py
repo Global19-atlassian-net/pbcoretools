@@ -712,7 +712,7 @@ def discard_bio_samples(subreads, barcode_label):
 def get_bio_sample_name(subreads):
     bio_samples = set()
     for collection in subreads.metadata.collections:
-        bio_samples.update({s for s in collection.wellSample.bioSamples})
+        bio_samples.update({s.name for s in collection.wellSample.bioSamples})
     if len(bio_samples) == 0:
         log.warn("No BioSample records present")
         return "unknown"

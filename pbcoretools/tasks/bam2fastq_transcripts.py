@@ -36,7 +36,7 @@ def get_parser():
     p.add_input_file_type(FileTypes.DS_TRANSCRIPT, "lq_transcripts",
                           "LQ Transcripts",
                           "Low-Quality TranscriptSet XML")
-    p.add_input_file_type(FileTypes.DS_SUBREAD, "subreads",
+    p.add_input_file_type(FileTypes.DS_SUBREADS, "subreads",
                           "Input Subreads",
                           "SubreadSet used to generate transcripts")
     p.add_output_file_type(FileTypes.FASTQ,

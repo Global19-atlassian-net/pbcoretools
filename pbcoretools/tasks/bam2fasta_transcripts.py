@@ -9,8 +9,9 @@ import sys
 from pbcommand.models import FileTypes, ResourceTypes, get_pbparser
 from pbcommand.cli import pbparser_runner
 from pbcommand.utils import setup_log
+from pbcore.io import SubreadSet
 
-from pbcoretools.tasks.converters import run_bam_to_fasta
+from pbcoretools.tasks.converters import run_bam_to_fasta, get_bio_sample_name
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ def get_parser():
     p.add_input_file_type(FileTypes.DS_TRANSCRIPT, "lq_transcripts",
                           "LQ Transcripts",
                           "Low-Quality TranscriptSet XML")
-    p.add_input_file_type(FileTypes.DS_SUBREAD, "subreads",
+    p.add_input_file_type(FileTypes.DS_SUBREADS, "subreads",
                           "Input Subreads",
                           "SubreadSet used to generate transcripts")
     p.add_output_file_type(FileTypes.FASTA,
@@ -54,7 +55,7 @@ def get_parser():
 def get_prefixes(subreads_file):
     with SubreadSet(subreads_file) as subreads:
         seqid_prefix = get_bio_sample_name(subreads)
-        return ("{}_HQ".format(seqid_prefix), "{}_LQ".format(seqid_prefix))
+        return ("{}_HQ_".format(seqid_prefix), "{}_LQ_".format(seqid_prefix))
 
 
 def run_args(args):
