@@ -4,11 +4,11 @@ Tool contract wrappers for miscellaneous quick functions.
 """
 
 from collections import defaultdict
-from zipfile import ZipFile
 import subprocess
 import itertools
 import functools
 import tempfile
+import zipfile
 import logging
 import shutil
 import gzip
@@ -128,7 +128,8 @@ def archive_files(input_file_names, output_file_name, remove_path=True):
     if remove_path:
         archive_file_names = [op.basename(fn) for fn in archive_file_names]
     log.info("Creating zip file %s", output_file_name)
-    with ZipFile(output_file_name, "w", allowZip64=True) as zip_out:
+    with zipfile.ZipFile(output_file_name, "w", zipfile.ZIP_DEFLATED,
+                         allowZip64=True) as zip_out:
         for file_name, archive_file_name in zip(input_file_names,
                                                 archive_file_names):
             zip_out.write(file_name, archive_file_name)
@@ -278,7 +279,7 @@ def split_laa_fastq_archived(input_file_name, output_file_name):
     assert (ext == ".zip")
     fastq_files = list(split_laa_fastq(input_file_name, base))
     if len(fastq_files) == 0: # workaround for empty input
-        with ZipFile(output_file_name, "w", allowZip64=True) as zip_out:
+        with zipfile.ZipFile(output_file_name, "w", allowZip64=True) as zip_out:
             return 0
     return archive_files(fastq_files, output_file_name)
 
@@ -340,15 +341,19 @@ def make_barcode_sample_csv(subreads, csv_file):
 
 
 def make_combined_laa_zip(fastq_file, summary_csv, input_subreads, output_file_name):
+    tmp_dir = tempfile.mkdtemp()
+    summary_csv_tmp = op.join(tmp_dir, "consensus_sequence_statistics.csv")
+    shutil.copyfile(summary_csv, summary_csv_tmp)
     fastq_files = split_laa_fastq(fastq_file, "consensus")
     barcodes_csv = "Barcoded_Sample_Names.csv"
     make_barcode_sample_csv(input_subreads, barcodes_csv)
-    all_files = fastq_files + [summary_csv, barcodes_csv]
+    all_files = fastq_files + [summary_csv_tmp, barcodes_csv]
     try:
         return archive_files(all_files, output_file_name)
     finally:
         for file_name in fastq_files + [barcodes_csv]:
             os.remove(file_name)
+        shutil.rmtree(tmp_dir)
 
 
 def run_fasta_to_fofn(input_file_name, output_file_name):
@@ -548,7 +553,7 @@ combined_zip_ftype = OutputFileType(FileTypes.ZIP.file_type_id,
                                     "Consensus Sequences Summary ZIP file",
                                     "consensus_sequences_summary")
 
-@registry("make_combined_laa_zip", "0.1.1",
+@registry("make_combined_laa_zip", "0.1.2",
           (FileTypes.FASTQ, FileTypes.CSV, FileTypes.DS_SUBREADS),
           combined_zip_ftype,
           is_distributed=True,
