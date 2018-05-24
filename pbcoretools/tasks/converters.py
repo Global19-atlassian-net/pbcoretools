@@ -715,10 +715,10 @@ def get_bio_sample_name(subreads):
         bio_samples.update({s.name for s in collection.wellSample.bioSamples})
     if len(bio_samples) == 0:
         log.warn("No BioSample records present")
-        return "unknown"
+        return "unknown_sample"
     elif len(bio_samples) > 1:
         log.warn("Multiple unique BioSample records present")
-        return "multiple" # TODO confirm this
+        return "multiple_samples"
     else:
         return list(bio_samples)[0]
 
