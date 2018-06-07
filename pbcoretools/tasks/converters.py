@@ -67,7 +67,7 @@ def _run_bax_to_bam(input_file_name, output_file_name):
     return 0
 
 
-def _run_bax_to_bam(input_file_name, output_file_name):
+def _run_bax_to_bam_multi_dataset(input_file_name, output_file_name):
     with HdfSubreadSet(input_file_name) as ds_in:
         movies = set()
         for rr in ds_in.resourceReaders():
@@ -110,7 +110,7 @@ subreads_barcoded_file_type = OutputFileType(FileTypes.DS_SUBREADS.file_type_id,
           FileTypes.DS_SUBREADS_H5,
           subreads_from_h5_file_type, is_distributed=True, nproc=1)
 def _run_bax2bam(rtc):
-    return _run_bax_to_bam(rtc.task.input_files[0], rtc.task.output_files[0])
+    return _run_bax_to_bam_multi_dataset(rtc.task.input_files[0], rtc.task.output_files[0])
 
 
 fasta_file_type = OutputFileType(FileTypes.FASTA.file_type_id, "fasta", "FASTA file",
