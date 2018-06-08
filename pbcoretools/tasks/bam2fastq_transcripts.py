@@ -10,7 +10,8 @@ from pbcommand.models import FileTypes, ResourceTypes, get_pbparser
 from pbcommand.cli import pbparser_runner
 from pbcommand.utils import setup_log
 
-from pbcoretools.tasks.converters import run_bam_to_fastq, get_bio_sample_name
+from pbcoretools.bam2fastx import run_bam_to_fastq
+from pbcoretools.file_utils import get_bio_sample_name
 from pbcoretools.tasks.bam2fasta_transcripts import get_prefixes
 
 log = logging.getLogger(__name__)

@@ -1,39 +1,33 @@
 
 """
-Tool contract wrapper for running bam2fasta, with tmp_dir support
+Tool contract wrapper for running bam2fastq, with tmp_dir support
 """
 
 import functools
 import tempfile
 import logging
-import gzip
 import re
 import os.path as op
-import os
 import sys
 
-from pbcore.io import (openDataSet, BarcodeSet,FastaReader, FastaWriter,
-                       FastqReader, FastqWriter)
 from pbcommand.models import FileTypes, ResourceTypes, get_pbparser
 from pbcommand.cli import pbparser_runner
 from pbcommand.utils import setup_log
-from pbcommand.engine import run_cmd
-from pbcommand.utils import walker
 
-from pbcoretools.bam2fastx import run_bam_to_fasta
+from pbcoretools.bam2fastx import run_bam_to_fastq
 
 log = logging.getLogger(__name__)
 
 class Constants(object):
-    TOOL_ID = "pbcoretools.tasks.bam2fasta"
-    VERSION = "0.2.0"
-    DRIVER = "python -m pbcoretools.tasks.bam2fasta --resolved-tool-contract"
+    TOOL_ID = "pbcoretools.tasks.bam2fastq"
+    VERSION = "0.4.0"
+    DRIVER = "python -m pbcoretools.tasks.bam2fastq --resolved-tool-contract"
 
 
 def get_parser():
     p = get_pbparser(Constants.TOOL_ID,
                      Constants.VERSION,
-                     "bam2fasta export",
+                     "bam2fastq export",
                      __doc__,
                      Constants.DRIVER,
                      is_distributed=True,
@@ -41,20 +35,20 @@ def get_parser():
     p.add_input_file_type(FileTypes.DS_SUBREADS, "subreads",
                           "Input Subreads",
                           "Input SubreadSet XML")
-    p.add_output_file_type(FileTypes.FASTA,
-                           "fasta_out",
-                           "FASTA subreads",
-                           description="Exported FASTA",
+    p.add_output_file_type(FileTypes.FASTQ,
+                           "fastq_out",
+                           "FASTQ subreads",
+                           description="Exported FASTQ",
                            default_name="subreads")
     return p
 
 
 def run_args(args):
-    return run_bam_to_fasta(args.subreads, args.fasta_out)
+    return run_bam_to_fastq(args.subreads, args.fastq_out)
 
 
 def run_rtc(rtc):
-    return run_bam_to_fasta(rtc.task.input_files[0], rtc.task.output_files[0],
+    return run_bam_to_fastq(rtc.task.input_files[0], rtc.task.output_files[0],
                             tmp_dir=rtc.task.tmpdir_resources[0].path)
 
 

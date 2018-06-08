@@ -12,7 +12,7 @@ from pbcommand.models import FileTypes, ResourceTypes, get_pbparser
 from pbcommand.cli import pbparser_runner
 from pbcommand.utils import setup_log
 
-from pbcoretools.tasks.converters import run_bam_to_fasta
+from pbcoretools.bam2fastx import run_bam_to_fasta
 
 log = logging.getLogger(__name__)
 
