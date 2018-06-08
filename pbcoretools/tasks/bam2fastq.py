@@ -1,6 +1,6 @@
 
 """
-bam2fastq export with tmp dir support
+Tool contract wrapper for running bam2fastq, with tmp_dir support
 """
 
 import functools

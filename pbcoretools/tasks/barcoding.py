@@ -30,7 +30,7 @@ class Constants(object):
 registry = registry_builder(Constants.TOOL_NAMESPACE, Constants.DRIVER_BASE)
 
 
-@registry("datastore_to_subreads", "0.2.0",
+@registry("datastore_to_subreads", "0.2.1",
           FileTypes.DATASTORE,
           FileTypes.DS_SUBREADS,
           is_distributed=False,
@@ -46,7 +46,7 @@ def run_datastore_to_subreads(rtc):
     return 0
 
 
-@registry("datastore_to_ccs", "0.1.0",
+@registry("datastore_to_ccs", "0.1.1",
           FileTypes.DATASTORE,
           FileTypes.DS_CCS,
           is_distributed=False,
@@ -62,7 +62,7 @@ def run_datastore_to_ccs(rtc):
     return 0
 
 
-@registry("update_barcoded_sample_metadata", "0.3.0",
+@registry("update_barcoded_sample_metadata", "0.3.1",
           (FileTypes.JSON, FileTypes.DS_SUBREADS, FileTypes.DS_BARCODE),
           FileTypes.DATASTORE,
           is_distributed=False,
@@ -79,7 +79,7 @@ def _run_update_barcoded_sample_metadata(rtc):
     return 0
 
 
-@registry("update_barcoded_sample_metadata_ccs", "0.1.0",
+@registry("update_barcoded_sample_metadata_ccs", "0.1.1",
           (FileTypes.JSON, FileTypes.DS_CCS, FileTypes.DS_BARCODE),
           FileTypes.DATASTORE,
           is_distributed=False,
@@ -101,7 +101,7 @@ ds_name_opt = QuickOpt("", "Name of Output Data Set",
                        "SMRT Link")
 
 
-@registry("reparent_subreads", "0.1.0",
+@registry("reparent_subreads", "0.1.1",
           FileTypes.DS_SUBREADS,
           FileTypes.DS_SUBREADS,
           is_distributed=False,
@@ -132,7 +132,7 @@ def _ds_to_datastore(dataset_file, datastore_file,
     return 0
 
 
-@registry("subreads_to_datastore", "0.1.0",
+@registry("subreads_to_datastore", "0.1.1",
           FileTypes.DS_SUBREADS,
           FileTypes.JSON,
           is_distributed=False,
@@ -143,7 +143,7 @@ def _run_subreads_to_datastore(rtc):
                             source_id=rtc.task.task_id + "-out-0")
 
 
-@registry("ccs_to_datastore", "0.1.0",
+@registry("ccs_to_datastore", "0.1.1",
           FileTypes.DS_CCS,
           FileTypes.JSON,
           is_distributed=False,

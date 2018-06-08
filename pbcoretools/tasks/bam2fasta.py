@@ -1,8 +1,6 @@
 
 """
-Wra
-
-Also includes bam2fasta export with tmp dir support
+Tool contract wrapper for running bam2fasta, with tmp_dir support
 """
 
 import functools

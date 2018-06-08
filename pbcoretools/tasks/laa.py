@@ -40,7 +40,7 @@ chimera_zip_ftype = OutputFileType(
     "chimera_fastq")
 
 
-@registry("split_laa_fastq", "0.3.0",
+@registry("split_laa_fastq", "0.3.1",
           (FileTypes.FASTQ, FileTypes.FASTQ), #FileTypes.DS_SUBREADS),
           (consensus_zip_ftype, chimera_zip_ftype),
           is_distributed=True, nproc=1)
@@ -59,7 +59,7 @@ combined_zip_ftype = OutputFileType(FileTypes.ZIP.file_type_id,
                                     "consensus_sequences_summary")
 
 
-@registry("make_combined_laa_zip", "0.1.2",
+@registry("make_combined_laa_zip", "0.1.3",
           (FileTypes.FASTQ, FileTypes.CSV, FileTypes.DS_SUBREADS),
           combined_zip_ftype,
           is_distributed=True,
