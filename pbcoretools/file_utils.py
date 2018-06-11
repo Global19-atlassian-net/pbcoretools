@@ -56,7 +56,8 @@ def archive_files(input_file_names, output_file_name, remove_path=True):
     return 0
 
 
-def split_laa_fastq(input_file_name, output_file_base):
+def split_laa_fastq(input_file_name, output_file_base, subreads_file_name,
+                    bio_samples_by_bc=None):
     """
     Split an LAA FASTQ file into one file per barcode.
     """
@@ -67,10 +68,16 @@ def split_laa_fastq(input_file_name, output_file_base):
         for rec in fastq_in:
             bc_id = re.sub("^Barcode", "", rec.id.split("_")[0])
             records[bc_id].append(rec)
-    #bio_samples_by_bc = get_barcode_to_bio_sample_mappings(subreads_file_name)
+    if bio_samples_by_bc is None:
+        bio_samples_by_bc = {}
+        with SubreadSet(subreads_file_name, strict=True) as ds:
+            if ds.isBarcoded:
+                bio_samples_by_bc = get_barcode_sample_mappings(ds)
     outputs = []
     for bc_id in sorted(records.keys()):
-        ofn = "{b}.{i}.fastq".format(b=output_file_base, i=bc_id)
+        bio_sample = bio_samples_by_bc.get(bc_id, "unknown")
+        ofn = "{b}.{s}.{i}.fastq".format(b=output_file_base, s=bio_sample,
+                                         i=bc_id)
         with FastqWriter(ofn) as fastq_out:
             for rec in records[bc_id]:
                 fastq_out.writeRecord(rec)
@@ -78,13 +85,13 @@ def split_laa_fastq(input_file_name, output_file_base):
     return outputs
 
 
-def split_laa_fastq_archived(input_file_name, output_file_name):
+def split_laa_fastq_archived(input_file_name, output_file_name, subreads_file_name):
     """
     Split an LAA FASTQ file into one file per barcode and package as zip.
     """
     base, ext = op.splitext(output_file_name)
     assert (ext == ".zip")
-    fastq_files = list(split_laa_fastq(input_file_name, base))
+    fastq_files = list(split_laa_fastq(input_file_name, base, subreads_file_name))
     if len(fastq_files) == 0:  # workaround for empty input
         with zipfile.ZipFile(output_file_name, "w", allowZip64=True) as zip_out:
             return 0
@@ -102,69 +109,72 @@ def iterate_datastore_read_set_files(datastore_file):
             yield f
 
 
-def get_barcode_sample_mappings(subreads):
-    with SubreadSet(subreads, strict=True) as ds:
-        barcoded_samples = []
-        for collection in ds.metadata.collections:
-            for bioSample in collection.wellSample.bioSamples:
-                for dnaBc in bioSample.DNABarcodes:
-                    barcoded_samples.append((dnaBc.name, bioSample.name))
-        # recover the original barcode FASTA file so we can map the barcode
-        # indices in the BAM file to the labels
-        bc_sets = {extRes.barcodes for extRes in ds.externalResources
-                   if extRes.barcodes is not None}
-        if len(bc_sets) > 1:
-            log.warn("Multiple BarcodeSets detected - further processing skipped.")
-        elif len(bc_sets) == 0:
-            log.warn("Can't find original BarcodeSet - further processing skipped.")
-        else:
-            with BarcodeSet(list(bc_sets)[0]) as bcs:
-                labels = [rec.id for rec in bcs]
-                bam_bc = set()  # barcode labels actually present in BAM files
-                for rr in ds.resourceReaders():
-                    mk_lbl = lambda i, j: "{}--{}".format(labels[i], labels[j])
-                    for fw, rev in zip(rr.pbi.bcForward, rr.pbi.bcReverse):
-                        if fw == -1 or rev == -1:
-                            continue
-                        bam_bc.add(mk_lbl(fw, rev))
-                bc_filtered = []
-                bc_with_sample = set()
-                # exclude barcodes from XML that are not present in BAM
-                for bc_label, bio_sample in barcoded_samples:
-                    bc_with_sample.add(bc_label)
-                    if not bc_label in bam_bc:
-                        log.info("Leaving out %s (not present in BAM files)",
-                                 bc_label)
-                    else:
-                        bc_filtered.append((bc_label, bio_sample))
-                # add barcodes that are in the BAM but not the XML metadata
-                for bc_label in list(bam_bc):
-                    if not bc_label in bc_with_sample:
-                        log.info("Adding barcode %s with unknown sample",
-                                 bc_label)
-                        bc_filtered.append((bc_label, "unknown"))
-                barcoded_samples = bc_filtered
-        return dict(barcoded_samples)
+def get_barcode_sample_mappings(ds):
+    barcoded_samples = []
+    for collection in ds.metadata.collections:
+        for bioSample in collection.wellSample.bioSamples:
+            for dnaBc in bioSample.DNABarcodes:
+                barcoded_samples.append((dnaBc.name, bioSample.name))
+    # recover the original barcode FASTA file so we can map the barcode
+    # indices in the BAM file to the labels
+    bc_sets = {extRes.barcodes for extRes in ds.externalResources
+               if extRes.barcodes is not None}
+    if len(bc_sets) > 1:
+        log.warn("Multiple BarcodeSets detected - further processing skipped.")
+    elif len(bc_sets) == 0:
+        log.warn("Can't find original BarcodeSet - further processing skipped.")
+    else:
+        with BarcodeSet(list(bc_sets)[0]) as bcs:
+            labels = [rec.id for rec in bcs]
+            bam_bc = set()  # barcode labels actually present in BAM files
+            for rr in ds.resourceReaders():
+                mk_lbl = lambda i, j: "{}--{}".format(labels[i], labels[j])
+                for fw, rev in zip(rr.pbi.bcForward, rr.pbi.bcReverse):
+                    if fw == -1 or rev == -1:
+                        continue
+                    bam_bc.add(mk_lbl(fw, rev))
+            bc_filtered = []
+            bc_with_sample = set()
+            # exclude barcodes from XML that are not present in BAM
+            for bc_label, bio_sample in barcoded_samples:
+                bc_with_sample.add(bc_label)
+                if not bc_label in bam_bc:
+                    log.info("Leaving out %s (not present in BAM files)",
+                             bc_label)
+                else:
+                    bc_filtered.append((bc_label, bio_sample))
+            # add barcodes that are in the BAM but not the XML metadata
+            for bc_label in list(bam_bc):
+                if not bc_label in bc_with_sample:
+                    log.info("Adding barcode %s with unknown sample",
+                             bc_label)
+                    bc_filtered.append((bc_label, "unknown"))
+            barcoded_samples = bc_filtered
+    return dict(barcoded_samples)
 
 
 def make_barcode_sample_csv(subreads, csv_file):
     headers = ["Barcode Name", "Bio Sample Name"]
-    barcoded_samples = get_barcode_sample_mappings(subreads)
+    barcoded_samples = {}
+    with SubreadSet(subreads, strict=True) as ds:
+        if ds.isBarcoded:
+            barcoded_samples = get_barcode_sample_mappings(ds)
     with open(csv_file, "w") as csv_out:
         writer = csv.writer(csv_out, delimiter=',', lineterminator="\n")
         writer.writerow(headers)
         for bc_label in sorted(barcoded_samples.keys()):
-            writer.writerow([bc_label, barcoded_samples[bc_label]])
-    return 0
+            writer.writerow([bc_label, barcoded_samples.get(bc_label, "unknown_sample")])
+    return barcoded_samples
 
 
 def make_combined_laa_zip(fastq_file, summary_csv, input_subreads, output_file_name):
     tmp_dir = tempfile.mkdtemp()
     summary_csv_tmp = op.join(tmp_dir, "consensus_sequence_statistics.csv")
     shutil.copyfile(summary_csv, summary_csv_tmp)
-    fastq_files = split_laa_fastq(fastq_file, "consensus")
     barcodes_csv = "Barcoded_Sample_Names.csv"
-    make_barcode_sample_csv(input_subreads, barcodes_csv)
+    bio_samples_by_bc = make_barcode_sample_csv(input_subreads, barcodes_csv)
+    fastq_files = split_laa_fastq(fastq_file, "consensus", input_subreads,
+                                  bio_samples_by_bc)
     all_files = fastq_files + [summary_csv_tmp, barcodes_csv]
     try:
         return archive_files(all_files, output_file_name)

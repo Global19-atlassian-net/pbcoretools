@@ -42,17 +42,19 @@ def _validate_dataset_xml(file_name):
 
 
 def _get_fastq_records():
+    # these correspond to barcodes in the barcoded-subreadset dataset
+    # provided by pbtestdata
     return [
-        FastqRecord("Barcode1--1_Cluster0_Phase0_NumReads91",
+        FastqRecord("Barcodelbc1--lbc1_Cluster0_Phase0_NumReads91",
                     "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
                     qualityString="~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"),
-        FastqRecord("Barcode1--1_Cluster0_Phase1_NumReads90",
+        FastqRecord("Barcodelbc1--lbc1_Cluster0_Phase1_NumReads90",
                     "AAAAAAAGAAAAAAAAAAAAAAATAAAAAAAAAAAAAA",
                     qualityString="~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"),
-        FastqRecord("Barcode2--2_Cluster0_Phase0_NumReads91",
+        FastqRecord("Barcodelbc3--lbc3_Cluster0_Phase0_NumReads91",
                     "TAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAT",
                     qualityString="~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"),
-        FastqRecord("Barcode2--2_Cluster0_Phase1_NumReads90",
+        FastqRecord("Barcodelbc3--lbc3_Cluster0_Phase1_NumReads90",
                     "CAAAAAAGAAAAAAAAAAAAAAATAAAAAAAAAAAAAC",
                     qualityString="~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     ]
@@ -127,18 +129,23 @@ class TestSplitLAA(unittest.TestCase):
     Unit tests for LAA FASTQ splitter.
     """
 
+    SUBREADS = pbtestdata.get_file("barcoded-subreadset")
+
     def setUp(self):
         # FIXME workaround for 'nose' stupidity
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
         self._records = _get_fastq_records()
         self.input_file_name = make_fastq_inputs(self._records)
+        self._subreads = pbtestdata.get_file("barcoded-subreadset")
 
     def test_split_laa_fastq(self):
         ifn = self.input_file_name
         ofb = tempfile.NamedTemporaryFile().name
-        ofs = split_laa_fastq(ifn, ofb)
+        ofs = split_laa_fastq(ifn, ofb, self._subreads)
         self.assertEqual(len(ofs), 2)
+        suffixes = sorted([".".join(of.split('.')[1:]) for of in ofs])
+        self.assertEqual(suffixes, ['Alice.lbc1--lbc1.fastq', 'Charles.lbc3--lbc3.fastq'])
         for i, ofn in enumerate(ofs):
             with FastqReader(ofn) as fastq_in:
                 recs = [rec for rec in fastq_in]
@@ -149,27 +156,26 @@ class TestSplitLAA(unittest.TestCase):
     def test_split_laa_fastq_archived(self):
         ifn = self.input_file_name
         ofn = tempfile.NamedTemporaryFile(suffix=".zip").name
-        rc = split_laa_fastq_archived(ifn, ofn)
+        rc = split_laa_fastq_archived(ifn, ofn, self._subreads)
         self.assertEqual(rc, 0)
-        # now with a different extension
-        ofn = tempfile.NamedTemporaryFile(suffix=".zip").name
-        rc = split_laa_fastq_archived(ifn, ofn)
-        self.assertEqual(rc, 0)
+        with ZipFile(ofn, "r") as zip_in:
+            files = zip_in.namelist()
+            suffixes = sorted([".".join(of.split('.')[1:]) for of in files])
+            self.assertEqual(suffixes, ['Alice.lbc1--lbc1.fastq', 'Charles.lbc3--lbc3.fastq'])
 
     def test_get_barcode_sample_mappings(self):
-        subreads = pbtestdata.get_file("barcoded-subreadset")
-        with SubreadSet(subreads) as ds:
+        with SubreadSet(self._subreads) as ds:
             # just double-checking that the XML defines more samples than are
             # actually present in the BAM
             assert len(ds.metadata.collections[0].wellSample.bioSamples) == 3
-        samples = get_barcode_sample_mappings(subreads)
+        samples = get_barcode_sample_mappings(SubreadSet(self._subreads))
         self.assertEqual(samples, {'lbc3--lbc3': 'Charles',
                                    'lbc1--lbc1': 'Alice'})
 
     def test_make_barcode_sample_csv(self):
-        subreads = pbtestdata.get_file("barcoded-subreadset")
         csv_file = tempfile.NamedTemporaryFile(suffix=".csv").name
-        make_barcode_sample_csv(subreads, csv_file)
+        sample_mappings = make_barcode_sample_csv(self._subreads, csv_file)
+        self.assertEqual(sample_mappings, {'lbc3--lbc3': 'Charles', 'lbc1--lbc1': 'Alice'})
         with open(csv_file) as f:
             self.assertEqual(
                 f.read(), "Barcode Name,Bio Sample Name\nlbc1--lbc1,Alice\nlbc3--lbc3,Charles\n")

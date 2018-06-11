@@ -31,25 +31,27 @@ consensus_zip_ftype = OutputFileType(
     "fastq_split_zip",
     "Consensus Amplicons",
     "Consensus amplicons in FASTQ format, split by barcode",
-    "consensus_fastq")
+    "consensus")
 chimera_zip_ftype = OutputFileType(
     FileTypes.ZIP.file_type_id,
     "fastq_split_zip",
     "Chimeric/Noise Sequences by barcode",
     "Chimeric and noise sequences in FASTQ format, split by barcode",
-    "chimera_fastq")
+    "chimera")
 
 
-@registry("split_laa_fastq", "0.3.1",
-          (FileTypes.FASTQ, FileTypes.FASTQ), #FileTypes.DS_SUBREADS),
+@registry("split_laa_fastq", "0.4",
+          (FileTypes.FASTQ, FileTypes.FASTQ, FileTypes.DS_SUBREADS),
           (consensus_zip_ftype, chimera_zip_ftype),
           is_distributed=True, nproc=1)
 def _run_split_laa_fastq(rtc):
     # XXX a bit of a hack to support unique file names for the FASTQ tarballs
     return max(split_laa_fastq_archived(rtc.task.input_files[0],
-                                        rtc.task.output_files[0]),
+                                        rtc.task.output_files[0],
+                                        rtc.task.input_files[2]),
                split_laa_fastq_archived(rtc.task.input_files[1],
-                                        rtc.task.output_files[1]))
+                                        rtc.task.output_files[1],
+                                        rtc.task.input_files[2]))
 
 
 combined_zip_ftype = OutputFileType(FileTypes.ZIP.file_type_id,
