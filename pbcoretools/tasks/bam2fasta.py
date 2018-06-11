@@ -12,8 +12,6 @@ import os.path as op
 import os
 import sys
 
-from pbcore.io import (openDataSet, BarcodeSet,FastaReader, FastaWriter,
-                       FastqReader, FastqWriter)
 from pbcommand.models import FileTypes, ResourceTypes, get_pbparser
 from pbcommand.cli import pbparser_runner
 from pbcommand.utils import setup_log
