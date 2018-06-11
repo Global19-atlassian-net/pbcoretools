@@ -13,11 +13,11 @@ import os
 import sys
 
 from pbcore.io import (openDataSet, BarcodeSet,FastaReader, FastaWriter,
-                       FastqReader, FastqWriter)
+                       FastqReader, FastqWriter, SubreadSet)
 from pbcommand.engine import run_cmd
 from pbcommand.utils import walker
 
-from pbcoretools.file_utils import archive_files
+from pbcoretools.file_utils import archive_files, get_barcode_sample_mappings
 
 log = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ def _ungzip_fastx(gzip_file_name, fastx_file_name):
 
 def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                       input_file_name, output_file_name, tmp_dir=None,
-                      seqid_prefix=None):
+                      seqid_prefix=None, subreads_in=None):
     """
     Converts a dataset to a set of fastx file, possibly archived.
     Can take a subreadset or consensusreadset as input.
@@ -57,6 +57,7 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                     if bam.barcodes is not None:
                         barcode_sets.add(bam.barcodes)
     barcode_labels = []
+    bio_samples_to_bc = None
     if barcode_mode:
         if len(barcode_sets) == 1:
             bc_file = list(barcode_sets)[0]
@@ -74,6 +75,11 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                 log.warn("  %s", fn)
         else:
             log.info("No barcode labels available")
+        if subreads_in is not None:
+            bio_samples_to_bc = {}
+            with SubreadSet(subreads_in, strict=True) as subread_ds:
+                if subread_ds.isBarcoded:
+                    bio_samples_to_bc = get_barcode_sample_mappings(subread_ds)
     base_ext = re.sub("bam2", ".", program_name)
     suffix = "{f}.gz".format(f=base_ext)
     tmp_out_prefix = tempfile.NamedTemporaryFile(dir=tmp_dir).name
@@ -127,9 +133,12 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                                 return x
                             bc_fwd_label = _label_or_none(bc_fwd_rev[0])
                             bc_rev_label = _label_or_none(bc_fwd_rev[1])
-                            bc_label = "{f}__{r}".format(f=bc_fwd_label,
+                            bc_label = "{f}--{r}".format(f=bc_fwd_label,
                                                          r=bc_rev_label)
                         suffix2 = ".{l}{t}".format(l=bc_label, t=base_ext)
+                        if bio_samples_to_bc is not None:
+                            sample = bio_samples_to_bc.get(bc_label, "unknown")
+                            suffix2 = ".{}".format(sample) + suffix2
                     else:
                         suffix2 = base_ext
                     base, ext = op.splitext(op.basename(output_file_name))
