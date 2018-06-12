@@ -287,8 +287,8 @@ class TestScatterSubreadBarcodes(pbcommand.testkit.core.PbTestScatterApp):
 class TestScatterSubreadBarcodesLAAgc(pbcommand.testkit.core.PbTestScatterApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.scatter_laagc"
     INPUT_FILES = [
-        pbtestdata.get_file("barcoded-subreadset"),
-        pbtestdata.get_file("lambdaNEB")
+        pbtestdata.get_file("lambdaNEB"),
+        pbtestdata.get_file("barcoded-subreadset")
     ]
     MAX_NCHUNKS = 8
     RESOLVED_MAX_NCHUNKS = 8
