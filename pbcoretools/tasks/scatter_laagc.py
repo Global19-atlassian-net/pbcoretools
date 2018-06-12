@@ -33,15 +33,15 @@ def get_contract_parser():
                              Constants.CHUNK_KEYS,
                              is_distributed=True)
 
-    p.add_input_file_type(FileTypes.DS_SUBREADS,
-                          "subreads",
-                          "SubreadSet",
-                          "Pacbio DataSet SubreadSet")
-
     p.add_input_file_type(FileTypes.DS_REF,
                           "ds_reference",
                           "ReferenceSet",
                           "Pac Bio ReferenceSet XML")
+
+    p.add_input_file_type(FileTypes.DS_SUBREADS,
+                          "subreads",
+                          "SubreadSet",
+                          "Pacbio DataSet SubreadSet")
 
     p.add_output_file_type(FileTypes.CHUNK,
                            "cjson_out",
@@ -77,8 +77,8 @@ def args_runner(args):
 
 
 def rtc_runner(rtc):
-    return run_main(rtc.task.input_files[0],
-                    rtc.task.input_files[1],
+    return run_main(rtc.task.input_files[1],
+                    rtc.task.input_files[0],
                     rtc.task.output_files[0],
                     rtc.task.max_nchunks,
                     os.path.dirname(rtc.task.output_files[0]))
