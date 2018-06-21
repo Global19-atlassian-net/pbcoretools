@@ -11,7 +11,7 @@ from pbcommand.models import FileTypes
 from pbcommand.cli import pbparser_runner
 from pbcommand.utils import setup_log
 
-from pbcoretools.tasks.converters import run_bam_to_fastq
+from pbcoretools.bam2fastx import run_bam_to_fastq
 from pbcoretools.tasks.bam2fasta_archive import (get_parser_impl, run_args_impl, run_rtc_impl)
 
 log = logging.getLogger(__name__)

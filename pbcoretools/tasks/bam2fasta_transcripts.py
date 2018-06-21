@@ -11,7 +11,8 @@ from pbcommand.cli import pbparser_runner
 from pbcommand.utils import setup_log
 from pbcore.io import SubreadSet
 
-from pbcoretools.tasks.converters import run_bam_to_fasta, get_bio_sample_name
+from pbcoretools.bam2fastx import run_bam_to_fasta
+from pbcoretools.file_utils import get_bio_sample_name
 
 log = logging.getLogger(__name__)
 

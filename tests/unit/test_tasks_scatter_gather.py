@@ -284,6 +284,17 @@ class TestScatterSubreadBarcodes(pbcommand.testkit.core.PbTestScatterApp):
     CHUNK_KEYS = ("$chunk.subreadset_id", )
 
 
+class TestScatterSubreadBarcodesLAAgc(pbcommand.testkit.core.PbTestScatterApp):
+    DRIVER_BASE = "python -m pbcoretools.tasks.scatter_laagc"
+    INPUT_FILES = [
+        pbtestdata.get_file("lambdaNEB"),
+        pbtestdata.get_file("barcoded-subreadset")
+    ]
+    MAX_NCHUNKS = 8
+    RESOLVED_MAX_NCHUNKS = 8
+    CHUNK_KEYS = ("$chunk.subreadset_id", "$chunk.reference_id")
+
+
 @skip_if_missing_testdata
 class TestScatterMinorVariants(pbcommand.testkit.core.PbTestScatterApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.scatter_ccs_aligned_barcodes"

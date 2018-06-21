@@ -265,6 +265,7 @@ def write_alignmentset_chunks_to_file(chunk_file, alignmentset_path,
     write_chunks_to_json(chunks, chunk_file)
     return 0
 
+
 def to_chunked_alignmentset_files(alignmentset_path, reference_path,
                                   max_total_nchunks, chunk_key, dir_name,
                                   base_name, ext, by_zmw):
@@ -343,7 +344,7 @@ to_chunked_ccsset_files = functools.partial(_to_chunked_dataset_files,
 
 def _to_barcode_chunked_dataset_files(dataset_type, dataset_path,
                                       max_total_nchunks, chunk_key, dir_name,
-                                      base_name, ext):
+                                      base_name, ext, extra_chunk_keys=None):
     """
     Similar to to_chunked_subreadset_files, but chunks reads by barcode lists.
     """
@@ -356,8 +357,12 @@ def _to_barcode_chunked_dataset_files(dataset_type, dataset_path,
         chunk_path = os.path.join(dir_name, chunk_name)
         dset.write(chunk_path)
         d[chunk_key] = os.path.abspath(chunk_path)
+        if extra_chunk_keys is not None:
+            for key, value in extra_chunk_keys.iteritems():
+                d[key] = value
         c = PipelineChunk(chunk_id, **d)
         yield c
+
 
 to_barcode_chunked_subreadset_files = functools.partial(
     _to_barcode_chunked_dataset_files, SubreadSet)
@@ -368,7 +373,7 @@ to_barcode_chunked_ccsset_files = functools.partial(
 def _write_dataset_barcode_chunks_to_file(chunk_func, chunk_key, chunk_file,
                                           dataset_path, max_total_chunks,
                                           dir_name, chunk_base_name,
-                                          chunk_ext):
+                                          chunk_ext, extra_chunk_keys=None):
     """
     Similar to write_subreadset_chunks_to_file, but chunks reads (subread or
     CCS) by barcodes for input to pblaa.
@@ -379,7 +384,8 @@ def _write_dataset_barcode_chunks_to_file(chunk_func, chunk_key, chunk_file,
         chunk_key=chunk_key,
         dir_name=dir_name,
         base_name=chunk_base_name,
-        ext=chunk_ext))
+        ext=chunk_ext,
+        extra_chunk_keys=extra_chunk_keys))
     write_chunks_to_json(chunks, chunk_file)
     return 0
 
