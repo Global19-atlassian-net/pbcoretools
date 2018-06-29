@@ -34,6 +34,8 @@ filters_opt = QuickOpt(
     ("A semicolon or comma separated list of other filters "
      "to add to the DataSet"))
 
+downsample_opt = QuickOpt(0, "Downsampling Factor", "If other than 0 or 1, this will add a filter to the input dataset to sample a random selection of ZMWs instead of running over the full dataset.  For example, a downsample factor of 10 means that 1/10th (10%) of ZMWs will be used.")
+
 subreads_file_type = OutputFileType(FileTypes.DS_SUBREADS.file_type_id,
                                     "SubreadSet", "Filtered SubreadSet XML",
                                     "Filtered SubreadSet XML", "filtered")
@@ -54,20 +56,26 @@ def combine_filters(ds, filters):
         for old_filter in ds.filters:
             log.info("Combining user-supplied filters with existing filter '%s", old_filter)
             for name, options in filters.items():
-                for oper, value in options:
+                for option_params in options:
+                    oper, value = option_params[0:2]
+                    modulo = None
+                    if len(option_params) > 2:
+                        modulo = option_params[2]
                     have_req = False
                     for old_prop in old_filter.plist:
                         if old_prop.name == name and old_prop.operator == oper:
                             old_prop.value = value
                             have_req = True
                     if not have_req:
-                        old_filter.addRequirement(name, oper, value)
+                        old_filter.addRequirement(name, oper, value,
+                                                  modulo=modulo)
         ds.filters._runCallbacks()
     else:
         ds.filters.addFilter(**filters)
 
 
-def run_filter_dataset(in_file, out_file, read_length, other_filters):
+def run_filter_dataset(in_file, out_file, read_length, other_filters,
+                       downsample_factor=0):
     dataSet = openDataSet(in_file)
     dataSet.updateCounts() # just in case
     rlen = sanitize_read_length(read_length)
@@ -79,29 +87,34 @@ def run_filter_dataset(in_file, out_file, read_length, other_filters):
             filters = parse_filter_list(str(other_filters).split(','))
         log.info("{i} other filters will be added".format(i=len(filters)))
     combine_filters(dataSet, filters)
+    tags = {t.strip() for t in dataSet.tags.strip().split(",")}
     if rlen:
         combine_filters(dataSet, {'length': [('>=', rlen)]})
+    if not downsample_factor in [0, 1]:
+        combine_filters(dataSet, {'zm': [("==", "0", downsample_factor)]})
+        tags.add("downsampled")
     dataSet.updateCounts()
+    tags.add("filtered")
+    dataSet.tags = ",".join(list(tags))
     if not "(filtered)" in dataSet.name:
         dataSet.name = dataSet.name + " (filtered)"
-    if dataSet.tags.strip() == "":
-        dataSet.tags = "filtered"
-    elif not "filtered" in dataSet.tags:
-        dataSet.tags = ",".join(dataSet.tags.strip().split(",") + ["filtered"])
     dataSet.newUuid()
     dataSet.write(out_file)
     return 0
 
-@registry("filterdataset", "0.2.0",
+
+@registry("filterdataset", "0.3.0",
           FileTypes.DS_SUBREADS,
           subreads_file_type, is_distributed=True, nproc=1,
           options={"read_length":rl_opt,
+                   "downsample_factor":downsample_opt,
                    "other_filters":filters_opt})
 def run_filterDataSet(rtc):
     return run_filter_dataset(
         rtc.task.input_files[0], rtc.task.output_files[0],
         rtc.task.options["pbcoretools.task_options.read_length"],
-        rtc.task.options["pbcoretools.task_options.other_filters"])
+        rtc.task.options["pbcoretools.task_options.other_filters"],
+        rtc.task.options["pbcoretools.task_options.downsample_factor"])
 
 
 def _split_transcripts(transcripts, hq_file, lq_file, cutoff):
