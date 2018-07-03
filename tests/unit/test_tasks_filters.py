@@ -88,7 +88,7 @@ class TestFilterDownsample(TestFilterDataSet):
     TASK_OPTIONS = {"pbcoretools.task_options.downsample_factor": 2}
     RESOLVED_TASK_OPTIONS = TASK_OPTIONS
     N_EXPECTED = 54
-    EXPECTED_FILTER_STR = "( BoostHashCombine(zm) % 2 == 0 )"
+    EXPECTED_FILTER_STR = "( Uint32Cast(zm) % 2 == 0 )"
 
     @classmethod
     def setUpClass(cls):
