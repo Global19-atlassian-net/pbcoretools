@@ -22,10 +22,29 @@ from pbcoretools.file_utils import archive_files, get_barcode_sample_mappings
 log = logging.getLogger(__name__)
 
 
+def _filesize(fn):
+    """In bytes.
+    Raise if fn does not exist.
+    """
+    return os.stat(fn).st_size
+
+
+def _check_exists_and_not_empty(fn):
+    if not os.path.exists(fn):
+        raise IOError('File {!r} does not exist.'.format(fn))
+    if 0 == _filesize(fn):
+        raise IOError('File {!r} is empty.'.format(fn))
+
+
 def _ungzip_fastx(gzip_file_name, fastx_file_name):
     """
     Decompress an output from bam2fastx.
     """
+    # An empty file gzips to a non-empty gzip file.
+    # So an empty gzip-file is likely incomplete, but it
+    # would be accepted by gzip.open().
+    _check_exists_and_not_empty(gzip_file_name)
+
     with gzip.open(gzip_file_name, "rb") as gz_in:
         with open(fastx_file_name, "wb") as fastx_out:
             def _fread():

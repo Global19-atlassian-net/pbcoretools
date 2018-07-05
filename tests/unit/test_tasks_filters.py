@@ -65,6 +65,7 @@ class TestFilterDataSet(PbTestApp):
         ds = openDataSet(rtc.task.output_files[0])
         self.assertTrue(ds.name.endswith("(filtered)"))
         self.assertTrue("filtered" in ds.tags)
+        return ds
 
 
 class TestFilterDataSetBq(TestFilterDataSet):
@@ -83,11 +84,30 @@ class TestFilterDataSetBq(TestFilterDataSet):
         ds.write(cls.INPUT_FILES[0])
 
 
+class TestFilterDownsample(TestFilterDataSet):
+    TASK_OPTIONS = {"pbcoretools.task_options.downsample_factor": 2}
+    RESOLVED_TASK_OPTIONS = TASK_OPTIONS
+    N_EXPECTED = 54
+    EXPECTED_FILTER_STR = "( Uint32Cast(zm) % 2 == 0 )"
+
+    @classmethod
+    def setUpClass(cls):
+        with SubreadSet(pbtestdata.get_file("subreads-xml"), strict=True) as ds:
+            assert len(ds) == 117 and len(ds.filters) == 0
+            ds.write(cls.INPUT_FILES[0])
+
+    def run_after(self, rtc, output_dir):
+        ds = super(TestFilterDownsample, self).run_after(rtc, output_dir)
+        self.assertTrue("downsampled" in ds.tags)
+
+
 class TestCombineFilters(TestFilterDataSet):
     TASK_OPTIONS = {"pbcoretools.task_options.other_filters": "rq >= 0.901"}
     RESOLVED_TASK_OPTIONS = TASK_OPTIONS
     N_EXPECTED = 12
     N_EXPECTED_2 = 48
+    N_EXPECTED_DOWNSAMPLED = 54 # downsampled only, no other filters
+    INPUT_FILES = [get_temp_file(suffix=".subreadset.xml")]
     EXPECTED_FILTER_STR = "( length >= 1000 AND rq >= 0.901 )"
 
     @classmethod
@@ -102,11 +122,17 @@ class TestCombineFilters(TestFilterDataSet):
         with openDataSet(self.INPUT_FILES[0], strict=True) as ds:
             filters = {"rq": [(">=", 0.901)]}
             combine_filters(ds, filters)
-            ds.updateCounts()
+            ds.reFilter(light=False)
             self.assertEqual(len(ds), self.N_EXPECTED)
             filters = {"rq": [(">=", 0.8)], "length": [(">=", 500)]}
             combine_filters(ds, filters)
+            ds.reFilter(light=False)
             self.assertEqual(len(ds), self.N_EXPECTED_2)
+            ds.filters = None
+            filters = {"zm": [("==", "0", 2)]}
+            combine_filters(ds, filters)
+            ds.reFilter(light=False)
+            self.assertEqual(len(ds), self.N_EXPECTED_DOWNSAMPLED)
 
     def test_run_filter_dataset(self):
         my_filters = "rq >= 0.901"
