@@ -9,6 +9,7 @@ import logging
 import gzip
 import re
 import os.path as op
+import pipes
 import os
 import sys
 
@@ -111,7 +112,7 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
     if barcode_mode:
         args.insert(1, "--split-barcodes")
     if seqid_prefix is not None:
-        args.extend(["--seqid-prefix", seqid_prefix])
+        args.extend(["--seqid-prefix", pipes.quote(seqid_prefix)])
     log.info(" ".join(args))
     remove_files = []
     result = run_cmd(" ".join(args),
