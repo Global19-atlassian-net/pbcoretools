@@ -37,7 +37,7 @@ $PIP install --user \
   $NX3PBASEURL/pythonpkgs/pysam-0.13-cp27-cp27mu-linux_x86_64.whl \
   $NX3PBASEURL/pythonpkgs/avro-1.7.7-cp27-none-any.whl
 ln -sfn ../data repos/PacBioTestData/pbtestdata/data
-$PIP install --user --upgrade pylint
+$PIP install --user --upgrade "pylint<2.0.0"
 $PIP install --user -e repos/PacBioTestData
 $PIP install --user -e repos/pbcommand
 $PIP install --user -e repos/pbcore
