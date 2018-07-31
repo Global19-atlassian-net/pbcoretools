@@ -292,6 +292,7 @@ def update_barcoded_sample_metadata(base_dir,
             ds.filters.addRequirement(
                 bq=[('>', Constants.BARCODE_QUALITY_GREATER_THAN)])
             ds.newUuid()
+            ds.updateCounts()
             ds.write(ds_out)
             f_new = copy.deepcopy(f)
             f_new.path = ds_out

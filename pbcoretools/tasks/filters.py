@@ -147,7 +147,7 @@ hq_qv_cutoff = QuickOpt(Constants.TRANSCRIPT_QV_CUTOFF,
 @registry("split_transcripts", "0.1.0",
           FileTypes.DS_TRANSCRIPT,
           (hq_file_type, lq_file_type),
-          is_distributed=False,
+          is_distributed=True,
           nproc=1,
           options={"hq_qv_cutoff": hq_qv_cutoff})
 def _run_split_transcripts(rtc):
