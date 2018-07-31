@@ -144,7 +144,7 @@ hq_qv_cutoff = QuickOpt(Constants.TRANSCRIPT_QV_CUTOFF,
                         "QV cutoff for HQ transcripts",
                         "Minimum read quality required for a transcript to be considered 'high-quality'")
 
-@registry("split_transcripts", "0.1.0",
+@registry("split_transcripts", "0.1.1",
           FileTypes.DS_TRANSCRIPT,
           (hq_file_type, lq_file_type),
           is_distributed=True,

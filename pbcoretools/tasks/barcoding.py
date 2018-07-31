@@ -65,7 +65,7 @@ def run_datastore_to_ccs(rtc):
     return 0
 
 
-@registry("update_barcoded_sample_metadata", "0.3.1",
+@registry("update_barcoded_sample_metadata", "0.4.0",
           (FileTypes.JSON, FileTypes.DS_SUBREADS, FileTypes.DS_BARCODE),
           FileTypes.DATASTORE,
           is_distributed=True,
@@ -104,7 +104,7 @@ ds_name_opt = QuickOpt("", "Name of Output Data Set",
                        "SMRT Link")
 
 
-@registry("reparent_subreads", "0.1.1",
+@registry("reparent_subreads", "0.1.2",
           FileTypes.DS_SUBREADS,
           FileTypes.DS_SUBREADS,
           is_distributed=False,
@@ -134,7 +134,7 @@ def _ds_to_datastore(dataset_file, datastore_file,
     return 0
 
 
-@registry("subreads_to_datastore", "0.1.1",
+@registry("subreads_to_datastore", "0.1.2",
           FileTypes.DS_SUBREADS,
           FileTypes.JSON,
           is_distributed=False,
@@ -145,7 +145,7 @@ def _run_subreads_to_datastore(rtc):
                             source_id=rtc.task.task_id + "-out-0")
 
 
-@registry("ccs_to_datastore", "0.1.1",
+@registry("ccs_to_datastore", "0.1.2",
           FileTypes.DS_CCS,
           FileTypes.JSON,
           is_distributed=False,
