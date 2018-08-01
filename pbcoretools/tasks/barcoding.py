@@ -13,6 +13,7 @@ import sys
 
 from pbcore.io import (SubreadSet, ConsensusReadSet, openDataSet)
 from pbcommand.cli import registry_builder, registry_runner, QuickOpt
+from pbcommand.utils import get_dataset_metadata
 from pbcommand.models import FileTypes, SymbolTypes, OutputFileType, DataStore, DataStoreFile
 
 from pbcoretools.file_utils import (update_barcoded_sample_metadata,
@@ -30,6 +31,7 @@ class Constants(object):
 registry = registry_builder(Constants.TOOL_NAMESPACE, Constants.DRIVER_BASE)
 
 
+# internal only
 @registry("datastore_to_subreads", "0.2.1",
           FileTypes.DATASTORE,
           FileTypes.DS_SUBREADS,
@@ -38,7 +40,7 @@ registry = registry_builder(Constants.TOOL_NAMESPACE, Constants.DRIVER_BASE)
 def run_datastore_to_subreads(rtc):
     datasets = list(iterate_datastore_read_set_files(rtc.task.input_files[0]))
     if len(datasets) > 0:
-        with SubreadSet(*[f.path for f in datasets], strict=True) as ds:
+        with SubreadSet(*[f.path for f in datasets], strict=True, skipCounts=True) as ds:
             ds.newUuid()
             ds.write(rtc.task.output_files[0])
     else:
@@ -46,6 +48,7 @@ def run_datastore_to_subreads(rtc):
     return 0
 
 
+# internal only
 @registry("datastore_to_ccs", "0.1.1",
           FileTypes.DATASTORE,
           FileTypes.DS_CCS,
@@ -54,7 +57,7 @@ def run_datastore_to_subreads(rtc):
 def run_datastore_to_ccs(rtc):
     datasets = list(iterate_datastore_read_set_files(rtc.task.input_files[0]))
     if len(datasets) > 0:
-        with ConsensusReadSet(*[f.path for f in datasets], strict=True) as ds:
+        with ConsensusReadSet(*[f.path for f in datasets], strict=True, skipCounts=True) as ds:
             ds.newUuid()
             ds.write(rtc.task.output_files[0])
     else:
@@ -62,10 +65,10 @@ def run_datastore_to_ccs(rtc):
     return 0
 
 
-@registry("update_barcoded_sample_metadata", "0.3.1",
+@registry("update_barcoded_sample_metadata", "0.4.0",
           (FileTypes.JSON, FileTypes.DS_SUBREADS, FileTypes.DS_BARCODE),
           FileTypes.DATASTORE,
-          is_distributed=False,
+          is_distributed=True,
           nproc=1)
 def _run_update_barcoded_sample_metadata(rtc):
     base_dir = op.dirname(rtc.task.output_files[0])
@@ -101,7 +104,7 @@ ds_name_opt = QuickOpt("", "Name of Output Data Set",
                        "SMRT Link")
 
 
-@registry("reparent_subreads", "0.1.1",
+@registry("reparent_subreads", "0.1.2",
           FileTypes.DS_SUBREADS,
           FileTypes.DS_SUBREADS,
           is_distributed=False,
@@ -111,7 +114,7 @@ def _run_reparent_subreads(rtc):
     NAME_OPT_ID = "pbcoretools.task_options.new_dataset_name"
     if rtc.task.options[NAME_OPT_ID].strip() == "":
         raise ValueError("New dataset name is required")
-    with SubreadSet(rtc.task.input_files[0], strict=True) as ds_in:
+    with SubreadSet(rtc.task.input_files[0], strict=True, skipCounts=True) as ds_in:
         if len(ds_in.metadata.provenance) > 0:
             log.warn("Removing existing provenance record: %s",
                      ds_in.metadata.provenance)
@@ -124,15 +127,14 @@ def _run_reparent_subreads(rtc):
 
 def _ds_to_datastore(dataset_file, datastore_file,
                      source_id="pbcoretools.tasks.barcoding-out-0"):
-    with openDataSet(dataset_file, strict=True) as ds:
-        ds_file = DataStoreFile(ds.uniqueId, source_id,
-                                ds.datasetType, dataset_file)
-        ds_out = DataStore([ds_file])
-        ds_out.write_json(datastore_file)
+    dsmd = get_dataset_metadata(dataset_file)
+    ds_file = DataStoreFile(dsmd.uuid, source_id, dsmd.metatype, dataset_file)
+    ds_out = DataStore([ds_file])
+    ds_out.write_json(datastore_file)
     return 0
 
 
-@registry("subreads_to_datastore", "0.1.1",
+@registry("subreads_to_datastore", "0.1.2",
           FileTypes.DS_SUBREADS,
           FileTypes.JSON,
           is_distributed=False,
@@ -143,7 +145,7 @@ def _run_subreads_to_datastore(rtc):
                             source_id=rtc.task.task_id + "-out-0")
 
 
-@registry("ccs_to_datastore", "0.1.1",
+@registry("ccs_to_datastore", "0.1.2",
           FileTypes.DS_CCS,
           FileTypes.JSON,
           is_distributed=False,
