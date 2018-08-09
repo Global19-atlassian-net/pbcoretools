@@ -37,6 +37,8 @@ def summarizeXml(args):
     print("# of Resources        : {r}".format(r=len(dset.toExternalFiles())))
     print("Filters               : {r}".format(r=str(dset.filters) if
                                                dset.filters else "None"))
+    if args.show_chemistry:
+        print("Sequencing Chemistry  : {c}".format(c=", ".join(dset.sequencingChemistry)))
     for fname in dset.toExternalFiles():
         print(fname)
     return 0
@@ -45,6 +47,7 @@ def summarize_options(parser):
     parser.description = "Print basic information about a DataSet XML file"
     parser.add_argument("infile", type=str,
                         help="The xml file to summarize")
+    parser.add_argument("--show-chemistry", action="store_true", help="Show the sequencing chemistries deduced from BAM headers (e.g. 'P6-C4')")
     parser.set_defaults(func=summarizeXml)
 
 def createXml(args):
