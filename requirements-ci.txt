@@ -1,4 +1,3 @@
-cython
 numpy
 pysam
 jinja2
