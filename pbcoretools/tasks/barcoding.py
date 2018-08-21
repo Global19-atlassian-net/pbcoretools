@@ -65,19 +65,22 @@ def run_datastore_to_ccs(rtc):
     return 0
 
 
-@registry("update_barcoded_sample_metadata", "0.4.1",
+@registry("update_barcoded_sample_metadata", "0.5.0",
           (FileTypes.JSON, FileTypes.DS_SUBREADS, FileTypes.DS_BARCODE),
           FileTypes.DATASTORE,
           is_distributed=True,
-          nproc=1)
+          nproc=1,
+          options={"use_barcode_uuids": True})
 def _run_update_barcoded_sample_metadata(rtc):
+    use_barcode_uuids = rtc.task.options["pbcoretools.task_options.use_barcode_uuids"]
     base_dir = op.dirname(rtc.task.output_files[0])
     datastore = update_barcoded_sample_metadata(
         base_dir=op.dirname(rtc.task.output_files[0]),
         datastore_file=rtc.task.input_files[0],
         input_reads=rtc.task.input_files[1],
         barcode_set=rtc.task.input_files[2],
-        isoseq_mode=False)
+        isoseq_mode=False,
+        use_barcode_uuids=use_barcode_uuids)
     datastore.write_json(rtc.task.output_files[0])
     return 0
 
@@ -94,7 +97,8 @@ def _run_update_barcoded_sample_metadata(rtc):
         datastore_file=rtc.task.input_files[0],
         input_reads=rtc.task.input_files[1],
         barcode_set=rtc.task.input_files[2],
-        isoseq_mode=True)
+        isoseq_mode=True,
+        use_barcode_uuids=False)
     datastore.write_json(rtc.task.output_files[0])
     return 0
 

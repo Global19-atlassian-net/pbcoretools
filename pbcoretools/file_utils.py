@@ -246,7 +246,8 @@ def update_barcoded_sample_metadata(base_dir,
                                     datastore_file,
                                     input_reads,
                                     barcode_set,
-                                    isoseq_mode=False):
+                                    isoseq_mode=False,
+                                    use_barcode_uuids=True):
     """
     Given a datastore JSON of SubreadSets produced by barcoding, apply the
     following updates to each:
@@ -297,12 +298,15 @@ def update_barcoded_sample_metadata(base_dir,
                         for dna_bc in bio_sample.DNABarcodes:
                             if dna_bc.name == barcode_label and dna_bc.uniqueId:
                                 return dna_bc.uniqueId
-            uuid = _get_uuid()
-            if uuid is not None:
-                ds.objMetadata["UniqueId"] = uuid
-                log.info("Set dataset UUID to %s", ds.uuid)
+            if use_barcode_uuids:
+                uuid = _get_uuid()
+                if uuid is not None:
+                    ds.objMetadata["UniqueId"] = uuid
+                    log.info("Set dataset UUID to %s", ds.uuid)
+                else:
+                    log.warn("No UUID defined for this barcoded dataset.")
+                    ds.newUuid()
             else:
-                log.warn("No UUID defined for this barcoded dataset.")
                 ds.newUuid()
             ds.updateCounts()
             ds.write(ds_out)

@@ -97,7 +97,9 @@ def split_barcoded_dataset(file_name, ext=".subreadset.xml"):
     return DataStore(ds_files)
 
 
-def validate_barcoded_datastore_files(self, subreads, datastore, have_collection_metadata=True):
+def validate_barcoded_datastore_files(self, subreads, datastore,
+                                      have_collection_metadata=True,
+                                      use_barcode_uuids=True):
     """
     This is linked to the PacBioTestData file 'barcoded-subreadset', which
     has been manually edited in support of this test.
@@ -129,8 +131,11 @@ def validate_barcoded_datastore_files(self, subreads, datastore, have_collection
                                  ds_in.uuid)
                 self.assertEqual(ds.name, "{n} ({s})".format(n=ds_in.name,
                                                              s=bio_name))
-                self.assertEqual(ds.uuid, dna_bc_uuids[bc_label])
                 expected_tags.append("Collections")
+                if use_barcode_uuids:
+                    self.assertEqual(ds.uuid, dna_bc_uuids[bc_label])
+                else:
+                    self.assertNotEqual(ds.uuid, dna_bc_uuids[bc_label])
             else:
                 self.assertEqual(ds.name, "{n} ({b})".format(n=ds_in.name,
                                                              b=bc_label))
@@ -279,6 +284,14 @@ class TestBarcodeUtils(unittest.TestCase):
                                                     self.SUBREADS,
                                                     barcodes)
         validate_barcoded_datastore_files(self, self.SUBREADS, datastore)
+        # now with use_barcode_uuids=False
+        datastore = update_barcoded_sample_metadata(base_dir,
+                                                    datastore_tmp,
+                                                    self.SUBREADS,
+                                                    barcodes,
+                                                    use_barcode_uuids=False)
+        validate_barcoded_datastore_files(self, self.SUBREADS, datastore,
+                                          use_barcode_uuids=False)
         # test that it works with no collection metadata
         ss = SubreadSet(self.SUBREADS)
         ss.metadata.collections = None

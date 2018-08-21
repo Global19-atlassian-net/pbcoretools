@@ -83,6 +83,17 @@ class TestUpdateBarcodedSampleMetadata(PbTestApp):
         validate_barcoded_datastore_files(self, self.INPUT_FILES[1], datastore)
 
 
+class TestUpdateBarcodedSampleMetadataNoUuid(TestUpdateBarcodedSampleMetadata):
+    TASK_OPTIONS = {
+        "pbcoretools.task_options.use_barcode_uuids": False
+    }
+
+    def run_after(self, rtc, output_dir):
+        datastore = DataStore.load_from_json(rtc.task.output_files[0])
+        validate_barcoded_datastore_files(self, self.INPUT_FILES[1], datastore,
+                                          use_barcode_uuids=False)
+
+
 class TestUpdateBarcodedSampleMetadataCCS(PbTestApp):
     TASK_ID = "pbcoretools.tasks.update_barcoded_sample_metadata_ccs"
     DRIVER_EMIT = "python -m pbcoretools.tasks.barcoding emit-tool-contract {i} ".format(i=TASK_ID)
