@@ -98,9 +98,17 @@ def split_barcoded_dataset(file_name, ext=".subreadset.xml"):
 
 
 def validate_barcoded_datastore_files(self, subreads, datastore):
+    """
+    This is linked to the PacBioTestData file 'barcoded-subreadset', which
+    has been manually edited in support of this test.
+    """
     bio_sample_names = {
         "lbc1--lbc1": "Alice",
         "lbc3--lbc3": "Charles"
+    }
+    dna_bc_uuids = {
+        "lbc1--lbc1": "dffb30e8-9243-4743-9980-468a20952167",
+        "lbc3--lbc3": "eef1a8ea-c6a7-4233-982a-d426e1e7d8c9"
     }
     self.assertEqual(len(datastore.files), 2)
     ds_in = SubreadSet(subreads)
@@ -118,6 +126,7 @@ def validate_barcoded_datastore_files(self, subreads, datastore):
             self.assertEqual(ds.name, "{n} ({s})".format(n=ds_in.name,
                                                          s=bio_name))
             self.assertEqual(ds.uuid, f.uuid)
+            self.assertEqual(ds.uuid, dna_bc_uuids[bc_label])
             md_tags = [r['tag'] for r in ds.metadata.record['children']]
             self.assertEqual(md_tags[0:4],
                              ["TotalLength", "NumRecords", "Provenance", "Collections"])

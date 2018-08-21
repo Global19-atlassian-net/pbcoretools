@@ -291,7 +291,19 @@ def update_barcoded_sample_metadata(base_dir,
             ds.name = get_ds_name(ds, parent_ds.name, barcode_label)
             ds.filters.addRequirement(
                 bq=[('>', Constants.BARCODE_QUALITY_GREATER_THAN)])
-            ds.newUuid()
+            def _get_uuid():
+                for collection in ds.metadata.collections:
+                    for bio_sample in collection.wellSample.bioSamples:
+                        for dna_bc in bio_sample.DNABarcodes:
+                            if dna_bc.name == barcode_label and dna_bc.uniqueId:
+                                return dna_bc.uniqueId
+            uuid = _get_uuid()
+            if uuid is not None:
+                ds.objMetadata["UniqueId"] = uuid
+                log.info("Set dataset UUID to %s", ds.uuid)
+            else:
+                log.warn("No UUID defined for this barcoded dataset.")
+                ds.newUuid()
             ds.updateCounts()
             ds.write(ds_out)
             f_new = copy.deepcopy(f)
