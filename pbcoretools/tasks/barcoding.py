@@ -65,7 +65,7 @@ def run_datastore_to_ccs(rtc):
     return 0
 
 
-@registry("update_barcoded_sample_metadata", "0.4.0",
+@registry("update_barcoded_sample_metadata", "0.4.1",
           (FileTypes.JSON, FileTypes.DS_SUBREADS, FileTypes.DS_BARCODE),
           FileTypes.DATASTORE,
           is_distributed=True,
@@ -82,7 +82,7 @@ def _run_update_barcoded_sample_metadata(rtc):
     return 0
 
 
-@registry("update_barcoded_sample_metadata_ccs", "0.1.1",
+@registry("update_barcoded_sample_metadata_ccs", "0.1.2",
           (FileTypes.JSON, FileTypes.DS_CCS, FileTypes.DS_BARCODE),
           FileTypes.DATASTORE,
           is_distributed=False,
