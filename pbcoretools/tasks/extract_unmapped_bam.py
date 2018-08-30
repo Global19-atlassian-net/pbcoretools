@@ -6,6 +6,7 @@ Write a dataset containing only unmapped reads.
 
 import subprocess
 import logging
+import uuid
 import os.path as op
 import os
 import sys
@@ -60,6 +61,7 @@ def make_unmapped_bam(alignment_file, subread_file, output_bam, nproc=1):
                     unmapped.add((qId, zmw))
                     n_rec += 1
     log.info("Wrote %d records from %d ZMWs", n_rec, len(unmapped))
+    # the index is slightly superfluous but useful for testing
     return subprocess.check_call(["pbindex", output_bam])
 
 
@@ -72,19 +74,12 @@ def run_extract_unmapped(alignment_file,
     if extract_unaligned:
         base_dir = op.dirname(datastore_file)
         output_bam = op.join(base_dir, "unaligned.subreads.bam")
-        output_ds = op.join(base_dir, "unaligned.subreadset.xml")
         make_unmapped_bam(alignment_file, subread_file, output_bam, nproc)
-        ds_in = SubreadSet(subread_file, skipCounts=True)
-        with SubreadSet(output_bam) as ds_out:
-            ds_out.name = ds_in.name + " (unaligned)"
-            ds_out.tags = ",".join(
-                list(ds_out.tags.split(",")) + ["unaligned"])
-            ds_out.write(output_ds)
         datastore_files.append(
-            DataStoreFile(ds_out.uuid,
-                          Constants.TASK_ID + "-out-2",
-                          FileTypes.DS_SUBREADS.file_type_id,
-                          output_ds))
+            DataStoreFile(uuid.uuid4(),
+                          Constants.TASK_ID + "-out-1",
+                          FileTypes.BAM_SUB.file_type_id,
+                          output_bam))
     else:
         log.warn("extract_unaligned=False, will write empty datastore")
     datastore = DataStore(datastore_files)
