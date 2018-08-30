@@ -11,7 +11,7 @@ import os.path as op
 import os
 import sys
 
-from pysam.calignmentfile import AlignmentFile
+from pysam.calignmentfile import AlignmentFile  # pylint: disable=no-name-in-module, import-error, fixme, line-too-long
 
 from pbcommand.models import get_pbparser, FileTypes, DataStore, DataStoreFile
 from pbcommand.cli import pbparser_runner
