@@ -30,7 +30,10 @@ from pbcoretools.file_utils import (
     make_barcode_sample_csv,
     make_combined_laa_zip,
     update_barcoded_sample_metadata,
-    discard_bio_samples)
+    discard_bio_samples,
+    add_mock_collection_metadata,
+    force_set_all_well_sample_names,
+    force_set_all_bio_sample_names)
 
 
 HAVE_XMLLINT = which("xmllint")
@@ -306,3 +309,23 @@ class TestBarcodeUtils(unittest.TestCase):
                                                     barcodes)
         validate_barcoded_datastore_files(self, self.SUBREADS, datastore,
                                           have_collection_metadata=False)
+
+    def test_add_mock_collection_metadata(self):
+        bam = pbtestdata.get_file("subreads-bam")
+        ds = SubreadSet(bam)
+        self.assertEqual(len(ds.metadata.collections), 0)
+        add_mock_collection_metadata(ds)
+        self.assertEqual(len(ds.metadata.collections), 1)
+        self.assertEqual(ds.metadata.collections[0].context,
+            "m140905_042212_sidney_c100564852550000001823085912221377_s1_X0")
+
+    def test_force_set_all_well_sample_names(self):
+        ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))
+        force_set_all_well_sample_names(ds, "My Test Sample")
+        self.assertEqual(ds.metadata.collections[0].wellSample.name,
+                         "My Test Sample")
+
+    def test_force_set_all_bio_sample_names(self):
+        ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))
+        force_set_all_bio_sample_names(ds, "My Test BioSample")
+        self.assertEqual(ds.metadata.collections[0].wellSample.bioSamples[0].name, "My Test BioSample")

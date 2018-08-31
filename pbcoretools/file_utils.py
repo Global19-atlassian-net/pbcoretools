@@ -11,6 +11,7 @@ import tempfile
 import zipfile
 import logging
 import shutil
+import uuid
 import gzip
 import copy
 import csv
@@ -23,6 +24,7 @@ from pbcore.io import (SubreadSet, HdfSubreadSet, FastaReader, FastaWriter,
                        FastqReader, FastqWriter, BarcodeSet, ExternalResource,
                        ExternalResources, openDataSet, ContigSet, ReferenceSet,
                        GmapReferenceSet, ConsensusReadSet)
+from pbcore.io.dataset.DataSetUtils import loadMockCollectionMetadata
 from pbcommand.models import FileTypes, DataStore
 from pbcommand.utils import walker
 
@@ -315,3 +317,59 @@ def update_barcoded_sample_metadata(base_dir,
             f_new.uuid = ds.uuid
             datastore_files.append(f_new)
     return DataStore(datastore_files)
+
+
+def add_mock_collection_metadata(ds):
+    """
+    For every movie defined in the BAM headers, add a CollectionMetadata
+    object with dummy values if one does not already exist.  The 'Context'
+    field will be set to the movie name.
+    """
+    have_movies = {c.context for c in ds.metadata.collections}
+    all_movie_names = set([rg.MovieName for rg in ds.readGroupTable])
+    new_movie_names = sorted(list(all_movie_names - have_movies))
+    for movie_name in new_movie_names:
+        coll = loadMockCollectionMetadata()
+        coll.context = movie_name
+        # This is not really ideal, since it's supposed to correspond to the
+        # original SubreadSet UUID (I think).  But as long as it's unique, it
+        # shouldn't matter for downstream apps.
+        coll.uniqueId = uuid.uuid4()
+        ds.metadata.collections.append(coll)
+    return len(new_movie_names)
+
+
+def force_set_all_well_sample_names(ds, sample_name):
+    """
+    Set the WellSample name for all collections in the dataset metadata.
+    """
+    for collection in ds.metadata.collections:
+        collection.wellSample.name = sample_name
+
+
+def force_set_all_bio_sample_names(ds, sample_name):
+    """
+    Set the BioSample name(s) (adding new records if necessary) for all
+    collections in the dataset metadata.
+
+    :return: the number of BioSamples modified (including new samples)
+    """
+    n_total = 0
+    for collection in ds.metadata.collections:
+        bioSamples = collection.wellSample.bioSamples
+        n_samples = len(bioSamples)
+        n_total += max(1, n_samples)
+        if n_samples == 0:
+            log.debug("Adding new BioSample '%s' to collection '%s'",
+                      sample_name, collection.context)
+            bioSamples.addSample(sample_name)
+        elif n_samples == 1:
+            bioSamples[0].name = sample_name
+        else:
+            log.warn("Multiple BioSamples found for collection '%s': '%s'",
+                     collection.context,
+                     "', '".join([s.name for s in bioSamples]))
+            log.warn("These will be overwritten with '%s'", sample_name)
+            for sample in bioSamples:
+                sample.name = sample_name
+    return n_total

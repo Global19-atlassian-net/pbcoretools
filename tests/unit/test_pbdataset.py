@@ -1,15 +1,16 @@
 
-import os
-import re
-import logging
+import xml.etree.cElementTree as ET
+from unittest.case import SkipTest
 import itertools
 import tempfile
+import unittest
+import logging
+import shutil
 import time
+import re
+import os
 
 import numpy as np
-import unittest
-import shutil
-from unittest.case import SkipTest
 
 from pbcore.io import PacBioBamIndex, IndexedBamReader
 from pbcore.io import openIndexedAlignmentFile
@@ -22,7 +23,8 @@ from pbcore.io.dataset.DataSetWriter import toXml
 from pbcore.io.dataset.DataSetValidator import validateFile
 from pbcore.util.Process import backticks
 import pbcore.data.datasets as data
-import xml.etree.cElementTree as ET
+
+import pbtestdata
 
 log = logging.getLogger(__name__)
 
@@ -559,3 +561,30 @@ class TestDataSet(unittest.TestCase):
         self.assertTrue(os.path.exists(outfile))
         aln = AlignmentSet(outfile)
         self.assertTrue(aln.metadata.summaryStats)
+
+    def _run_cmd_with_output(self, cmd, outfile):
+        o, r, m = backticks(cmd)
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(outfile))
+
+    def test_dataset_create_set_sample_names(self):
+        sample_args = "--well-sample-name WELLSAMPLE --bio-sample-name BIOSAMPLE".split()
+        outfile = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
+        cmd = " ".join(["dataset", "create", "--force", outfile, pbtestdata.get_file("subreads-bam")] + sample_args)
+        self._run_cmd_with_output(cmd, outfile)
+        with SubreadSet(outfile) as ds:
+            self.assertEqual(len(ds.metadata.collections), 1)
+            self.assertEqual(ds.metadata.collections[0].wellSample.name,
+                             "WELLSAMPLE")
+            self.assertEqual(ds.metadata.collections[0].wellSample.bioSamples[0].name, "BIOSAMPLE")
+            self.assertEqual(len(ds.metadata.collections[0].wellSample.bioSamples), 1)
+        # now with existing samples
+        outfile = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
+        cmd = " ".join(["dataset", "create", "--force", outfile, pbtestdata.get_file("barcoded-subreadset")] + sample_args)
+        self._run_cmd_with_output(cmd, outfile)
+        with SubreadSet(outfile) as ds:
+            self.assertEqual(len(ds.metadata.collections), 1)
+            self.assertEqual(ds.metadata.collections[0].wellSample.name,
+                             "WELLSAMPLE")
+            biosamples = {s.name for s in ds.metadata.collections[0].wellSample.bioSamples}
+            self.assertEqual(biosamples, {"BIOSAMPLE"})
