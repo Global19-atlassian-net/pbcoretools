@@ -326,10 +326,7 @@ def add_mock_collection_metadata(ds):
     field will be set to the movie name.
     """
     have_movies = {c.context for c in ds.metadata.collections}
-    all_movie_names = set([])
-    for bam in ds.resourceReaders():
-        for rg in bam.readGroupTable:
-            all_movie_names.add(rg.MovieName)
+    all_movie_names = set([rg.MovieName for rg in ds.readGroupTable])
     new_movie_names = sorted(list(all_movie_names - have_movies))
     for movie_name in new_movie_names:
         coll = loadMockCollectionMetadata()
