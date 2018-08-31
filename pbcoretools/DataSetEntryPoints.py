@@ -201,8 +201,8 @@ def filter_options(parser):
                           'of different names will be ANDed together, '
                           'multiple filters of the same name will be ORed '
                           'together, duplicating existing requirements'.format(
-        f=sorted(list(pbiFilterOptions)),
-        b=sorted(list(bamFilterOptions - pbiFilterOptions))))
+                              f=sorted(list(pbiFilterOptions)),
+                              b=sorted(list(bamFilterOptions - pbiFilterOptions))))
     # parser.add_argument("infile", type=validate_file,
     parser.add_argument("infile", type=str,
                         help="The XML file to filter")
@@ -216,7 +216,7 @@ def filter_options(parser):
 
 def splitXml(args):
     log.debug("Starting split")
-    dataSet=openDataSet(args.infile, strict=args.strict)
+    dataSet = openDataSet(args.infile, strict=args.strict)
     chunks = len(args.outfiles)
     if args.chunks:
         chunks = args.chunks
@@ -234,7 +234,7 @@ def splitXml(args):
                             byRecords=(not args.byRefLength),
                             updateCounts=(not args.noCounts))
     log.debug("Splitting into {i} chunks".format(i=len(dss)))
-    infix='chunk{i}'
+    infix = 'chunk{i}'
     chNums = range(len(dss))
     if args.barcodes:
         infix = '{i}'
@@ -411,7 +411,7 @@ def loadStatsXml(args):
     if len(dset.externalResources) > 1:
         log.info("More than one ExternalResource found, adding the "
                  "sts.xml nested external resource to the first one")
-    dset.externalResources[0].sts=args.statsfile
+    dset.externalResources[0].sts = args.statsfile
     if args.outfile:
         dset.write(args.outfile, validate=False)
     else:
@@ -478,9 +478,10 @@ def consolidateXml(args):
     one consolidated XML"""
     dset = openDataSet(args.infile)
     dset.consolidate(args.datafile, numFiles=args.numFiles, useTmp=(not
-                     args.noTmp))
+                                                                    args.noTmp))
     dset.write(args.xmlfile)
     return 0
+
 
 def consolidate_options(parser):
     parser.description = ('Combine the resource files (BAM, fasta, etc.) '
