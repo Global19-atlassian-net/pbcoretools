@@ -149,11 +149,12 @@ def create_options(parser):
                         help=("Set the BioSample name for all movies (will generate new CollectionMetadata from blank template for any movies that are not already represented)."))
     parser.set_defaults(func=createXml)
 
+
 def pad_separators(base_set):
     """e.g. 'gt' will hit 'length', so we pad it to ' gt '"""
-    padded=[]
+    padded = []
     for sep in base_set:
-        new_sep=[]
+        new_sep = []
         if sep[0] in string.ascii_lowercase:
             new_sep.append(" ")
         new_sep.append(sep)
@@ -162,25 +163,27 @@ def pad_separators(base_set):
         padded.append(''.join(new_sep))
     return padded
 
+
 def parse_filter_list(filtStrs):
-    filters=defaultdict(list)
+    filters = defaultdict(list)
     # pull them from the filter parser:
-    separators=OPMAP.keys()
+    separators = OPMAP.keys()
     # pad the ones that start and end with letters
-    separators=pad_separators(separators)
+    separators = pad_separators(separators)
     for filt in filtStrs:
         for sep in separators:
             if sep in filt:
-                param, condition=filt.split(sep)
-                condition=(sep.strip(), condition.strip())
+                param, condition = filt.split(sep)
+                condition = (sep.strip(), condition.strip())
                 filters[param.strip()].append(condition)
                 break
     return filters
 
+
 def filterXml(args):
     if args.infile.endswith('xml'):
-        dataSet=openDataSet(args.infile, strict=args.strict)
-        filters=parse_filter_list(args.filters)
+        dataSet = openDataSet(args.infile, strict=args.strict)
+        filters = parse_filter_list(args.filters)
         dataSet.filters.addRequirement(**filters)
         dataSet.updateCounts()
         log.info("{i} filters added".format(i=len(filters)))
@@ -189,10 +192,11 @@ def filterXml(args):
         raise IOError("No files found/found to be compatible")
     return 0
 
+
 def filter_options(parser):
-    pbiFilterOptions=set(Filters()._pbiMappedVecAccMap().keys())
-    bamFilterOptions=set(Filters()._bamAccMap.keys())
-    parser.description=('Add filters to an XML file. Suggested fields: '
+    pbiFilterOptions = set(Filters()._pbiMappedVecAccMap().keys())
+    bamFilterOptions = set(Filters()._bamAccMap.keys())
+    parser.description = ('Add filters to an XML file. Suggested fields: '
                           '{f}. More expensive fields: {b}.\nMultiple filters '
                           'of different names will be ANDed together, '
                           'multiple filters of the same name will be ORed '
@@ -209,16 +213,17 @@ def filter_options(parser):
                               "(e.g. 'rq>0.85')"))
     parser.set_defaults(func=filterXml)
 
+
 def splitXml(args):
     log.debug("Starting split")
     dataSet=openDataSet(args.infile, strict=args.strict)
-    chunks=len(args.outfiles)
+    chunks = len(args.outfiles)
     if args.chunks:
-        chunks=args.chunks
+        chunks = args.chunks
     if isinstance(dataSet, ContigSet):
-        dss=dataSet.split(chunks)
+        dss = dataSet.split(chunks)
     else:
-        dss=dataSet.split(chunks=chunks,
+        dss = dataSet.split(chunks=chunks,
                             ignoreSubDatasets=(not args.subdatasets),
                             contigs=args.contigs,
                             maxChunks=args.maxChunks,
@@ -230,31 +235,31 @@ def splitXml(args):
                             updateCounts=(not args.noCounts))
     log.debug("Splitting into {i} chunks".format(i=len(dss)))
     infix='chunk{i}'
-    chNums=range(len(dss))
+    chNums = range(len(dss))
     if args.barcodes:
-        infix='{i}'
-        chNums=['_'.join(ds.barcodes).replace(
+        infix = '{i}'
+        chNums = ['_'.join(ds.barcodes).replace(
             '[', '').replace(']', '').replace(', ', '-') for ds in dss]
-    nSuf=-2 if re.search(r".+\.\w+set\.xml", args.infile) else -1
+    nSuf = -2 if re.search(r".+\.\w+set\.xml", args.infile) else -1
     if not args.outfiles:
         if not args.outdir:
-            args.outfiles=['.'.join(args.infile.split('.')[:nSuf] +
+            args.outfiles = ['.'.join(args.infile.split('.')[:nSuf] +
                                       [infix.format(i=chNum)] +
                                       args.infile.split('.')[nSuf:])
                              for chNum in chNums]
         else:
-            args.outfiles=['.'.join(args.infile.split('.')[:nSuf] +
+            args.outfiles = ['.'.join(args.infile.split('.')[:nSuf] +
                                       [infix.format(i=chNum)] +
                                       args.infile.split('.')[nSuf:])
                              for chNum in chNums]
-            args.outfiles=[os.path.join(args.outdir,
+            args.outfiles = [os.path.join(args.outdir,
                                           os.path.basename(outfn))
                              for outfn in args.outfiles]
-            num=len(dss)
-            end=''
+            num = len(dss)
+            end = ''
             if num > 5:
-                num=5
-                end='...'
+                num = 5
+                end = '...'
             log.debug("Emitting {f} {e}".format(
                 f=', '.join(args.outfiles[:num]),
                 e=end))
@@ -264,8 +269,9 @@ def splitXml(args):
     log.debug("Done writing files")
     return 0
 
+
 def split_options(parser):
-    parser.description="Split the DataSet"
+    parser.description = "Split the DataSet"
     parser.add_argument("infile", type=str,
                         help="The DataSet XML file to split")
     parser.add_argument("--contigs", default=False, action='store_true',
@@ -294,9 +300,10 @@ def split_options(parser):
                         type=str, help="The resulting XML files (optional)")
     parser.set_defaults(func=splitXml)
 
+
 def mergeXml(args):
-    dss=[openDataSet(infn, strict=args.strict) for infn in args.infiles]
-    allds=reduce(lambda ds1, ds2: ds1 + ds2, dss)
+    dss = [openDataSet(infn, strict=args.strict) for infn in args.infiles]
+    allds = reduce(lambda ds1, ds2: ds1 + ds2, dss)
     if not allds is None:
         allds.updateCounts()
         allds.write(args.outfile)
@@ -305,8 +312,9 @@ def mergeXml(args):
                                     "conflicting Filters")
     return 0
 
+
 def merge_options(parser):
-    parser.description=('Combine DataSet XML files without touching '
+    parser.description = ('Combine DataSet XML files without touching '
                           'resource files (e.g. BAM, Fasta, etc.)')
     parser.add_argument("outfile", type=str,
                         help="The resulting XML file")
@@ -317,33 +325,36 @@ def merge_options(parser):
 
 
 def relativizeXml(args):
-    dss=openDataSet(args.infile, strict=args.strict)
+    dss = openDataSet(args.infile, strict=args.strict)
     dss.write(args.infile, relPaths=True)
     return 0
+
 
 def relativize_options(parser):
     # doesn't make sense to have an outdir, that would screw with the relative
     # paths...
-    parser.description='Make the paths in a DataSet XML file relative'
+    parser.description = 'Make the paths in a DataSet XML file relative'
     parser.add_argument("infile", type=str,
                         help="The XML file to relativize")
     parser.set_defaults(func=relativizeXml)
 
+
 def absolutizeXml(args):
-    dss=openDataSet(args.infile, strict=args.strict)
-    outfn=args.infile
+    dss = openDataSet(args.infile, strict=args.strict)
+    outfn = args.infile
     if args.outdir:
         if os.path.isdir(args.outdir):
-            outfn=_swapPath(args.outdir, args.infile)
+            outfn = _swapPath(args.outdir, args.infile)
         else:
-            outfn=args.outdir
+            outfn = args.outdir
     if args.updateCounts:
         dss.updateCounts()
     dss.write(outfn, relPaths=False)
     return 0
 
+
 def absolutize_options(parser):
-    parser.description=('Make the paths in an DataSet XML file absolute, '
+    parser.description = ('Make the paths in an DataSet XML file absolute, '
                           'optionally writing the new DataSet to a new '
                           'location at the same time')
     parser.add_argument("infile", type=str,
@@ -355,17 +366,19 @@ def absolutize_options(parser):
                         help="Update dataset metadata")
     parser.set_defaults(func=absolutizeXml)
 
+
 def copyToXml(args):
-    dss=openDataSet(args.infile, strict=args.strict)
-    outfn=args.outdir
+    dss = openDataSet(args.infile, strict=args.strict)
+    outfn = args.outdir
     if os.path.isdir(args.outdir):
-        outfn=_swapPath(args.outdir, args.infile)
+        outfn = _swapPath(args.outdir, args.infile)
     dss.copyTo(os.path.split(outfn)[0])
     dss.write(outfn, relPaths=args.relative)
     return 0
 
+
 def copyTo_options(parser):
-    parser.description=('Copy a DataSet XML and external resources to a new '
+    parser.description = ('Copy a DataSet XML and external resources to a new '
                           'location')
     parser.add_argument("infile", type=str,
                         help="The XML file to copy")
@@ -376,22 +389,25 @@ def copyTo_options(parser):
                               "absolute"))
     parser.set_defaults(func=copyToXml)
 
+
 def newUuidXml(args):
-    dss=openDataSet(args.infile, strict=args.strict)
+    dss = openDataSet(args.infile, strict=args.strict)
     dss.newUuid(random=args.random)
     dss.write(args.infile, validate=False)
     return 0
 
+
 def newUniqueId_options(parser):
-    parser.description="Refresh a DataSet's UniqueId"
+    parser.description = "Refresh a DataSet's UniqueId"
     parser.add_argument("infile", type=str,
                         help="The XML file to refresh")
     parser.add_argument("--random", action='store_true', default=False,
                         help=("Generate a random UUID, instead of a hash"))
     parser.set_defaults(func=newUuidXml)
 
+
 def loadStatsXml(args):
-    dset=openDataSet(args.infile, strict=args.strict)
+    dset = openDataSet(args.infile, strict=args.strict)
     if len(dset.externalResources) > 1:
         log.info("More than one ExternalResource found, adding the "
                  "sts.xml nested external resource to the first one")
@@ -402,8 +418,9 @@ def loadStatsXml(args):
         dset.write(args.infile, validate=False)
     return 0
 
+
 def loadStatsXml_options(parser):
-    parser.description=("Add an sts.xml file external resource to a "
+    parser.description = ("Add an sts.xml file external resource to a "
                           "DataSet XML file")
     parser.add_argument("infile", type=str,
                         help="The DataSet XML file to modify")
@@ -413,8 +430,9 @@ def loadStatsXml_options(parser):
                         help="The DataSet XML file to output")
     parser.set_defaults(func=loadStatsXml)
 
+
 def loadMetadataXml(args):
-    dset=openDataSet(args.infile, strict=args.strict)
+    dset = openDataSet(args.infile, strict=args.strict)
     dset.loadMetadata(args.metadata)
     if args.outfile:
         dset.write(args.outfile, validate=False)
@@ -422,8 +440,9 @@ def loadMetadataXml(args):
         dset.write(args.infile, validate=False)
     return 0
 
+
 def loadMetadataXml_options(parser):
-    parser.description=('Copy the contents of a Sequel metadata.xml file '
+    parser.description = ('Copy the contents of a Sequel metadata.xml file '
                           'into a DataSet XML file')
     parser.add_argument("infile", type=str,
                         help="The DataSet XML file to modify")
@@ -434,14 +453,16 @@ def loadMetadataXml_options(parser):
                         help="The DataSet XML file to output")
     parser.set_defaults(func=loadMetadataXml)
 
+
 def validateXml(args):
     validateFile(args.infile, args.skipFiles)
     print("{f} is valid DataSet XML with valid ResourceId "
           "references".format(f=args.infile))
     return 0
 
+
 def validate_options(parser):
-    parser.description=('Validate DataSet XML and ResourceId files '
+    parser.description = ('Validate DataSet XML and ResourceId files '
                           '(XML validation '
                           'only available when PyXB is installed)')
     parser.add_argument("infile", type=str,
@@ -451,17 +472,18 @@ def validate_options(parser):
                         help="Skip validating ResourceIds")
     parser.set_defaults(func=validateXml)
 
+
 def consolidateXml(args):
     """Combine BAMs and apply the filters described in the XML file, producing
     one consolidated XML"""
-    dset=openDataSet(args.infile)
+    dset = openDataSet(args.infile)
     dset.consolidate(args.datafile, numFiles=args.numFiles, useTmp=(not
                      args.noTmp))
     dset.write(args.xmlfile)
     return 0
 
 def consolidate_options(parser):
-    parser.description=('Combine the resource files (BAM, fasta, etc.) '
+    parser.description = ('Combine the resource files (BAM, fasta, etc.) '
                           'and apply the filters described in a DataSet XML '
                           'file')
     # parser.add_argument("infile", type=validate_file,
