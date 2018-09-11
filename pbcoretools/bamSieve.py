@@ -75,6 +75,9 @@ def _create_whitelist(bam_readers, percentage=None, count=None):
     if percentage is not None:
         count = int(len(zmws) * percentage / 100.0)
     zmws = list(zmws)
+    if count >= len(zmws):
+        warnings.warn("Count exceeds total number of ZMWs (%d > %d); will output all records" % (count, len(zmws)))
+        return set(zmws)
     have_zmws = set()
     whitelist = set()
     k = 0
