@@ -1,5 +1,6 @@
 
 import subprocess
+import warnings
 import tempfile
 import unittest
 import shutil
@@ -199,6 +200,20 @@ class TestBamSieve(unittest.TestCase):
         with BamReader(ofn) as bam_out:
             zmws = set([rec.HoleNumber for rec in bam_out])
             self.assertEqual(len(zmws), 1)
+
+    def test_count_overflow(self):
+        ofn = tempfile.NamedTemporaryFile(suffix=".bam").name
+        with warnings.catch_warnings(record=True) as w:
+            rc = bamSieve.filter_reads(
+                input_bam=SUBREADS3,
+                output_bam=ofn,
+                count=100000,
+                seed=12345)
+            self.assertEqual(rc, 0)
+            self.assertEqual(len(w), 1)
+            with BamReader(ofn) as bam_out:
+                zmws = set([rec.HoleNumber for rec in bam_out])
+                self.assertEqual(len(zmws), 48)
 
     def test_sts_xml(self):
         ofn = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
