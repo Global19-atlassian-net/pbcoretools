@@ -9,6 +9,7 @@ from pbcore.io import AlignmentSet, SubreadSet
 
 from pbcoretools.tasks.extract_unmapped_bam import (run_extract_unmapped,
                                                     make_unmapped_bam)
+from pbcoretools import bamSieve
 
 import pbtestdata
 
@@ -30,10 +31,24 @@ def assert_no_reads_in_common(self, alignment_file, output_file):
         mapped_zmws = set(mapped.index.holeNumber)
         with SubreadSet(output_file) as unmapped:
             unmapped_zmws = set(unmapped.index.holeNumber)
+            self.assertTrue(len(unmapped_zmws) > 0)
             self.assertEqual(len(mapped_zmws & unmapped_zmws), 0)
 
 
+def _make_filtered(ds_file):
+    tmp_file = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
+    bamSieve.filter_reads(
+        input_bam=ds_file,
+        output_bam=tmp_file,
+        blacklist={49050})
+    return tmp_file
+
+
 class TestExtractUnmappedBam(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.mapped = _make_filtered(pbtestdata.get_file("aligned-xml"))
 
     def test_get_blacklist(self):
         from pbcoretools.tasks.extract_unmapped_bam import _get_blacklist, _get_blacklist_pbi
@@ -47,30 +62,27 @@ class TestExtractUnmappedBam(unittest.TestCase):
 
     def test_make_unmapped_bam(self):
         subreads = pbtestdata.get_file("subreads-xml")
-        mapped = pbtestdata.get_file("aligned-xml")
         output_bam = tempfile.NamedTemporaryFile(suffix=".subreads.bam").name
-        make_unmapped_bam(mapped, subreads, output_bam)
-        assert_no_reads_in_common(self, mapped, output_bam)
+        make_unmapped_bam(self.mapped, subreads, output_bam)
+        assert_no_reads_in_common(self, self.mapped, output_bam)
 
     def test_run_extract_unmapped(self):
         subreads = pbtestdata.get_file("subreads-xml")
-        mapped = pbtestdata.get_file("aligned-xml")
         output_ds = tempfile.NamedTemporaryFile(suffix=".datastore.json").name
-        run_extract_unmapped(mapped, subreads, output_ds)
-        validate_outputs(self, output_ds, mapped)
+        run_extract_unmapped(self.mapped, subreads, output_ds)
+        validate_outputs(self, output_ds, self.mapped)
 
     def test_run_extract_unmapped_no_output(self):
         subreads = pbtestdata.get_file("subreads-xml")
-        mapped = pbtestdata.get_file("aligned-xml")
         output_ds = tempfile.NamedTemporaryFile(suffix=".datastore.json").name
-        run_extract_unmapped(mapped, subreads, output_ds, False)
+        run_extract_unmapped(self.mapped, subreads, output_ds, False)
         assert_empty_datastore(self, output_ds)
 
 
 class TestExtractUnalignedTCDefaults(PbTestApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.extract_unmapped_bam"
     INPUT_FILES = [
-        pbtestdata.get_file("aligned-xml"),
+        _make_filtered(pbtestdata.get_file("aligned-xml")),
         pbtestdata.get_file("subreads-xml")
     ]
 
