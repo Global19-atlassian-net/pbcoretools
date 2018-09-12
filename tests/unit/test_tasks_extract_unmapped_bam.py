@@ -28,11 +28,11 @@ def validate_outputs(self, output_file, alignment_file):
 
 def assert_no_reads_in_common(self, alignment_file, output_file):
     with AlignmentSet(alignment_file) as mapped:
-        mapped_zmws = set(mapped.index.holeNumber)
+        mapped_subreads = set(zip(mapped.index.holeNumber, mapped.index.qStart))
         with SubreadSet(output_file) as unmapped:
-            unmapped_zmws = set(unmapped.index.holeNumber)
-            self.assertTrue(len(unmapped_zmws) > 0)
-            self.assertEqual(len(mapped_zmws & unmapped_zmws), 0)
+            unmapped_subreads = set(zip(unmapped.index.holeNumber, unmapped.index.qStart))
+            self.assertTrue(len(unmapped_subreads) > 0)
+            self.assertEqual(len(mapped_subreads & unmapped_subreads), 0)
 
 
 def _make_filtered(ds_file):
@@ -56,9 +56,11 @@ class TestExtractUnmappedBam(unittest.TestCase):
         pbi = re.sub(".subreadset.xml", ".subreads.bam.pbi", subreads)
         ds = SubreadSet(subreads, skipCounts=True)
         blacklist = sorted(_get_blacklist(ds))
-        self.assertEqual(blacklist, [(-2081539485, 5177614), (-2081539485, 6160775)])
+        self.assertEqual(len(blacklist), 20)
+        self.assertEqual(blacklist[0], (-2081539485, 5177614, 404))
         blacklist = sorted(_get_blacklist_pbi(pbi))
-        self.assertEqual(blacklist, [(-2081539485, 5177614), (-2081539485, 6160775)])
+        self.assertEqual(len(blacklist), 20)
+        self.assertEqual(blacklist[0], (-2081539485, 5177614, 404))
 
     def test_make_unmapped_bam(self):
         subreads = pbtestdata.get_file("subreads-xml")

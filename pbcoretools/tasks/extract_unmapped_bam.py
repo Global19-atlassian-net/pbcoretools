@@ -33,7 +33,7 @@ class Constants(object):
 
 def _get_blacklist_pbi(pbi_file):
     pbi = PacBioBamIndex(pbi_file)
-    return set(zip(pbi.qId, pbi.holeNumber))
+    return set(zip(pbi.qId, pbi.holeNumber, pbi.qStart))
 
 
 # NOTE this ignores filters entirely - this works in practice because our
@@ -60,11 +60,12 @@ def make_unmapped_bam(alignment_file, subread_file, output_bam, nproc=1):
     with openDataSet(subread_file, strict=True) as ds_in:
         bam_template = ds_in.resourceReaders()[0].peer
         with AlignmentFile(output_bam, 'wb', template=bam_template) as out:
-            for i_rec, (qId, zmw) in enumerate(zip(ds_in.index.qId,
-                                                   ds_in.index.holeNumber)):
-                if not (qId, zmw) in blacklist:
+            for i_rec, (qId, zmw, qStart) in enumerate(
+                zip(ds_in.index.qId, ds_in.index.holeNumber,
+                    ds_in.index.qStart)):
+                if not (qId, zmw, qStart) in blacklist:
                     out.write(ds_in[i_rec].peer)
-                    unmapped.add((qId, zmw))
+                    unmapped.add((qId, zmw, qStart))
                     n_rec += 1
     log.info("Wrote %d records from %d ZMWs", n_rec, len(unmapped))
     # the index is slightly superfluous but useful for testing
