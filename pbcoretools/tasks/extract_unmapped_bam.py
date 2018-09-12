@@ -36,6 +36,9 @@ def _get_blacklist_pbi(pbi_file):
     return set(zip(pbi.qId, pbi.holeNumber))
 
 
+# NOTE this ignores filters entirely - this works in practice because our
+# AlignmentSet XMLs don't contain filters, but if that assumption changes we
+# will need to use the combined dataset index instead of .pbi files
 def _get_blacklist(ds, nproc=1):
     pbi_files = [ext_res.pbi for ext_res in ds.externalResources]
     results = pool_map(_get_blacklist_pbi, pbi_files, nproc)
@@ -60,7 +63,7 @@ def make_unmapped_bam(alignment_file, subread_file, output_bam, nproc=1):
             for i_rec, (qId, zmw) in enumerate(zip(ds_in.index.qId,
                                                    ds_in.index.holeNumber)):
                 if not (qId, zmw) in blacklist:
-                    out.write(ds_in[i_rec])
+                    out.write(ds_in[i_rec].peer)
                     unmapped.add((qId, zmw))
                     n_rec += 1
     log.info("Wrote %d records from %d ZMWs", n_rec, len(unmapped))
