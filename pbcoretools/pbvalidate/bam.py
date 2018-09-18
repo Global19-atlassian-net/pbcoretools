@@ -86,8 +86,8 @@ class Constants (object):
 def _check_pysam_version():  # XXX unused, see below
     import pysam.version
     version = pysam.version.__version__.split(".")
-    if (version < ["0", "8", "2"]):
-        raise ImportError("pysam >= 0.8.2 required")
+    if (version < ["0", "15", "1"]):
+        raise ImportError("pysam >= 0.15.1 required")
 
 # workaround for lack of has_tag() in pysam < 0.8.2
 # FIXME it would be nice if we could just require a newer version, but one of
