@@ -100,14 +100,15 @@ def split_laa_fastq_archived(input_file_name, output_file_name, subreads_file_na
     return archive_files(fastq_files, output_file_name)
 
 
-def iterate_datastore_read_set_files(datastore_file):
+def iterate_datastore_read_set_files(datastore_file,
+                                     allowed_read_types=Constants.ALLOWED_BC_TYPES):
     """
-    Iterate over SubreadSet or ConsensusReadSet files listed in a datastore JSON.
+    Iterate over dataset (e.g., SubreadSet or ConsensusReadSet) files listed in a datastore JSON.
     """
     ds = DataStore.load_from_json(datastore_file)
     files = ds.files.values()
     for f in files:
-        if f.file_type_id in Constants.ALLOWED_BC_TYPES:
+        if f.file_type_id in allowed_read_types:
             yield f
 
 
