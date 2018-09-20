@@ -4,29 +4,21 @@ File conversion utility functions.
 """
 
 from collections import defaultdict
-import subprocess
-import itertools
-import functools
 import tempfile
 import zipfile
 import logging
 import shutil
 import uuid
-import gzip
 import copy
 import csv
 import re
 import os.path as op
 import os
-import sys
 
-from pbcore.io import (SubreadSet, HdfSubreadSet, FastaReader, FastaWriter,
-                       FastqReader, FastqWriter, BarcodeSet, ExternalResource,
-                       ExternalResources, openDataSet, ContigSet, ReferenceSet,
-                       GmapReferenceSet, ConsensusReadSet)
+from pbcore.io import (SubreadSet, FastqReader, FastqWriter, BarcodeSet,
+                       openDataSet)
 from pbcore.io.dataset.DataSetUtils import loadMockCollectionMetadata
 from pbcommand.models import FileTypes, DataStore
-from pbcommand.utils import walker
 
 log = logging.getLogger(__name__)
 
