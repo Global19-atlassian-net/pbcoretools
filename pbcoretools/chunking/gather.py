@@ -21,7 +21,7 @@ from pbcommand.cli import get_default_argparser
 from pbcommand.models.report import Report
 
 from pbcore.io import (SubreadSet, ContigSet, AlignmentSet, ConsensusReadSet,
-                       ConsensusAlignmentSet, TranscriptSet)
+                       ConsensusAlignmentSet, TranscriptSet, TranscriptAlignmentSet)
 from pbcore.io.FastaIO import FastaReader, FastaWriter
 from pbcore.io.FastqIO import FastqReader, FastqWriter
 from pbcore.io.GffIO import merge_gffs_sorted
@@ -259,6 +259,7 @@ gather_alignmentset = P(__gather_readset, AlignmentSet)
 gather_ccsset = P(__gather_readset, ConsensusReadSet)
 gather_ccs_alignmentset = P(__gather_readset, ConsensusAlignmentSet)
 gather_transcripts = P(__gather_readset, TranscriptSet)
+gather_transcript_alignmentset = P(__gather_readset, TranscriptAlignmentSet)
 
 
 def gather_bigwig(input_files, output_file):
@@ -476,6 +477,7 @@ run_main_gather_contigset = P(__gather_runner, gather_contigset)
 run_main_gather_ccsset = P(__gather_runner, gather_ccsset)
 run_main_gather_ccs_alignmentset = P(__gather_runner, gather_ccs_alignmentset)
 run_main_gather_transcripts = P(__gather_runner, gather_transcripts)
+run_main_gather_transcript_alignmentset = P(__gather_runner, gather_transcript_alignmentset)
 run_main_gather_bigwig = P(__gather_runner, gather_bigwig)
 run_main_gather_tgz = P(__gather_runner, gather_tgz)
 run_main_gather_zip = P(__gather_runner, gather_zip)
