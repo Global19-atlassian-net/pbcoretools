@@ -47,6 +47,7 @@ class TestFilterDataSet(PbTestApp):
     def setUpClass(cls):
         ds = SubreadSet(data.getXml(10), strict=True)
         ds.write(cls.INPUT_FILES[0])
+        cls._n_input = len(ds)
 
     def _get_counts(self, rtc):
         n_expected = self.N_EXPECTED
@@ -66,6 +67,16 @@ class TestFilterDataSet(PbTestApp):
         self.assertTrue(ds.name.endswith("(filtered)"))
         self.assertTrue("filtered" in ds.tags)
         return ds
+
+
+class TestFilterDataSetNoFilter(TestFilterDataSet):
+    TASK_OPTIONS = {"pbcoretools.task_options.other_filters": ""}
+    RESOLVED_TASK_OPTIONS = {"pbcoretools.task_options.other_filters": ""}
+    EXPECTED_FILTER_STR = ""
+
+    def _get_counts(self, rtc):
+        _, n_actual = super(TestFilterDataSetNoFilter, self)._get_counts(rtc)
+        return self._n_input, n_actual
 
 
 class TestFilterDataSetBq(TestFilterDataSet):
