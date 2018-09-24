@@ -84,11 +84,12 @@ def run_filter_dataset(in_file, out_file, read_length, other_filters,
         else:
             filters = parse_filter_list(str(other_filters).split(','))
         log.info("{i} other filters will be added".format(i=len(filters)))
+    tags = set()
     if rlen or len(filters) > 0 or not downsample_factor in [0, 1]:
         dataSet = openDataSet(in_file)
         dataSet.updateCounts() # just in case
         combine_filters(dataSet, filters)
-        tags = {t.strip() for t in dataSet.tags.strip().split(",")}
+        tags.update({t.strip() for t in dataSet.tags.strip().split(",")})
         if rlen:
             combine_filters(dataSet, {'length': [('>=', rlen)]})
         if not downsample_factor in [0, 1]:
