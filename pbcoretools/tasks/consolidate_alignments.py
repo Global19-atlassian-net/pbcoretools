@@ -67,6 +67,10 @@ def get_parser(tool_id=Constants.TOOL_ID,
     return p
 
 
+def bam_of_dataset(dataset_fn):
+    return op.splitext(dataset_fn)[0] + ".bam"
+
+
 def run_consolidate(dataset_file, output_file, datastore_file,
                     consolidate, n_files, task_id=Constants.TOOL_ID,
                     consolidate_f=lambda ds: ds.consolidate):
@@ -75,7 +79,7 @@ def run_consolidate(dataset_file, output_file, datastore_file,
         if consolidate:
             if len(ds_in.toExternalFiles()) <= 0:
                 raise ValueError("DataSet {} must contain one or more files!".format(dataset_file))
-            new_resource_file = op.splitext(output_file)[0] + ".bam"
+            new_resource_file = bam_of_dataset(output_file)
             consolidate_f(ds_in)(new_resource_file, numFiles=n_files, useTmp=False)
             # always display the BAM/BAI if consolidation is enabled
             # XXX there is no uniqueness constraint on the sourceId, but this
