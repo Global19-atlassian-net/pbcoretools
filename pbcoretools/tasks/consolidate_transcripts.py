@@ -6,7 +6,7 @@ string (e.g., 'mysample_HQ_') to every transcript names.
 
 import sys
 import logging
-import pysam
+import subprocess
 
 from pbcommand.utils import setup_log
 from pbcommand.cli import pbparser_runner
@@ -14,10 +14,10 @@ from pbcommand.models import FileTypes, get_pbparser, ResourceTypes
 from pysam import AlignmentFile  # pylint: disable=no-member, no-name-in-module
 
 from pbcore.io import TranscriptSet
-from pbcoretools.tasks.consolidate_alignments import Constants as BaseConstants, run_consolidate
+from pbcoretools.tasks.consolidate_alignments import Constants as BaseConstants
+from pbcoretools.tasks.consolidate_alignments import run_consolidate, bam_of_dataset
 from pbcoretools.file_utils import get_prefixes
-
-logger = logging.getLogger()
+from pbcoretools.datastore_utils import dataset_to_datastore
 
 
 def get_consolidate_parser(tool_id, file_type, driver_exe, version, description):
@@ -99,6 +99,8 @@ def consolidate_transcripts(ds_in, prefix):
                     for record in reader:
                         record.query_name = prefix + record.query_name
                         writer.write(record)
+        # create pbi and bai index files for new_resource_file
+        subprocess.check_call(["pbindex", new_resource_file])
         ds_in = TranscriptSet(new_resource_file)  # override ds_in
     return _consolidate_transcripts_f
 
@@ -114,9 +116,17 @@ def __runner(ds_items):
                         n_files=1,
                         task_id=Constants.TOOL_ID,
                         consolidate_f=func)
+        # At this piont, ds_out is the same as ds_in, override ds_out with
+        # newly created, read name modified TranscriptSet
+        new_resource_file = bam_of_dataset(ds_out)
+        _ds_out = TranscriptSet(new_resource_file)
+        _ds_out.newUuid()
+        _ds_in = TranscriptSet(ds_in)
+        _ds_out.tags = _ds_in.tags
+        _ds_out.name = _ds_in.name
+        _ds_out.write(ds_out)
         # At this piont datastore contains paths to bam/bai/pbi files, now override
         # datastore with TranscriptSet
-        from pbcoretools.datastore_utils import dataset_to_datastore
         dataset_to_datastore(ds_out, datastore, source_id=Constants.TOOL_ID)
     return 0
 
