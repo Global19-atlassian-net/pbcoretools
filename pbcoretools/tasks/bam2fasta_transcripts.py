@@ -10,10 +10,9 @@ import re
 from pbcommand.models import FileTypes, ResourceTypes, get_pbparser
 from pbcommand.cli import pbparser_runner
 from pbcommand.utils import setup_log
-from pbcore.io import SubreadSet
 
 from pbcoretools.bam2fastx import run_bam_to_fasta
-from pbcoretools.file_utils import get_bio_sample_name
+from pbcoretools.file_utils import get_prefixes
 
 log = logging.getLogger(__name__)
 
@@ -52,47 +51,6 @@ def get_parser():
                            description="Exported FASTA containing low-quality transcripts",
                            default_name="lq_transcripts")
     return p
-
-
-# Regular expression pattern of sample strings: must be a string
-# of length >= 1, the leading character must be a letter or number,
-# the remaining characters must be in [a-zA-Z0-9\_\-]
-SAMPLE_CHARSET_RE_STR = '[a-zA-Z0-9\-\_]'
-SAMPLE_CHARSET_RE = re.compile(r"{}".format(SAMPLE_CHARSET_RE_STR))
-
-def sanitize_sample(sample):
-    """Simple method to sanitize sample to match sample pattern
-    ...doctest:
-        >>> def a_generator(): return 'a'
-        >>> sanitize_sample('1' * 20) # no length limit
-        '11111111111111111111'
-        >>> sanitize_sample('-123')
-        '-123'
-        >>> sanitize_sample('123 !&?') # all invalid characters go to '_'
-        '123____'
-    """
-    if len(sample) == 0:
-        raise ValueError('Sample must not be an empty string')
-    sanitized_sample = ''
-    for c in sample:
-        if not SAMPLE_CHARSET_RE.search(c):
-            c = '_'
-        sanitized_sample +=  c
-    return sanitized_sample
-
-
-def get_sanitized_bio_sample_name(subreads):
-    """Return sanitized biosample name"""
-    sample = get_bio_sample_name(subreads)
-    ssample = sanitize_sample(sample)
-    log.warning("Sanitize biosample name from {!r} to {!r}".format(sample, ssample))
-    return ssample
-
-
-def get_prefixes(subreads_file):
-    with SubreadSet(subreads_file) as subreads:
-        seqid_prefix = get_sanitized_bio_sample_name(subreads)
-        return ("{}_HQ_".format(seqid_prefix), "{}_LQ_".format(seqid_prefix))
 
 
 def run_args(args):

@@ -5,11 +5,9 @@
 Consolidate AlignmentSet .bam files
 """
 
-import functools
 import tempfile
 import logging
 import os.path as op
-import os
 import sys
 
 from pbcommand.models import get_pbparser, FileTypes, ResourceTypes, DataStore, DataStoreFile
@@ -59,24 +57,26 @@ def get_parser(tool_id=Constants.TOOL_ID,
                            description="Datastore containing BAM resource",
                            default_name="resources")
     p.add_boolean(Constants.CONSOLIDATE_ID, "consolidate",
-        default=False,
-        name="Consolidate .bam",
-        description="Merge chunked/gathered .bam files")
+                  default=False,
+                  name="Consolidate .bam",
+                  description="Merge chunked/gathered .bam files")
     p.add_int(Constants.N_FILES_ID, "consolidate_n_files",
-        default=1,
-        name="Number of .bam files",
-        description="Number of .bam files to create in consolidate mode")
+              default=1,
+              name="Number of .bam files",
+              description="Number of .bam files to create in consolidate mode")
     return p
 
 
 def run_consolidate(dataset_file, output_file, datastore_file,
-                    consolidate, n_files, task_id=Constants.TOOL_ID):
+                    consolidate, n_files, task_id=Constants.TOOL_ID,
+                    consolidate_f=lambda ds: ds.consolidate):
     datastore_files = []
     with openDataSet(dataset_file) as ds_in:
         if consolidate:
-            if len(ds_in.toExternalFiles()) != 1:
-                new_resource_file = op.splitext(output_file)[0] + ".bam"
-                ds_in.consolidate(new_resource_file, numFiles=n_files, useTmp=False)
+            if len(ds_in.toExternalFiles()) <= 0:
+                raise ValueError("DataSet {} must contain one or more files!".format(dataset_file))
+            new_resource_file = op.splitext(output_file)[0] + ".bam"
+            consolidate_f(ds_in)(new_resource_file, numFiles=n_files, useTmp=False)
             # always display the BAM/BAI if consolidation is enabled
             # XXX there is no uniqueness constraint on the sourceId, but this
             # seems sloppy nonetheless - unfortunately I don't know how else to
