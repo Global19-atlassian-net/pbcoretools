@@ -86,9 +86,12 @@ def createXml(args):
                             generateIndices=args.generateIndices)
     else:
         dsTypes = DataSet.castableTypes()
-        dset = dsTypes[args.dsType](*args.infile, strict=args.strict,
-                                    skipCounts=args.skipCounts,
-                                    generateIndices=args.generateIndices)
+        dset = dsTypes[args.dsType](
+            *args.infile,
+            strict=args.strict,
+            skipCounts=args.skipCounts,
+            generateIndices=args.generateIndices,
+            referenceFastaFname=args.reference_fasta_fname)
     if args.dsName != '':
         dset.name = args.dsName
     if args.metadata:
@@ -115,38 +118,40 @@ def createXml(args):
 def create_options(parser):
     parser.description = ('Create an XML file from fofn, BAM, or DataSet XML '
                           'files.')
-    parser.add_argument("outfile", type=str, help="The XML file to create")
-    parser.add_argument("infile", type=str, nargs='+',
-                        help=("The fofn, BAM, or XML file(s) to make into "
-                              "a DataSet XML"))
-    parser.add_argument("--force", default=False, action='store_true',
-                        help=("Clobber output file if it already exists"))
-    parser.add_argument("--type", type=str,
-                        dest='dsType',
-                        choices=DataSet.castableTypes(),
-                        help=("The type of XML to create (may be inferred "
-                              "if not provided). "))
-    parser.add_argument("--name", type=str, default='',
-                        dest='dsName',
-                        help="The name (in metadata) of the new DataSet")
-    parser.add_argument("--generateIndices", action='store_true',
-                        default=False,
-                        help=("Generate index files (.pbi and .bai for BAM, "
-                              ".fai for FASTA).  Requires pysam and "
-                              "pbindex."))
-    parser.add_argument("--metadata", type=str, default=None,
-                        help=("A Sequel metadata.xml file (or DataSet) to "
-                              "supply metadata"))
-    parser.add_argument("--novalidate", action='store_false', default=True,
-                        help=("Don't validate the resulting XML, don't modify "
-                              "paths"))
-    parser.add_argument("--relative", action='store_true', default=False,
-                        help=("Make the included paths relative instead of "
-                              "absolute (not compatible with --novalidate)"))
-    parser.add_argument("--well-sample-name", action="store", default=None,
-                        help=("Set the WellSample name for all movies (will generate new CollectionMetadata from blank template for any movies that are not already represented)."))
-    parser.add_argument("--bio-sample-name", action="store", default=None,
-                        help=("Set the BioSample name for all movies (will generate new CollectionMetadata from blank template for any movies that are not already represented)."))
+    pad = parser.add_argument
+    pad("outfile", help="The XML file to create")
+    pad("infile", nargs='+',
+        help=("The fofn, BAM, or XML file(s) to make into a DataSet XML"))
+    pad("--force", default=False, action='store_true',
+        help=("Clobber output file if it already exists"))
+    pad("--type", type=str,
+        dest='dsType',
+        choices=DataSet.castableTypes(),
+        help=("The type of XML to create (may be inferred "
+              "if not provided). "))
+    pad("--name", default='',
+        dest='dsName', help="The name (in metadata) of the new DataSet")
+    pad("--generateIndices", action='store_true',
+        default=False,
+        help=("Generate index files (.pbi and .bai for BAM, .fai for FASTA). "
+              "Requires pysam and pbindex."))
+    pad("--metadata",
+        help=("A Sequel metadata.xml file (or DataSet) to supply metadata"))
+    pad("--novalidate", action='store_false', default=True,
+        help=("Don't validate the resulting XML, don't modify paths"))
+    pad("--relative", action='store_true', default=False,
+        help=("Make the included paths relative instead of "
+              "absolute (not compatible with --novalidate)"))
+    pad("--well-sample-name",
+        help=("Set the WellSample name for all movies (will generate new "
+              "CollectionMetadata from blank template for any movies that are "
+              "not already represented)."))
+    pad("--bio-sample-name",
+        help=("Set the BioSample name for all movies (will generate new "
+              "CollectionMetadata from blank template for any movies that are "
+              "not already represented)."))
+    pad("--reference-fasta-fname",
+        help=("A path to a reference fasta file for the new AlignmentSet"))
     parser.set_defaults(func=createXml)
 
 
@@ -271,33 +276,37 @@ def splitXml(args):
 
 
 def split_options(parser):
-    parser.description = "Split the DataSet"
-    parser.add_argument("infile", type=str,
-                        help="The DataSet XML file to split")
-    parser.add_argument("--contigs", default=False, action='store_true',
-                        help="Split on contigs")
-    parser.add_argument("--barcodes", default=False, action='store_true',
-                        help="Split on barcodes")
-    parser.add_argument("--zmws", default=False, action='store_true',
-                        help="Split on ZMWs")
-    parser.add_argument("--byRefLength", default=True, action='store_true',
-                        help="Split contigs by contig length")
-    parser.add_argument("--noCounts", default=False, action='store_true',
-                        help="Update DataSet counts after split")
-    parser.add_argument("--chunks", default=0, type=int,
-                        help="Split contigs into <chunks> total windows")
-    parser.add_argument("--maxChunks", default=0, type=int,
-                        help="Split contigs into at most <chunks> groups")
-    parser.add_argument("--targetSize", default=5000, type=int,
-                        help="Target number of records per chunk")
-    parser.add_argument("--breakContigs", default=False, action='store_true',
-                        help="Break contigs to get closer to maxCounts")
-    parser.add_argument("--subdatasets", default=False, action='store_true',
-                        help="Split on SubDataSets")
-    parser.add_argument("--outdir", default=False, type=validate_output_dir,
-                        help="Specify an output directory")
-    parser.add_argument("outfiles", nargs=argparse.REMAINDER,
-                        type=str, help="The resulting XML files (optional)")
+    parser.description = ("Split the DataSet. By default the DataSet is "
+                          "split by ExternalResources, filters are used "
+                          "instead for other split methods")
+    pad = parser.add_argument
+    pad("infile", type=str,
+        help="The DataSet XML file to split")
+    pad("--contigs", default=False, action='store_true',
+        help="Split mapped reads by contig span")
+    pad("--barcodes", default=False, action='store_true',
+        help="Split on barcodes")
+    pad("--zmws", default=False, action='store_true',
+        help="Split on ZMWs, keeping ZMWs together")
+    pad("--byRefLength", default=True, action='store_true',
+        help="Split contigs by contig length")
+    pad("--noCounts", default=False, action='store_true',
+        help="Skip updating DataSet counts after split")
+    pad("--chunks", default=0, type=int,
+        help="Split into <chunks> approximately-even DataSets")
+    pad("--maxChunks", default=0, type=int,
+        help="Split into at most <chunks> groups, possibly fewer")
+    pad("--targetSize", default=5000, type=int,
+        help="Target number of records per chunk")
+    pad("--breakContigs", default=False, action='store_true',
+        help=("Split mapped reads by reference spans shorter than a full "
+              "contig to get more even chunks"))
+    pad("--subdatasets", default=False, action='store_true',
+        help="Split using existing SubDataSets")
+    pad("--outdir", default=False, type=validate_output_dir,
+        help="Specify an output directory")
+    pad("outfiles", nargs=argparse.REMAINDER, type=str,
+        help="The resulting XML files (optional)")
     parser.set_defaults(func=splitXml)
 
 

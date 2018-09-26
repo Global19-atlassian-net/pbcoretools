@@ -23,6 +23,7 @@ from pbcore.io.dataset.DataSetWriter import toXml
 from pbcore.io.dataset.DataSetValidator import validateFile
 from pbcore.util.Process import backticks
 import pbcore.data.datasets as data
+import pbcore.data as otherdata
 
 import pbtestdata
 
@@ -544,6 +545,23 @@ class TestDataSet(unittest.TestCase):
         self.assertEqual(r, 0)
         self.assertTrue(os.path.exists(ofn))
         aset = AlignmentSet(ofn, strict=True)
+        shutil.rmtree(outdir)
+
+        log.debug("Include reference fasta fname")
+        outdir = tempfile.mkdtemp(suffix="dataset-unittest")
+        ofn = os.path.join(outdir, os.path.basename(data.getXml(12)))
+        cmd = ("dataset create --type AlignmentSet "
+               "--reference-fasta-fname {r} {o} {i1} {i2}").format(
+            o=ofn, i1=data.getXml(8), i2=data.getXml(11),
+            r=otherdata.getFasta())
+        log.debug(cmd)
+        o, r, m = backticks(cmd)
+        log.debug(m)
+        self.assertEqual(r, 0)
+        self.assertTrue(os.path.exists(ofn))
+        aset = AlignmentSet(ofn, strict=True)
+        for res in aset.externalResources:
+            self.assertEqual(res.reference, otherdata.getFasta())
         shutil.rmtree(outdir)
 
 
