@@ -58,8 +58,16 @@ def make_unmapped_bam(alignment_file, subread_file, output_bam, nproc=1):
     unmapped = set()
     log.info("Reading from %s", subread_file)
     with openDataSet(subread_file, strict=True) as ds_in:
-        bam_template = ds_in.resourceReaders()[0].peer
-        with AlignmentFile(output_bam, 'wb', template=bam_template) as out:
+        header = dict(ds_in.resourceReaders()[0].peer.header)
+        have_rgs = set()
+        rgs = []
+        for rr in ds_in.resourceReaders():
+            for bam_rg in rr.peer.header['RG']:
+                if not bam_rg['ID'] in have_rgs:
+                    rgs.append(bam_rg)
+                    have_rgs.add(bam_rg['ID'])
+        header['RG'] = rgs
+        with AlignmentFile(output_bam, 'wb', header=header) as out:
             for i_rec, (qId, zmw, qStart) in enumerate(
                 zip(ds_in.index.qId, ds_in.index.holeNumber,
                     ds_in.index.qStart)):
