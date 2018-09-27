@@ -207,7 +207,6 @@ class TestCase (unittest.TestCase):
         file_name = op.join(DATA_DIR, "tst_2_subreads.bam")
         bam_file = pbcore.io.BamReader(file_name)
         _run_validators(f=bam_file, expected_failures=[
-            'AlignmentCigarError',
             'AlignmentCigarMatchError', 'AlignmentNotUniqueError',
             'AlignmentUnmappedError', 'BasecallerVersionError',
             'MissingCodecError', 'MissingIndexError', 'MissingPlatformError',
@@ -263,8 +262,7 @@ class TestCase (unittest.TestCase):
         e, c = bam.validate_bam(file_name, validate_index=True)
         errors = sorted(list(set([type(err).__name__ for err in e])))
         self.assertEqual(errors,
-                         ['AlignmentCigarError', 'AlignmentCigarMatchError',
-                          'AlignmentNotUniqueError',
+                         ['AlignmentCigarMatchError',
                           'AlignmentUnmappedError',
                           'BasecallerVersionError',
                           'MissingCodecError', 'MissingIndexError',
@@ -325,6 +323,13 @@ class TestCase (unittest.TestCase):
         BAM = "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/unpolished.bam"
         e, c = bam.validate_bam(BAM)
         self.assertEqual(len(e), 0)
+
+    @unittest.skipUnless(op.isdir(TESTDATA), "Testdata not found")
+    def test_overlapping_alignments(self):
+        BAM = "/pbi/dept/secondary/siv/testdata/pbreports-unittest/data/mapping_stats/pbmm2/aligned.bam"
+        e, c = bam.validate_bam(BAM, aligned=True)
+        errors2 = list(set(sorted([type(err).__name__ for err in e])))
+        self.assertEqual(errors2, ["AlignmentNotUniqueError"])
 
 
 if __name__ == "__main__":

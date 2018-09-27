@@ -198,7 +198,7 @@ class MissingCodecError (BAMError):
 
 
 class AlignmentNotUniqueError (BAMReadError):
-    MESSAGE_FORMAT = "QNAME %s occurs more than once (tStart = %s)"
+    MESSAGE_FORMAT = "QNAME %s is present in multiple overlapping alignments ((%d, %d) versus (%d, %d))"
 
 
 class AlignmentUnmappedError (BAMReadError):
@@ -624,15 +624,21 @@ class ValidateReadBase (ValidateRecord):
 
 class ValidateReadUnique (ValidateReadBase):
 
+    """
+    Make sure there are no duplicate subread alignments
+    """
+
     def __init__(self):
-        self._tstarts = {}
+        self._aRanges = {}
 
     def _get_errors(self, aln):
-        if aln.qName in self._tstarts:
-            self._tstarts[aln.qName].append(aln.tStart)
-            tstarts = ", ".join([str(x) for x in self._tstarts[aln.qName]])
-            return [AlignmentNotUniqueError.from_args(aln, aln.qName, tstarts)]
-        self._tstarts[aln.qName] = [aln.tStart]
+        if aln.qName in self._aRanges:
+            for (aStart, aEnd) in self._aRanges[aln.qName]:
+                if aStart <= aln.aStart < aEnd or aStart < aln.aEnd <= aEnd:
+                    return [AlignmentNotUniqueError.from_args(aln, aln.qName, aStart, aEnd, aln.aStart, aln.aEnd)]
+            self._aRanges[aln.qName].append((aln.aStart, aln.aEnd))
+        else:
+            self._aRanges[aln.qName] = [(aln.aStart, aln.aEnd)]
         return []
 
 
@@ -1104,7 +1110,8 @@ def get_validators(aligned=None, contents=None,
         # ValidateReadQVs(),
         ValidateReadTags(),
         ValidateReadSNR(),
-        ValidateReadCigar(),
+        # XXX disabling this because of pbmm2, see SL-3350
+        # ValidateReadCigar(),
         ValidateReadCigarMatches(),
         ValidateReadPulseFeatures(),
         ValidatePulseWidthEncoding(),
