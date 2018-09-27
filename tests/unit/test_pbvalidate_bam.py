@@ -207,7 +207,6 @@ class TestCase (unittest.TestCase):
         file_name = op.join(DATA_DIR, "tst_2_subreads.bam")
         bam_file = pbcore.io.BamReader(file_name)
         _run_validators(f=bam_file, expected_failures=[
-            'AlignmentCigarError',
             'AlignmentCigarMatchError', 'AlignmentNotUniqueError',
             'AlignmentUnmappedError', 'BasecallerVersionError',
             'MissingCodecError', 'MissingIndexError', 'MissingPlatformError',
@@ -263,7 +262,7 @@ class TestCase (unittest.TestCase):
         e, c = bam.validate_bam(file_name, validate_index=True)
         errors = sorted(list(set([type(err).__name__ for err in e])))
         self.assertEqual(errors,
-                         ['AlignmentCigarError', 'AlignmentCigarMatchError',
+                         ['AlignmentCigarMatchError',
                           'AlignmentNotUniqueError',
                           'AlignmentUnmappedError',
                           'BasecallerVersionError',
