@@ -637,7 +637,8 @@ class ValidateReadUnique (ValidateReadBase):
                 if aStart <= aln.aStart < aEnd or aStart < aln.aEnd <= aEnd:
                     return [AlignmentNotUniqueError.from_args(aln, aln.qName, aStart, aEnd, aln.aStart, aln.aEnd)]
             self._aRanges[aln.qName].append((aln.aStart, aln.aEnd))
-        self._aRanges[aln.qName] = [(aln.aStart, aln.aEnd)]
+        else:
+            self._aRanges[aln.qName] = [(aln.aStart, aln.aEnd)]
         return []
 
 

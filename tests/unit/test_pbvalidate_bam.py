@@ -263,7 +263,6 @@ class TestCase (unittest.TestCase):
         errors = sorted(list(set([type(err).__name__ for err in e])))
         self.assertEqual(errors,
                          ['AlignmentCigarMatchError',
-                          'AlignmentNotUniqueError',
                           'AlignmentUnmappedError',
                           'BasecallerVersionError',
                           'MissingCodecError', 'MissingIndexError',
@@ -324,6 +323,13 @@ class TestCase (unittest.TestCase):
         BAM = "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/unpolished.bam"
         e, c = bam.validate_bam(BAM)
         self.assertEqual(len(e), 0)
+
+    @unittest.skipUnless(op.isdir(TESTDATA), "Testdata not found")
+    def test_overlapping_alignments(self):
+        BAM = "/pbi/dept/secondary/siv/testdata/pbreports-unittest/data/mapping_stats/pbmm2/aligned.bam"
+        e, c = bam.validate_bam(BAM, aligned=True)
+        errors2 = list(set(sorted([type(err).__name__ for err in e])))
+        self.assertEqual(errors2, ["AlignmentNotUniqueError"])
 
 
 if __name__ == "__main__":
