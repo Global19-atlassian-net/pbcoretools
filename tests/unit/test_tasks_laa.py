@@ -7,7 +7,7 @@ import os
 import sys
 
 from pbcore.io import FastqRecord
-from pbcommand.testkit import PbTestApp
+import pbcommand.testkit
 
 import pbtestdata
 
@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 SUBREADS_IN = pbtestdata.get_file("barcoded-subreadset")
 
 
-class TestSplitLAATask(PbTestApp):
+class TestSplitLAATask(pbcommand.testkit.PbTestApp):
     TASK_ID = "pbcoretools.tasks.split_laa_fastq"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.laa emit-tool-contract {i} '.format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.laa run-rtc '
@@ -49,7 +49,7 @@ class TestSplitLAATask(PbTestApp):
             self.assertEqual(suffixes, ['Alice.lbc1--lbc1.fastq', 'Charles.lbc3--lbc3.fastq'])
 
 
-class TestCombinedLAAZip(PbTestApp):
+class TestCombinedLAAZip(pbcommand.testkit.PbTestApp):
     TASK_ID = "pbcoretools.tasks.make_combined_laa_zip"
     DRIVER_EMIT = "python -m pbcoretools.tasks.laa emit-tool-contract {i} ".format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.laa run-rtc '

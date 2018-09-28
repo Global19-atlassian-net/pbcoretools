@@ -7,7 +7,7 @@ import os.path as op
 from pbcore.io import (FastaReader, FastqReader, openDataSet, HdfSubreadSet,
                        SubreadSet, ConsensusReadSet, TranscriptSet)
 import pbcore.data.datasets as data
-from pbcommand.testkit import PbTestApp
+import pbcommand.testkit
 
 from pbcoretools.tasks.filters import combine_filters, run_filter_dataset
 
@@ -27,7 +27,7 @@ def _to_skip_msg(exe):
 skip_if_no_testdata = unittest.skipUnless(op.exists(SIV_DATA_DIR),
                                           "Missing testdata")
 
-class TestFilterDataSet(PbTestApp):
+class TestFilterDataSet(pbcommand.testkit.PbTestApp):
     TASK_ID = "pbcoretools.tasks.filterdataset"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.filters emit-tool-contract {i} '.format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.filters run-rtc '
@@ -158,7 +158,7 @@ class TestCombineFilters(TestFilterDataSet):
 
 
 @skip_if_no_testdata
-class TestSplitTranscripts(PbTestApp):
+class TestSplitTranscripts(pbcommand.testkit.PbTestApp):
     TASK_ID = "pbcoretools.tasks.split_transcripts"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.filters emit-tool-contract {i} '.format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.filters run-rtc '
