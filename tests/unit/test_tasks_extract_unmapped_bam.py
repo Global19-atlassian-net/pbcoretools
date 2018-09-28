@@ -3,7 +3,7 @@ import tempfile
 import unittest
 import re
 
-from pbcommand.testkit.core import PbTestApp
+import pbcommand.testkit
 from pbcommand.models.common import DataStore
 from pbcore.io import AlignmentSet, SubreadSet
 
@@ -81,7 +81,7 @@ class TestExtractUnmappedBam(unittest.TestCase):
         assert_empty_datastore(self, output_ds)
 
 
-class TestExtractUnalignedTCDefaults(PbTestApp):
+class TestExtractUnalignedTCDefaults(pbcommand.testkit.PbTestApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.extract_unmapped_bam"
     INPUT_FILES = [
         _make_filtered(pbtestdata.get_file("aligned-xml")),

@@ -233,6 +233,18 @@ def gather_fastq_contigset(input_files, output_file):
         return output_file
 
 
+def _uniqueify_metadata(ds):
+    if ds.metadata is not None and len(ds.metadata.collections) > 1:
+        have_collections = set()
+        k = 0
+        while k < len(ds.metadata.collections):
+            if ds.metadata.collections[k].uniqueId in have_collections:
+                ds.metadata.collections.pop(k)
+            else:
+                have_collections.add(ds.metadata.collections[k].uniqueId)
+                k += 1
+
+
 def __gather_readset(dataset_type, input_files, output_file, skip_empty=True,
                      consolidate=False, consolidate_n_files=1):
     """
@@ -245,6 +257,7 @@ def __gather_readset(dataset_type, input_files, output_file, skip_empty=True,
     :rtype: str
     """
     tbr = dataset_type(*input_files)
+    _uniqueify_metadata(tbr)
     if consolidate:
         new_resource_file = output_file[:-4] + ".bam"
         tbr.consolidate(new_resource_file, numFiles=consolidate_n_files)

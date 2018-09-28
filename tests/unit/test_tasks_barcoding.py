@@ -12,7 +12,7 @@ import os
 import sys
 
 from pbcore.io import SubreadSet, openDataSet
-from pbcommand.testkit import PbTestApp
+import pbcommand.testkit
 from pbcommand.utils import which
 from pbcommand.models.common import DataStore, DataStoreFile, FileTypes
 
@@ -29,7 +29,7 @@ from test_file_utils import (validate_barcoded_datastore_files,
 log = logging.getLogger(__name__)
 
 
-class TestDataStoreToSubreads(PbTestApp):
+class TestDataStoreToSubreads(pbcommand.testkit.PbTestApp):
     TASK_ID = "pbcoretools.tasks.datastore_to_subreads"
     DRIVER_EMIT = "python -m pbcoretools.tasks.barcoding emit-tool-contract {i} ".format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.barcoding run-rtc '
@@ -46,7 +46,7 @@ class TestDataStoreToSubreads(PbTestApp):
         ds.write_json(cls.INPUT_FILES[0])
 
 
-class TestDataStoreToCCS(PbTestApp):
+class TestDataStoreToCCS(pbcommand.testkit.PbTestApp):
     TASK_ID = "pbcoretools.tasks.datastore_to_ccs"
     DRIVER_EMIT = "python -m pbcoretools.tasks.barcoding emit-tool-contract {i} ".format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.barcoding run-rtc '
@@ -63,7 +63,7 @@ class TestDataStoreToCCS(PbTestApp):
         ds.write_json(cls.INPUT_FILES[0])
 
 
-class TestUpdateBarcodedSampleMetadata(PbTestApp):
+class TestUpdateBarcodedSampleMetadata(pbcommand.testkit.PbTestApp):
     TASK_ID = "pbcoretools.tasks.update_barcoded_sample_metadata"
     DRIVER_EMIT = "python -m pbcoretools.tasks.barcoding emit-tool-contract {i} ".format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.barcoding run-rtc '
@@ -94,7 +94,7 @@ class TestUpdateBarcodedSampleMetadataNoUuid(TestUpdateBarcodedSampleMetadata):
                                           use_barcode_uuids=False)
 
 
-class TestUpdateBarcodedSampleMetadataCCS(PbTestApp):
+class TestUpdateBarcodedSampleMetadataCCS(pbcommand.testkit.PbTestApp):
     TASK_ID = "pbcoretools.tasks.update_barcoded_sample_metadata_ccs"
     DRIVER_EMIT = "python -m pbcoretools.tasks.barcoding emit-tool-contract {i} ".format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.barcoding run-rtc '
@@ -110,7 +110,7 @@ class TestUpdateBarcodedSampleMetadataCCS(PbTestApp):
         ds.write_json(cls.INPUT_FILES[0])
 
 
-class TestReparentSubreads(PbTestApp):
+class TestReparentSubreads(pbcommand.testkit.PbTestApp):
     TASK_ID = "pbcoretools.tasks.reparent_subreads"
     DRIVER_EMIT = "python -m pbcoretools.tasks.barcoding emit-tool-contract {i} ".format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.barcoding run-rtc '
@@ -122,14 +122,14 @@ class TestReparentSubreads(PbTestApp):
             self.assertEqual(ds_out.name, "My Data")
 
 
-class TestSubreadsToDataStore(PbTestApp):
+class TestSubreadsToDataStore(pbcommand.testkit.PbTestApp):
     TASK_ID = "pbcoretools.tasks.subreads_to_datastore"
     DRIVER_EMIT = "python -m pbcoretools.tasks.barcoding emit-tool-contract {i} ".format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.barcoding run-rtc '
     INPUT_FILES = [pbtestdata.get_file("subreads-sequel")]
 
 
-class TestCCSToDataStore(PbTestApp):
+class TestCCSToDataStore(pbcommand.testkit.PbTestApp):
     TASK_ID = "pbcoretools.tasks.ccs_to_datastore"
     DRIVER_EMIT = "python -m pbcoretools.tasks.barcoding emit-tool-contract {i} ".format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.barcoding run-rtc '

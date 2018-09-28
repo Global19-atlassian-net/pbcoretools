@@ -17,7 +17,7 @@ import sys
 from pbcore.io import (FastaReader, FastqReader, openDataSet, HdfSubreadSet,
                        SubreadSet, ConsensusReadSet, FastqWriter, FastqRecord,
                        TranscriptSet)
-from pbcommand.testkit import PbTestApp
+import pbcommand.testkit
 from pbcommand.utils import which
 from pbcommand.models.common import DataStore, DataStoreFile, FileTypes
 
@@ -55,7 +55,7 @@ SKIP_MSG_BAM2FX = _to_skip_msg(Constants.BAM2FASTA)
 skip_unless_bam2fastx = unittest.skipUnless(HAVE_BAM2FASTX, SKIP_MSG_BAM2FX)
 
 
-class _BaseTestBam2Fasta(PbTestApp):
+class _BaseTestBam2Fasta(pbcommand.testkit.PbTestApp):
     INPUT_FILES = [get_temp_file(suffix=".subreadset.xml")]
     SRC_FILE = None # used to generate INPUT_FILES[0]
     MAX_NPROC = 24
@@ -232,7 +232,7 @@ class TestBam2FastqCCS(TestBam2FastaCCS):
 
 
 @skip_unless_bam2fastx
-class TestBam2FastaBarcoded(PbTestApp):
+class TestBam2FastaBarcoded(pbcommand.testkit.PbTestApp):
     TASK_ID = "pbcoretools.tasks.bam2fasta_archive"
     DRIVER_BASE = "python -m pbcoretools.tasks.bam2fasta_archive"
     INPUT_FILES = [pbtestdata.get_file("barcoded-subreadset")]
@@ -375,7 +375,7 @@ def _setup_transcripts(hq_file, lq_file):
 
 
 @skip_unless_bam2fastx
-class TestBam2FastaTranscripts(PbTestApp):
+class TestBam2FastaTranscripts(pbcommand.testkit.PbTestApp):
     TASK_ID = "pbcoretools.tasks.bam2fasta_transcripts"
     DRIVER_BASE = "python -m pbcoretools.tasks.bam2fasta_transcripts"
     INPUT_FILES = [

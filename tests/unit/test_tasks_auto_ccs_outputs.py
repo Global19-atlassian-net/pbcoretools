@@ -5,7 +5,7 @@ import logging
 import os.path as op
 import sys
 
-from pbcommand.testkit import PbTestApp
+import pbcommand.testkit
 from pbcommand.models import DataStore
 from pbcommand.utils import which
 
@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 
 @skip_unless_pbmerge
 @skip_if_no_testdata
-class TestAutoCCSOutputs(PbTestApp):
+class TestAutoCCSOutputs(pbcommand.testkit.PbTestApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.auto_ccs_outputs"
     INPUT_FILES = [
         op.join(TESTDATA, "auto_ccs_outputs/m54006_180707_211919.consensusreadset.xml")
@@ -50,7 +50,7 @@ class TestAutoCCSOutputs(PbTestApp):
 
 @skip_unless_pbmerge
 @skip_if_no_testdata
-class TestAutoCCSBarcodedOutputs(PbTestApp):
+class TestAutoCCSBarcodedOutputs(pbcommand.testkit.PbTestApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.auto_ccs_outputs_barcoded"
     INPUT_FILES = [
         op.join(TESTDATA, "auto_ccs_outputs_barcoded/file.datastore.json")
