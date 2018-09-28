@@ -7,17 +7,21 @@ set -x
 if [[ -z ${bamboo_repository_branch_name+x} ]]; then
   WHEELHOUSE=/mnt/software/p/python/wheelhouse/develop
   PB_TOOLS_BIN=/pbi/dept/secondary/builds/links/current_develop_smrttools-incremental_installdir/smrtcmds/bin
+  PB_TOOLS_INTERNAL_BIN=/pbi/dept/secondary/builds/links/current_develop_smrttools-incremental_installdir/private/otherbins/internalall/bin
 elif [[ ${bamboo_repository_branch_name} == develop ]]; then
   WHEELHOUSE=/mnt/software/p/python/wheelhouse/develop
   PB_TOOLS_BIN=/pbi/dept/secondary/builds/links/current_develop_smrttools-incremental_installdir/smrtcmds/bin
+  PB_TOOLS_INTERNAL_BIN=/pbi/dept/secondary/builds/links/current_develop_smrttools-incremental_installdir/private/otherbins/internalall/bin
 elif [[ ${bamboo_repository_branch_name} == master ]]; then
   WHEELHOUSE=/mnt/software/p/python/wheelhouse/master
   PB_TOOLS_BIN=/pbi/dept/secondary/builds/links/current_master_smrttools-incremental_installdir/smrtcmds/bin
+  PB_TOOLS_INTERNAL_BIN=/pbi/dept/secondary/builds/links/current_master_smrttools-incremental_installdir/private/otherbins/internalall/bin
   git -C repos/pbcore checkout master
   git -C repos/pbcommand checkout master
 else
   WHEELHOUSE=/mnt/software/p/python/wheelhouse/develop
   PB_TOOLS_BIN=/pbi/dept/secondary/builds/links/current_develop_smrttools-incremental_installdir/smrtcmds/bin
+  PB_TOOLS_INTERNAL_BIN=/pbi/dept/secondary/builds/links/current_develop_smrttools-incremental_installdir/private/otherbins/internalall/bin
 fi
 
 rm -rf build
@@ -36,6 +40,7 @@ if [ ! -z "$PB_TOOLS_BIN" ]; then
   ln -sfn $PB_TOOLS_BIN/bam2fasta build/bin/
   ln -sfn $PB_TOOLS_BIN/bam2fastq build/bin/
   ln -sfn $PB_TOOLS_BIN/samtools  build/bin/
+  ln -sfn $PB_TOOLS_INTERNAL_BIN/pbmerge  build/bin/
 else
   echo "WARNING: smrttools not available, some tests will be skipped"
 fi
