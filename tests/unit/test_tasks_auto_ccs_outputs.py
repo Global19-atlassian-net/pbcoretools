@@ -7,13 +7,18 @@ import sys
 
 from pbcommand.testkit import PbTestApp
 from pbcommand.models import DataStore
+from pbcommand.utils import which
 
 from pbcoretools.tasks.auto_ccs_outputs import run_ccs_bam_fastq_exports
 
 from base import TESTDATA, skip_if_no_testdata
 
+HAVE_PBMERGE = which("pbmerge")
+skip_unless_pbmerge = unittest.skipUnless(HAVE_PBMERGE, "Missing pbmerge")
+
 log = logging.getLogger(__name__)
 
+@skip_unless_pbmerge
 @skip_if_no_testdata
 class TestAutoCCSOutputs(PbTestApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.auto_ccs_outputs"
@@ -43,6 +48,7 @@ class TestAutoCCSOutputs(PbTestApp):
         self._check_datastore_files(files)
 
 
+@skip_unless_pbmerge
 @skip_if_no_testdata
 class TestAutoCCSBarcodedOutputs(PbTestApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.auto_ccs_outputs_barcoded"
