@@ -47,7 +47,7 @@ def _get_parser():
     return p
 
 
-def run_ccs_bam_fastq_exports(ccs_dataset_file, base_dir):
+def run_ccs_bam_fastq_exports(ccs_dataset_file, base_dir, is_barcoded=False):
     """
     Take a ConsensusReadSet and write BAM/FASTQ files to the output
     directory.  If this is a demultiplexed dataset, it is assumed to have
@@ -56,9 +56,9 @@ def run_ccs_bam_fastq_exports(ccs_dataset_file, base_dir):
     datastore_files = []
     with ConsensusReadSet(ccs_dataset_file, strict=True) as ccs:
         bam_file_name = None
-        if ccs.isBarcoded:
+        if is_barcoded:
             barcodes = list(set(zip(ccs.index.bcForward, ccs.index.bcReverse)))
-            assert len(barcodes) == 0, "Multiple barcodes found: {b}".format(
+            assert len(barcodes) == 1, "Multiple barcodes found: {b}".format(
                 b=", ".join([str(b) for b in barcodes]))
             assert len(ccs.externalResources) == 1
             ccs_bam = ccs.externalResources[0].bam

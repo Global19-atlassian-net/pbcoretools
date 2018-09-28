@@ -9,12 +9,11 @@ from pbcommand.models import DataStore
 
 from pbcoretools.tasks.auto_ccs_outputs import run_ccs_bam_fastq_exports
 
+from base import TESTDATA, skip_if_no_testdata
+
 log = logging.getLogger(__name__)
 
-TESTDATA = "/pbi/dept/secondary/siv/testdata/pbcoretools-unittest/data"
-
-
-@unittest.skipUnless(op.isdir(TESTDATA), "Testdata not found")
+@skip_if_no_testdata
 class TestAutoCCSOutputs(PbTestApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.auto_ccs_outputs"
     INPUT_FILES = [
@@ -30,13 +29,13 @@ class TestAutoCCSOutputs(PbTestApp):
         ])
 
 
-@unittest.skip("TODO")
+@skip_if_no_testdata
 class TestAutoCCSBarcodedOutputs(PbTestApp):
     DRIVER_BASE = "python -m pbcoretools.tasks.auto_ccs_outputs_barcoded"
     INPUT_FILES = [
-        op.join(TESTDATA, "?")
+        op.join(TESTDATA, "auto_ccs_outputs_barcoded/file.datastore.json")
     ]
 
     def run_after(self, rtc, output_dir):
         ds = DataStore.load_from_json(rtc.task.output_files[0])
-        self.assertEqual(len(ds.files), _N_FILES_TODO)
+        self.assertEqual(len(ds.files), 1)

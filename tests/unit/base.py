@@ -1,5 +1,11 @@
 
+import unittest
 import tempfile
+import os.path as op
+
+TESTDATA = "/pbi/dept/secondary/siv/testdata/pbcoretools-unittest/data"
+
+skip_if_no_testdata = unittest.skipUnless(op.isdir(TESTDATA), "Testdata not found")
 
 def _get_temp_file(suffix, dir_):
     t = tempfile.NamedTemporaryFile(suffix=suffix, delete=False, dir=dir_)
