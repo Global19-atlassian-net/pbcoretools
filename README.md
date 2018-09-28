@@ -3,10 +3,11 @@
 The `pbcoretools` package provides Python CLIs for interacting with PacBio
 data files and writing bioinformatics applications.
 
-## Installation:
+## Availability
+Latest version can be installed via bioconda package `pbcoretools`.
 
-    % pip install -r requirements.txt
-    % python setup.py install
+Please refer to our [official pbbioconda page](https://github.com/PacificBiosciences/pbbioconda)
+for information on Installation, Support, License, Copyright, and Disclaimer.
 
 ## Documentation:
 
