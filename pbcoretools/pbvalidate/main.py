@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 from cStringIO import StringIO
 from xml.dom import minidom
+import warnings
 import argparse
 import logging
 import os.path
@@ -86,6 +87,8 @@ class run_validator (object):
     def __init__(self, args, out=sys.stdout, save_exit_code=False):
         if not os.path.isfile(args.file):
             raise IOError("Not a file: %s" % args.file)
+        if args.quiet:
+            warnings.simplefilter("ignore")
         self.file_name = args.file
         self.silent = args.xunit_out is not None and not save_exit_code
         base, ext = os.path.splitext(args.file)

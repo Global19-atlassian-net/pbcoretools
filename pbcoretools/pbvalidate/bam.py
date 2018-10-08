@@ -8,6 +8,7 @@ implicitly.
 from __future__ import division, print_function
 from collections import defaultdict
 from functools import wraps
+import warnings
 import argparse
 import unittest
 import hashlib
@@ -209,6 +210,15 @@ class AlignmentUnmappedError (BAMReadError):
 class ReadLengthError (BAMReadError):
     MESSAGE_FORMAT = "The length of the sequence of %s and the length " +\
         "indicated by qStart/qEnd disagree (%d versus %d)"
+
+
+class ZeroLengthError(BAMReadError):
+    MESSAGE_FORMAT = "Record %s has zero length - this is only allowed for " +\
+        "SCRAP reads"
+
+
+class ZeroLengthWarning(UserWarning):
+    pass
 
 
 class MissingAlignmentTagError (BAMReadError):  # XXX untested
@@ -776,6 +786,12 @@ class ValidateReadLength (ValidateReadBase):
         rg = aln.readGroupInfo
         if not rg.ReadType in [Constants.READ_TYPE_CCS, Constants.READ_TYPE_TRANSCRIPT]:
             qlen = aln.qEnd - aln.qStart
+            if aln.peer.seq is None:
+                if rg.ReadType == Constants.READ_TYPE_SCRAP:
+                    warnings.warn("SCRAP record %s has zero length" % aln.qName,
+                                  ZeroLengthWarning)
+                    return []
+                return [ZeroLengthError.from_args(aln, aln.qName)]
             seq_len = len(aln.peer.seq)
             if seq_len != qlen:
                 return [ReadLengthError.from_args(aln, aln.qName, seq_len, qlen)]
