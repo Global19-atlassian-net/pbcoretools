@@ -103,30 +103,50 @@ def _run_update_barcoded_sample_metadata(rtc):
     return 0
 
 
+def _reparent_dataset(input_file, dataset_name, output_file):
+    with openDataSet(input_file, strict=True, skipCounts=True) as ds_in:
+        if len(ds_in.metadata.provenance) > 0:
+            log.warn("Removing existing provenance record: %s",
+                     ds_in.metadata.provenance)
+            ds_in.metadata.provenance = None
+        ds_in.name = dataset_name
+        ds_in.newUuid(random=True)
+        ds_in.write(output_file)
+    return 0
+
+
+def _reparent_dataset_rtc(rtc):
+    NAME_OPT_ID = "pbcoretools.task_options.new_dataset_name"
+    if rtc.task.options[NAME_OPT_ID].strip() == "":
+        raise ValueError("New dataset name is required")
+    return _reparent_dataset(rtc.task.input_files[0],
+                             rtc.task.options[NAME_OPT_ID],
+                             rtc.task.output_files[0])
+
+
 ds_name_opt = QuickOpt("", "Name of Output Data Set",
                        "Name of new demultiplexed data set as it appears in " +
                        "SMRT Link")
 
 
-@registry("reparent_subreads", "0.1.2",
+@registry("reparent_subreads", "0.1.3",
           FileTypes.DS_SUBREADS,
           FileTypes.DS_SUBREADS,
           is_distributed=False,
           nproc=1,
           options={"new_dataset_name": ds_name_opt})
 def _run_reparent_subreads(rtc):
-    NAME_OPT_ID = "pbcoretools.task_options.new_dataset_name"
-    if rtc.task.options[NAME_OPT_ID].strip() == "":
-        raise ValueError("New dataset name is required")
-    with SubreadSet(rtc.task.input_files[0], strict=True, skipCounts=True) as ds_in:
-        if len(ds_in.metadata.provenance) > 0:
-            log.warn("Removing existing provenance record: %s",
-                     ds_in.metadata.provenance)
-            ds_in.metadata.provenance = None
-        ds_in.name = rtc.task.options[NAME_OPT_ID]
-        ds_in.newUuid(random=True)
-        ds_in.write(rtc.task.output_files[0])
-    return 0
+    return _reparent_dataset_rtc(rtc)
+
+
+@registry("reparent_ccs", "0.1.0",
+          FileTypes.DS_CCS,
+          FileTypes.DS_CCS,
+          is_distributed=False,
+          nproc=1,
+          options={"new_dataset_name": ds_name_opt})
+def _run_reparent_subreads(rtc):
+    return _reparent_dataset_rtc(rtc)
 
 
 def _ds_to_datastore(dataset_file, datastore_file,
