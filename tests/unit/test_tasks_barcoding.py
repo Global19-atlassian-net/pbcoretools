@@ -11,7 +11,7 @@ import os.path as op
 import os
 import sys
 
-from pbcore.io import SubreadSet, openDataSet
+from pbcore.io import SubreadSet, openDataSet, ConsensusReadSet
 import pbcommand.testkit
 from pbcommand.utils import which
 from pbcommand.models.common import DataStore, DataStoreFile, FileTypes
@@ -119,6 +119,18 @@ class TestReparentSubreads(pbcommand.testkit.PbTestApp):
 
     def run_after(self, rtc, output_dir):
         with SubreadSet(rtc.task.output_files[0]) as ds_out:
+            self.assertEqual(ds_out.name, "My Data")
+
+
+class TestReparentCCS(pbcommand.testkit.PbTestApp):
+    TASK_ID = "pbcoretools.tasks.reparent_ccs"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.barcoding emit-tool-contract {i} ".format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.barcoding run-rtc '
+    INPUT_FILES = [pbtestdata.get_file("ccs-barcoded")]
+    TASK_OPTIONS = {"pbcoretools.task_options.new_dataset_name": "My Data"}
+
+    def run_after(self, rtc, output_dir):
+        with ConsensusReadSet(rtc.task.output_files[0]) as ds_out:
             self.assertEqual(ds_out.name, "My Data")
 
 
