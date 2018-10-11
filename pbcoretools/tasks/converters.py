@@ -14,10 +14,14 @@ import os
 import sys
 
 from pbcore.io import (SubreadSet, ContigSet, ConsensusReadSet, openDataSet,
-                       ReferenceSet, GmapReferenceSet, HdfSubreadSet)
+                       ReferenceSet, GmapReferenceSet, HdfSubreadSet, TranscriptSet,
+                       AlignmentSet, ConsensusAlignmentSet, TranscriptAlignmentSet)
 from pbcommand.cli import registry_builder, registry_runner, QuickOpt
 from pbcommand.models import FileTypes, SymbolTypes, OutputFileType, DataStore, DataStoreFile
 from pbcommand.engine import run_cmd
+
+from pbcoretools.tasks.barcoding import _ds_to_datastore
+from pbcoretools.file_utils import iterate_datastore_read_set_files
 
 log = logging.getLogger(__name__)
 
@@ -331,6 +335,72 @@ def _run_slimbam_rtc(rtc): # pragma: no cover
     ds.updateCounts()
     ds.write(rtc.task.output_files[0])
     return 0
+
+
+def __run_datastore_to_dataset(rtc, filetype, readcls):
+    datasets = list(iterate_datastore_read_set_files(rtc.task.input_files[0], [filetype]))
+    if len(datasets) > 0:
+        with readcls(*[f.path for f in datasets], strict=True, skipCounts=True) as ds:
+            ds.newUuid()
+            ds.write(rtc.task.output_files[0])
+    else:
+        raise ValueError("Expected one or more {} in datastore".format(readcls.__name__))
+    return 0
+
+
+# internal only
+@registry("datastore_to_transcripts", "0.2.1",
+          FileTypes.JSON,
+          FileTypes.DS_TRANSCRIPT,
+          is_distributed=False,
+          nproc=1)
+def run_datastore_to_transcripts(rtc):
+    return __run_datastore_to_dataset(rtc, FileTypes.DS_TRANSCRIPT.file_type_id,
+                                      TranscriptSet)
+
+
+# internal only
+@registry("datastore_to_alignments", "0.2.1",
+          FileTypes.JSON,
+          FileTypes.DS_ALIGN,
+          is_distributed=False,
+          nproc=1)
+def run_datastore_to_alignments(rtc):
+    return __run_datastore_to_dataset(rtc, FileTypes.DS_ALIGN.file_type_id,
+                                      AlignmentSet)
+
+
+# internal only
+@registry("datastore_to_ccs_alignments", "0.2.1",
+          FileTypes.JSON,
+          FileTypes.DS_ALIGN_CCS,
+          is_distributed=False,
+          nproc=1)
+def run_datastore_to_ccs_alignments(rtc):
+    return __run_datastore_to_dataset(rtc, FileTypes.DS_ALIGN_CCS.file_type_id,
+                                      ConsensusAlignmentSet)
+
+
+# internal only
+@registry("datastore_to_transcript_alignments", "0.2.1",
+          FileTypes.JSON,
+          FileTypes.DS_ALIGN_TRANSCRIPT,
+          is_distributed=False,
+          nproc=1)
+def run_datastore_to_transcript_alignments(rtc):
+    return __run_datastore_to_dataset(rtc, FileTypes.DS_ALIGN_TRANSCRIPT.file_type_id,
+                                      TranscriptAlignmentSet)
+
+
+@registry("transcripts_to_datastore", "0.1.2",
+          FileTypes.DS_TRANSCRIPT,
+          FileTypes.JSON,
+          is_distributed=False,
+          nproc=1)
+def _run_transcripts_to_datastore(rtc):
+    return _ds_to_datastore(rtc.task.input_files[0],
+                            rtc.task.output_files[0],
+                            source_id=rtc.task.task_id + "-out-0")
 
 
 if __name__ == '__main__':

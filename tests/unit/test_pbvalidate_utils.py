@@ -41,7 +41,7 @@ class MiscTests(unittest.TestCase):
         result = pbcoretools.pbvalidate.main.run_validator(args)
         dom = result.to_xml()
         failures = dom.getElementsByTagName("failure")
-        self.assertEqual(len(failures), 16)
+        self.assertEqual(len(failures), 14)
 
 
 if __name__ == "__main__":

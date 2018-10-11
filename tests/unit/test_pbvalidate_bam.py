@@ -6,6 +6,7 @@ manipulated to trigger various errors.
 
 from cStringIO import StringIO
 import subprocess
+import warnings
 import unittest
 import logging
 import os.path
@@ -170,7 +171,7 @@ def remove_data_files():
         os.remove("tst_%d_subreads.bam" % (i + 1))
 
 
-class TestCase (unittest.TestCase):
+class TestPbvalidateBam (unittest.TestCase):
 
     def setUp(self):
         pass
@@ -207,7 +208,6 @@ class TestCase (unittest.TestCase):
         file_name = op.join(DATA_DIR, "tst_2_subreads.bam")
         bam_file = pbcore.io.BamReader(file_name)
         _run_validators(f=bam_file, expected_failures=[
-            'AlignmentCigarError',
             'AlignmentCigarMatchError', 'AlignmentNotUniqueError',
             'AlignmentUnmappedError', 'BasecallerVersionError',
             'MissingCodecError', 'MissingIndexError', 'MissingPlatformError',
@@ -263,8 +263,7 @@ class TestCase (unittest.TestCase):
         e, c = bam.validate_bam(file_name, validate_index=True)
         errors = sorted(list(set([type(err).__name__ for err in e])))
         self.assertEqual(errors,
-                         ['AlignmentCigarError', 'AlignmentCigarMatchError',
-                          'AlignmentNotUniqueError',
+                         ['AlignmentCigarMatchError',
                           'AlignmentUnmappedError',
                           'BasecallerVersionError',
                           'MissingCodecError', 'MissingIndexError',
@@ -325,6 +324,21 @@ class TestCase (unittest.TestCase):
         BAM = "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/unpolished.bam"
         e, c = bam.validate_bam(BAM)
         self.assertEqual(len(e), 0)
+
+    @unittest.skipUnless(op.isdir(TESTDATA), "Testdata not found")
+    def test_overlapping_alignments(self):
+        BAM = "/pbi/dept/secondary/siv/testdata/pbreports-unittest/data/mapping_stats/pbmm2/aligned.bam"
+        e, c = bam.validate_bam(BAM, aligned=True)
+        errors2 = list(set(sorted([type(err).__name__ for err in e])))
+        self.assertEqual(errors2, ["AlignmentNotUniqueError"])
+
+    @unittest.skipUnless(op.isdir(TESTDATA), "Testdata not found")
+    def test_zero_length_scrap(self):
+        BAM = "/pbi/dept/secondary/siv/testdata/SA3-Sequel/ecoli/EmptyRecords/m54043_180414_094215.scraps.bam"
+        with warnings.catch_warnings(record=True) as w:
+            e, c = bam.validate_bam(BAM, aligned=False)
+            self.assertEqual(len(e), 0)
+            self.assertEqual(len(w), 7)
 
 
 if __name__ == "__main__":

@@ -11,6 +11,7 @@ from pbcore.io import (FastaWriter, FastaReader, FastqReader, FastqWriter,
 from pbcommand.pb_io.common import write_pipeline_chunks
 from pbcommand.pb_io.report import fofn_to_report
 from pbcommand.models import PipelineChunk
+from pbcoretools.datastore_utils import datastore_to_datastorefile_objs, dataset_to_datastore
 
 
 log = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ class Constants(object):
     CHUNK_KEY_FOFN = "$chunk.fofn_id"
     CHUNK_KEY_FOFN_REPORT = '$chunk.fofn_report_id'
     CHUNK_KEY_CSV = "$chunk.csv_id"
+    CHUNK_KEY_DATASTORE_JSON = "$chunk.datastore_id"
 
 
 def write_chunks_to_json(chunks, chunk_file):
@@ -422,13 +424,64 @@ def _to_zmw_chunked_dataset_files(dataset_type, dataset_path,
         c = PipelineChunk(chunk_id, **d)
         yield c
 
+TRANSCRIPTSET_EXTRA_SPLIT_ARGS = {"targetSize": 1000}
 to_zmw_chunked_subreadset_files = functools.partial(
     _to_zmw_chunked_dataset_files, SubreadSet)
 to_zmw_chunked_ccsset_files = functools.partial(
     _to_zmw_chunked_dataset_files, ConsensusReadSet)
 to_zmw_chunked_transcriptset_files = functools.partial(
     _to_zmw_chunked_dataset_files, TranscriptSet,
-    extra_split_args={"targetSize": 1000})
+    extra_split_args=TRANSCRIPTSET_EXTRA_SPLIT_ARGS)
+
+
+def to_zmw_chunked_datastore_files(datastore_path, reference_path,
+                                   max_total_nchunks, chunk_key, dir_name,
+                                   base_name, ext):
+    """
+    dataset_path --- datastore.json file
+    """
+    datastorefile_objs, dataset_type_id, cls, dataset_ext = datastore_to_datastorefile_objs(
+            datastore_path)
+
+    dset = cls(*[f.path for f in datastorefile_objs], strict=True)
+    dset.newUuid()
+    merged_dataset_xml = os.path.join(dir_name, base_name + '.merged.' + dataset_ext)
+    dset.write(merged_dataset_xml)
+
+    dset = cls(merged_dataset_xml, strict=True)
+    kwargs = {"chunks": max_total_nchunks, "zmws": True}
+    if cls == TranscriptSet:
+        kwargs.update(TRANSCRIPTSET_EXTRA_SPLIT_ARGS)
+
+    dset_chunks = dset.split(**kwargs)
+
+    d = {}
+    for i, _dset in enumerate(dset_chunks):
+        chunk_id = '_'.join([base_name, str(i)])
+        # write chunk xml file, e.g., chunk_1.subreadset.xml
+        chunk_dataset_path = os.path.abspath(os.path.join(dir_name, chunk_id + '.' + dataset_ext))
+        _dset.write(chunk_dataset_path)
+
+        # write chunk datastore.json file.
+        chunk_datastore_path = os.path.abspath(os.path.join(dir_name, chunk_id + '.' + ext))
+        dataset_to_datastore(chunk_dataset_path, chunk_datastore_path)
+        d[chunk_key] = chunk_datastore_path
+        d['$chunk.reference_id'] = reference_path
+        c = PipelineChunk(chunk_id, **d)
+        yield c
+
+def write_datastore_chunks_to_file(chunk_file, datastore_path,
+                                   reference_path,
+                                   max_total_chunks, dir_name,
+                                   chunk_base_name, chunk_ext):
+    chunks = list(to_zmw_chunked_datastore_files(datastore_path,
+                                                 reference_path,
+                                                 max_total_chunks,
+                                                 Constants.CHUNK_KEY_DATASTORE_JSON,
+                                                 dir_name, chunk_base_name,
+                                                 chunk_ext))
+    write_chunks_to_json(chunks, chunk_file)
+    return 0
 
 
 def _to_bam_chunked_dataset_files(dataset_type, dataset_path,
@@ -475,6 +528,7 @@ def _write_dataset_chunks_to_file(chunk_func, chunk_key, chunk_file,
         extra_chunk_keys=extra_chunk_keys))
     write_chunks_to_json(chunks, chunk_file)
     return 0
+
 
 write_subreadset_zmw_chunks_to_file = functools.partial(
     _write_dataset_chunks_to_file, to_zmw_chunked_subreadset_files,

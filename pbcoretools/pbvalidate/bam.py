@@ -8,6 +8,7 @@ implicitly.
 from __future__ import division, print_function
 from collections import defaultdict
 from functools import wraps
+import warnings
 import argparse
 import unittest
 import hashlib
@@ -86,8 +87,8 @@ class Constants (object):
 def _check_pysam_version():  # XXX unused, see below
     import pysam.version
     version = pysam.version.__version__.split(".")
-    if (version < ["0", "8", "2"]):
-        raise ImportError("pysam >= 0.8.2 required")
+    if (version < ["0", "15", "1"]):
+        raise ImportError("pysam >= 0.15.1 required")
 
 # workaround for lack of has_tag() in pysam < 0.8.2
 # FIXME it would be nice if we could just require a newer version, but one of
@@ -198,7 +199,7 @@ class MissingCodecError (BAMError):
 
 
 class AlignmentNotUniqueError (BAMReadError):
-    MESSAGE_FORMAT = "QNAME %s occurs more than once (tStart = %s)"
+    MESSAGE_FORMAT = "QNAME %s is present in multiple overlapping alignments ((%d, %d) versus (%d, %d))"
 
 
 class AlignmentUnmappedError (BAMReadError):
@@ -209,6 +210,15 @@ class AlignmentUnmappedError (BAMReadError):
 class ReadLengthError (BAMReadError):
     MESSAGE_FORMAT = "The length of the sequence of %s and the length " +\
         "indicated by qStart/qEnd disagree (%d versus %d)"
+
+
+class ZeroLengthError(BAMReadError):
+    MESSAGE_FORMAT = "Record %s has zero length - this is only allowed for " +\
+        "SCRAP reads"
+
+
+class ZeroLengthWarning(UserWarning):
+    pass
 
 
 class MissingAlignmentTagError (BAMReadError):  # XXX untested
@@ -624,15 +634,21 @@ class ValidateReadBase (ValidateRecord):
 
 class ValidateReadUnique (ValidateReadBase):
 
+    """
+    Make sure there are no duplicate subread alignments
+    """
+
     def __init__(self):
-        self._tstarts = {}
+        self._aRanges = {}
 
     def _get_errors(self, aln):
-        if aln.qName in self._tstarts:
-            self._tstarts[aln.qName].append(aln.tStart)
-            tstarts = ", ".join([str(x) for x in self._tstarts[aln.qName]])
-            return [AlignmentNotUniqueError.from_args(aln, aln.qName, tstarts)]
-        self._tstarts[aln.qName] = [aln.tStart]
+        if aln.qName in self._aRanges:
+            for (aStart, aEnd) in self._aRanges[aln.qName]:
+                if aStart <= aln.aStart < aEnd or aStart < aln.aEnd <= aEnd:
+                    return [AlignmentNotUniqueError.from_args(aln, aln.qName, aStart, aEnd, aln.aStart, aln.aEnd)]
+            self._aRanges[aln.qName].append((aln.aStart, aln.aEnd))
+        else:
+            self._aRanges[aln.qName] = [(aln.aStart, aln.aEnd)]
         return []
 
 
@@ -770,6 +786,12 @@ class ValidateReadLength (ValidateReadBase):
         rg = aln.readGroupInfo
         if not rg.ReadType in [Constants.READ_TYPE_CCS, Constants.READ_TYPE_TRANSCRIPT]:
             qlen = aln.qEnd - aln.qStart
+            if aln.peer.seq is None:
+                if rg.ReadType == Constants.READ_TYPE_SCRAP:
+                    warnings.warn("SCRAP record %s has zero length" % aln.qName,
+                                  ZeroLengthWarning)
+                    return []
+                return [ZeroLengthError.from_args(aln, aln.qName)]
             seq_len = len(aln.peer.seq)
             if seq_len != qlen:
                 return [ReadLengthError.from_args(aln, aln.qName, seq_len, qlen)]
@@ -1104,7 +1126,8 @@ def get_validators(aligned=None, contents=None,
         # ValidateReadQVs(),
         ValidateReadTags(),
         ValidateReadSNR(),
-        ValidateReadCigar(),
+        # XXX disabling this because of pbmm2, see SL-3350
+        # ValidateReadCigar(),
         ValidateReadCigarMatches(),
         ValidateReadPulseFeatures(),
         ValidatePulseWidthEncoding(),

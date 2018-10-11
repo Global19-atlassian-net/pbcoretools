@@ -123,59 +123,58 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
         return fn.startswith(tmp_out_prefix) and fn.endswith(suffix)
 
     try:
-        if result.exit_code != 0:
-            return result.exit_code
+        assert result.exit_code == 0, "{p} exited with code {c}".format(
+            p=program_name, c=result.exit_code)
+        if output_file_name.endswith(".zip"):
+            tc_out_dir = op.dirname(output_file_name)
+            fastx_file_names = []
+            # find the barcoded FASTX files and un-gzip them to the same
+            # output directory and file prefix as the ultimate output
+            for fn in walker(tmp_out_dir, _is_fastx_file):
+                if barcode_mode:
+                    # bam2fastx outputs files with the barcode indices
+                    # encoded in the file names; here we attempt to
+                    # translate these to barcode labels, falling back on
+                    # the original indices if necessary
+                    bc_fwd_rev = fn.split(".")[-3].split("_")
+                    bc_label = "unbarcoded"
+                    if (bc_fwd_rev != ["65535", "65535"] and
+                            bc_fwd_rev != ["-1", "-1"]):
+                        def _label_or_none(x):
+                            try:
+                                bc = int(x)
+                                if bc < 0:
+                                    return "none"
+                                elif bc < len(barcode_labels):
+                                    return barcode_labels[bc]
+                            except ValueError as e:
+                                pass
+                            return x
+                        bc_fwd_label = _label_or_none(bc_fwd_rev[0])
+                        bc_rev_label = _label_or_none(bc_fwd_rev[1])
+                        bc_label = "{f}--{r}".format(f=bc_fwd_label,
+                                                     r=bc_rev_label)
+                    suffix2 = ".{l}{t}".format(l=bc_label, t=base_ext)
+                    if bio_samples_to_bc is not None:
+                        sample = bio_samples_to_bc.get(bc_label, "unknown")
+                        suffix2 = ".{}".format(sample) + suffix2
+                else:
+                    suffix2 = base_ext
+                base, ext = op.splitext(op.basename(output_file_name))
+                fn_out = base
+                if not fn_out.endswith(suffix2):
+                    fn_out = re.sub(base_ext, suffix2, fn_out)
+                fastx_out = op.join(tc_out_dir, fn_out)
+                _ungzip_fastx(fn, fastx_out)
+                fastx_file_names.append(fastx_out)
+                remove_files.append(fn)
+            assert len(fastx_file_names) > 0
+            remove_files.extend(fastx_file_names)
+            return archive_files(fastx_file_names, output_file_name)
         else:
-            if output_file_name.endswith(".zip"):
-                tc_out_dir = op.dirname(output_file_name)
-                fastx_file_names = []
-                # find the barcoded FASTX files and un-gzip them to the same
-                # output directory and file prefix as the ultimate output
-                for fn in walker(tmp_out_dir, _is_fastx_file):
-                    if barcode_mode:
-                        # bam2fastx outputs files with the barcode indices
-                        # encoded in the file names; here we attempt to
-                        # translate these to barcode labels, falling back on
-                        # the original indices if necessary
-                        bc_fwd_rev = fn.split(".")[-3].split("_")
-                        bc_label = "unbarcoded"
-                        if (bc_fwd_rev != ["65535", "65535"] and
-                                bc_fwd_rev != ["-1", "-1"]):
-                            def _label_or_none(x):
-                                try:
-                                    bc = int(x)
-                                    if bc < 0:
-                                        return "none"
-                                    elif bc < len(barcode_labels):
-                                        return barcode_labels[bc]
-                                except ValueError as e:
-                                    pass
-                                return x
-                            bc_fwd_label = _label_or_none(bc_fwd_rev[0])
-                            bc_rev_label = _label_or_none(bc_fwd_rev[1])
-                            bc_label = "{f}--{r}".format(f=bc_fwd_label,
-                                                         r=bc_rev_label)
-                        suffix2 = ".{l}{t}".format(l=bc_label, t=base_ext)
-                        if bio_samples_to_bc is not None:
-                            sample = bio_samples_to_bc.get(bc_label, "unknown")
-                            suffix2 = ".{}".format(sample) + suffix2
-                    else:
-                        suffix2 = base_ext
-                    base, ext = op.splitext(op.basename(output_file_name))
-                    fn_out = base
-                    if not fn_out.endswith(suffix2):
-                        fn_out = re.sub(base_ext, suffix2, fn_out)
-                    fastx_out = op.join(tc_out_dir, fn_out)
-                    _ungzip_fastx(fn, fastx_out)
-                    fastx_file_names.append(fastx_out)
-                    remove_files.append(fn)
-                assert len(fastx_file_names) > 0
-                remove_files.extend(fastx_file_names)
-                return archive_files(fastx_file_names, output_file_name)
-            else:
-                tmp_out = "{p}{b}.gz".format(p=tmp_out_prefix, b=base_ext)
-                _ungzip_fastx(tmp_out, output_file_name)
-                remove_files = [tmp_out]
+            tmp_out = "{p}{b}.gz".format(p=tmp_out_prefix, b=base_ext)
+            _ungzip_fastx(tmp_out, output_file_name)
+            remove_files = [tmp_out]
     finally:
         for fn in remove_files:
             os.remove(fn)

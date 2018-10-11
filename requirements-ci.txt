@@ -1,6 +1,5 @@
-cython
 numpy
-pysam
+pysam >= 0.15.1
 jinja2
 networkx
 jsonschema

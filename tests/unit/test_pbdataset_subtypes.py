@@ -117,6 +117,7 @@ class TestDataSet(unittest.TestCase):
         o, r, m = backticks(cmd)
         self.assertEqual(r, 0)
 
+    @unittest.skip("DISABLED FOR AUTOMATED TESTING")
     @unittest.skipIf(not _check_constools() or not _internal_data(),
                      "pbmerge, pbindex or data not found, skipping")
     def test_alignmentset_partial_consolidate(self):

@@ -30,7 +30,10 @@ from pbcoretools.file_utils import (
     make_barcode_sample_csv,
     make_combined_laa_zip,
     update_barcoded_sample_metadata,
-    discard_bio_samples)
+    discard_bio_samples,
+    add_mock_collection_metadata,
+    force_set_all_well_sample_names,
+    force_set_all_bio_sample_names)
 
 
 HAVE_XMLLINT = which("xmllint")
@@ -97,31 +100,50 @@ def split_barcoded_dataset(file_name, ext=".subreadset.xml"):
     return DataStore(ds_files)
 
 
-def validate_barcoded_datastore_files(self, subreads, datastore):
+def validate_barcoded_datastore_files(self, subreads, datastore,
+                                      have_collection_metadata=True,
+                                      use_barcode_uuids=True):
+    """
+    This is linked to the PacBioTestData file 'barcoded-subreadset', which
+    has been manually edited in support of this test.
+    """
     bio_sample_names = {
         "lbc1--lbc1": "Alice",
         "lbc3--lbc3": "Charles"
     }
+    dna_bc_uuids = {
+        "lbc1--lbc1": "dffb30e8-9243-4743-9980-468a20952167",
+        "lbc3--lbc3": "eef1a8ea-c6a7-4233-982a-d426e1e7d8c9"
+    }
     self.assertEqual(len(datastore.files), 2)
     ds_in = SubreadSet(subreads)
     for f in datastore.files.values():
+        _validate_dataset_xml(f.path)
         with SubreadSet(f.path) as ds:
             # FIXME need better testing here
             self.assertEqual(len(ds.filters), 1)
+            self.assertEqual(ds.uuid, f.uuid)
             bc_label = op.basename(f.path).split(".")[1]
             bio_name = bio_sample_names[bc_label]
-            coll = ds.metadata.collections[0]
-            self.assertEqual(len(coll.wellSample.bioSamples), 1)
-            self.assertEqual(coll.wellSample.bioSamples[0].name, bio_name)
-            self.assertEqual(ds.metadata.provenance.parentDataSet.uniqueId,
-                             ds_in.uuid)
-            self.assertEqual(ds.name, "{n} ({s})".format(n=ds_in.name,
-                                                         s=bio_name))
-            self.assertEqual(ds.uuid, f.uuid)
+            expected_tags = ["TotalLength", "NumRecords", "Provenance"]
+            if have_collection_metadata:
+                coll = ds.metadata.collections[0]
+                self.assertEqual(len(coll.wellSample.bioSamples), 1)
+                self.assertEqual(coll.wellSample.bioSamples[0].name, bio_name)
+                self.assertEqual(ds.metadata.provenance.parentDataSet.uniqueId,
+                                 ds_in.uuid)
+                self.assertEqual(ds.name, "{n} ({s})".format(n=ds_in.name,
+                                                             s=bio_name))
+                expected_tags.append("Collections")
+                if use_barcode_uuids:
+                    self.assertEqual(ds.uuid, dna_bc_uuids[bc_label])
+                else:
+                    self.assertNotEqual(ds.uuid, dna_bc_uuids[bc_label])
+            else:
+                self.assertEqual(ds.name, "{n} ({b})".format(n=ds_in.name,
+                                                             b=bc_label))
             md_tags = [r['tag'] for r in ds.metadata.record['children']]
-            self.assertEqual(md_tags[0:4],
-                             ["TotalLength", "NumRecords", "Provenance", "Collections"])
-            _validate_dataset_xml(f.path)
+            self.assertEqual(md_tags[0:4], expected_tags)
 
 
 class TestSplitLAA(unittest.TestCase):
@@ -199,15 +221,16 @@ class TestSplitLAA(unittest.TestCase):
 
 
 class TestBarcodeUtils(unittest.TestCase):
+    SUBREADS = pbtestdata.get_file("barcoded-subreadset")
 
     def test_discard_bio_samples(self):
-        ds = SubreadSet(pbtestdata.get_file("barcoded-subreadset"))
+        ds = SubreadSet(self.SUBREADS)
         discard_bio_samples(ds, "lbc1--lbc1")
         coll = ds.metadata.collections[0]
         self.assertEqual(len(coll.wellSample.bioSamples), 1)
         self.assertEqual(coll.wellSample.bioSamples[0].name, "Alice")
         # No matching BioSample records
-        ds = SubreadSet(pbtestdata.get_file("barcoded-subreadset"))
+        ds = SubreadSet(self.SUBREADS)
         coll = ds.metadata.collections[0]
         coll.wellSample.bioSamples.pop(1)
         coll.wellSample.bioSamples.pop(1)
@@ -231,7 +254,7 @@ class TestBarcodeUtils(unittest.TestCase):
                          0].DNABarcodes[0].name, "lbc1--lbc1")
 
     def test_get_ds_name(self):
-        ds = SubreadSet(pbtestdata.get_file("barcoded-subreadset"))
+        ds = SubreadSet(self.SUBREADS)
         name = get_ds_name(ds, "My Data", "My Barcode")
         self.assertEqual(name, "My Data (multiple samples)")
         for coll in ds.metadata.collections:
@@ -239,7 +262,7 @@ class TestBarcodeUtils(unittest.TestCase):
                 coll.wellSample.bioSamples.pop(0)
         name = get_ds_name(ds, "My Data", "My Barcode")
         self.assertEqual(name, "My Data (My Barcode)")
-        ds = SubreadSet(pbtestdata.get_file("barcoded-subreadset"))
+        ds = SubreadSet(self.SUBREADS)
         for coll in ds.metadata.collections:
             while len(coll.wellSample.bioSamples) > 1:
                 coll.wellSample.bioSamples.pop(1)
@@ -254,16 +277,55 @@ class TestBarcodeUtils(unittest.TestCase):
         self.assertEqual(name, "My Data (unknown sample)")
 
     def test_update_barcoded_sample_metadata(self):
-        INPUT_FILES = [
-            tempfile.NamedTemporaryFile(suffix=".datastore.json").name,
-            pbtestdata.get_file("barcoded-subreadset"),
-            pbtestdata.get_file("barcodeset")
-        ]
-        ds = split_barcoded_dataset(INPUT_FILES[1])
-        ds.write_json(INPUT_FILES[0])
+        datastore_tmp = tempfile.NamedTemporaryFile(suffix=".datastore.json").name
+        barcodes = pbtestdata.get_file("barcodeset")
+        ds = split_barcoded_dataset(self.SUBREADS)
+        ds.write_json(datastore_tmp)
         base_dir = tempfile.mkdtemp()
         datastore = update_barcoded_sample_metadata(base_dir,
-                                                    INPUT_FILES[0],
-                                                    INPUT_FILES[1],
-                                                    INPUT_FILES[2])
-        validate_barcoded_datastore_files(self, INPUT_FILES[1], datastore)
+                                                    datastore_tmp,
+                                                    self.SUBREADS,
+                                                    barcodes)
+        validate_barcoded_datastore_files(self, self.SUBREADS, datastore)
+        # now with use_barcode_uuids=False
+        datastore = update_barcoded_sample_metadata(base_dir,
+                                                    datastore_tmp,
+                                                    self.SUBREADS,
+                                                    barcodes,
+                                                    use_barcode_uuids=False)
+        validate_barcoded_datastore_files(self, self.SUBREADS, datastore,
+                                          use_barcode_uuids=False)
+        # test that it works with no collection metadata
+        ss = SubreadSet(self.SUBREADS)
+        ss.metadata.collections = None
+        ss_tmp = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
+        ss.write(ss_tmp)
+        ds = split_barcoded_dataset(ss_tmp)
+        ds.write_json(datastore_tmp)
+        base_dir = tempfile.mkdtemp()
+        datastore = update_barcoded_sample_metadata(base_dir,
+                                                    datastore_tmp,
+                                                    self.SUBREADS,
+                                                    barcodes)
+        validate_barcoded_datastore_files(self, self.SUBREADS, datastore,
+                                          have_collection_metadata=False)
+
+    def test_add_mock_collection_metadata(self):
+        bam = pbtestdata.get_file("subreads-bam")
+        ds = SubreadSet(bam)
+        self.assertEqual(len(ds.metadata.collections), 0)
+        add_mock_collection_metadata(ds)
+        self.assertEqual(len(ds.metadata.collections), 1)
+        self.assertEqual(ds.metadata.collections[0].context,
+            "m140905_042212_sidney_c100564852550000001823085912221377_s1_X0")
+
+    def test_force_set_all_well_sample_names(self):
+        ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))
+        force_set_all_well_sample_names(ds, "My Test Sample")
+        self.assertEqual(ds.metadata.collections[0].wellSample.name,
+                         "My Test Sample")
+
+    def test_force_set_all_bio_sample_names(self):
+        ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))
+        force_set_all_bio_sample_names(ds, "My Test BioSample")
+        self.assertEqual(ds.metadata.collections[0].wellSample.bioSamples[0].name, "My Test BioSample")

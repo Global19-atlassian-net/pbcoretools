@@ -65,24 +65,27 @@ def run_datastore_to_ccs(rtc):
     return 0
 
 
-@registry("update_barcoded_sample_metadata", "0.4.0",
+@registry("update_barcoded_sample_metadata", "0.5.0",
           (FileTypes.JSON, FileTypes.DS_SUBREADS, FileTypes.DS_BARCODE),
           FileTypes.DATASTORE,
           is_distributed=True,
-          nproc=1)
+          nproc=1,
+          options={"use_barcode_uuids": True})
 def _run_update_barcoded_sample_metadata(rtc):
+    use_barcode_uuids = rtc.task.options["pbcoretools.task_options.use_barcode_uuids"]
     base_dir = op.dirname(rtc.task.output_files[0])
     datastore = update_barcoded_sample_metadata(
         base_dir=op.dirname(rtc.task.output_files[0]),
         datastore_file=rtc.task.input_files[0],
         input_reads=rtc.task.input_files[1],
         barcode_set=rtc.task.input_files[2],
-        isoseq_mode=False)
+        isoseq_mode=False,
+        use_barcode_uuids=use_barcode_uuids)
     datastore.write_json(rtc.task.output_files[0])
     return 0
 
 
-@registry("update_barcoded_sample_metadata_ccs", "0.1.1",
+@registry("update_barcoded_sample_metadata_ccs", "0.1.2",
           (FileTypes.JSON, FileTypes.DS_CCS, FileTypes.DS_BARCODE),
           FileTypes.DATASTORE,
           is_distributed=False,
@@ -94,9 +97,31 @@ def _run_update_barcoded_sample_metadata(rtc):
         datastore_file=rtc.task.input_files[0],
         input_reads=rtc.task.input_files[1],
         barcode_set=rtc.task.input_files[2],
-        isoseq_mode=True)
+        isoseq_mode=True,
+        use_barcode_uuids=False)
     datastore.write_json(rtc.task.output_files[0])
     return 0
+
+
+def _reparent_dataset(input_file, dataset_name, output_file):
+    with openDataSet(input_file, strict=True, skipCounts=True) as ds_in:
+        if len(ds_in.metadata.provenance) > 0:
+            log.warn("Removing existing provenance record: %s",
+                     ds_in.metadata.provenance)
+            ds_in.metadata.provenance = None
+        ds_in.name = dataset_name
+        ds_in.newUuid(random=True)
+        ds_in.write(output_file)
+    return 0
+
+
+def _reparent_dataset_rtc(rtc):
+    NAME_OPT_ID = "pbcoretools.task_options.new_dataset_name"
+    if rtc.task.options[NAME_OPT_ID].strip() == "":
+        raise ValueError("New dataset name is required")
+    return _reparent_dataset(rtc.task.input_files[0],
+                             rtc.task.options[NAME_OPT_ID],
+                             rtc.task.output_files[0])
 
 
 ds_name_opt = QuickOpt("", "Name of Output Data Set",
@@ -104,25 +129,24 @@ ds_name_opt = QuickOpt("", "Name of Output Data Set",
                        "SMRT Link")
 
 
-@registry("reparent_subreads", "0.1.2",
+@registry("reparent_subreads", "0.1.3",
           FileTypes.DS_SUBREADS,
           FileTypes.DS_SUBREADS,
           is_distributed=False,
           nproc=1,
           options={"new_dataset_name": ds_name_opt})
 def _run_reparent_subreads(rtc):
-    NAME_OPT_ID = "pbcoretools.task_options.new_dataset_name"
-    if rtc.task.options[NAME_OPT_ID].strip() == "":
-        raise ValueError("New dataset name is required")
-    with SubreadSet(rtc.task.input_files[0], strict=True, skipCounts=True) as ds_in:
-        if len(ds_in.metadata.provenance) > 0:
-            log.warn("Removing existing provenance record: %s",
-                     ds_in.metadata.provenance)
-            ds_in.metadata.provenance = None
-        ds_in.name = rtc.task.options[NAME_OPT_ID]
-        ds_in.newUuid(random=True)
-        ds_in.write(rtc.task.output_files[0])
-    return 0
+    return _reparent_dataset_rtc(rtc)
+
+
+@registry("reparent_ccs", "0.1.0",
+          FileTypes.DS_CCS,
+          FileTypes.DS_CCS,
+          is_distributed=False,
+          nproc=1,
+          options={"new_dataset_name": ds_name_opt})
+def _run_reparent_subreads(rtc):
+    return _reparent_dataset_rtc(rtc)
 
 
 def _ds_to_datastore(dataset_file, datastore_file,

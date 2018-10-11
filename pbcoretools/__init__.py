@@ -28,4 +28,4 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #################################################################################
 
-from pbcoretools.version import __VERSION__
+__VERSION__ = "0.2.9"

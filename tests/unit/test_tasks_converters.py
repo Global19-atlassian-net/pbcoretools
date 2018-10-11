@@ -13,13 +13,14 @@ import sys
 from pbcore.io import (FastaReader, FastqReader, openDataSet, HdfSubreadSet,
                        SubreadSet, ConsensusReadSet, FastqWriter, FastqRecord,
                        TranscriptSet)
-from pbcommand.testkit import PbTestApp
+import pbcommand.testkit
 from pbcommand.utils import which
 from pbcommand.models.common import DataStore, DataStoreFile, FileTypes
 
 import pbtestdata
 
 from pbcoretools import pbvalidate
+from pbcoretools.tasks.barcoding import _ds_to_datastore
 
 from base import get_temp_file
 from test_file_utils import (validate_barcoded_datastore_files,
@@ -86,7 +87,7 @@ def _get_bax2bam_inputs():
 
 
 @skip_unless_bax2bam
-class TestBax2Bam(PbTestApp):
+class TestBax2Bam(pbcommand.testkit.PbTestApp):
     TASK_ID = "pbcoretools.tasks.h5_subreads_to_subread"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
@@ -106,7 +107,7 @@ class TestBax2Bam(PbTestApp):
             self.assertEqual(ds_out.name, "lambda_rsii")
 
 
-class _BaseTestBam2Fasta(PbTestApp):
+class _BaseTestBam2Fasta(pbcommand.testkit.PbTestApp):
     TASK_ID = None # XXX override in subclasses
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
@@ -137,7 +138,7 @@ class _BaseTestBam2Fasta(PbTestApp):
 
 
 @skip_unless_fasta2ref
-class TestFastaToReference(PbTestApp):
+class TestFastaToReference(pbcommand.testkit.PbTestApp):
     TASK_ID = "pbcoretools.tasks.fasta_to_reference"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
@@ -166,7 +167,7 @@ class TestFastaToGmapReference(TestFastaToReference):
     DATASET_TYPE = "GmapReferenceSet"
 
 
-class TestFasta2Fofn(PbTestApp):
+class TestFasta2Fofn(pbcommand.testkit.PbTestApp):
     TASK_ID = "pbcoretools.tasks.fasta2fofn"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
@@ -175,14 +176,14 @@ class TestFasta2Fofn(PbTestApp):
     RESOLVED_IS_DISTRIBUTED = False
 
 
-class TestFasta2ReferenceSet(PbTestApp):
+class TestFasta2ReferenceSet(pbcommand.testkit.PbTestApp):
     TASK_ID = "pbcoretools.tasks.fasta2referenceset"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
     INPUT_FILES = [pbtestdata.get_file("lambda-fasta")]
 
 
-class TestContigSet2Fasta(PbTestApp):
+class TestContigSet2Fasta(pbcommand.testkit.PbTestApp):
     TASK_ID = "pbcoretools.tasks.contigset2fasta"
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
@@ -190,7 +191,7 @@ class TestContigSet2Fasta(PbTestApp):
 
 
 @skip_unless_slimbam
-class TestSlimbam(PbTestApp):
+class TestSlimbam(pbcommand.testkit.PbTestApp):
     TASK_ID = "pbcoretools.tasks.slimbam"
     DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
@@ -216,3 +217,77 @@ class TestSlimbam(PbTestApp):
                 bam_out = ds_out.externalResources[0].resourceId
                 factor = op.getsize(bam_in) / op.getsize(bam_out)
                 self.assertTrue(factor >= 3, "File size larger than expected")
+
+
+def get_f(filename):
+    return pbtestdata.get_file(filename)
+
+def generate_datastore(filename):
+    # Generate datastore file on the fly
+    input_dataset = get_f(filename)
+    out_datastore_json = tempfile.NamedTemporaryFile(suffix='datastore.json').name
+    _ds_to_datastore(input_dataset, out_datastore_json, 'generate_datastore')
+    return out_datastore_json
+
+
+class TestSubreadSetToDatastore(pbcommand.testkit.PbTestApp):
+    TASK_ID = "pbcoretools.tasks.subreads_to_datastore"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.barcoding emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.barcoding run-rtc '
+    INPUT_FILES = [get_f('subreads-xml')]
+
+
+class TestCCSToDatastore(pbcommand.testkit.PbTestApp):
+    TASK_ID = "pbcoretools.tasks.ccs_to_datastore"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.barcoding emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.barcoding run-rtc '
+    INPUT_FILES = [get_f('ccs-barcoded')]
+
+
+class TestTranscriptSetToDatastore(pbcommand.testkit.PbTestApp):
+    TASK_ID = "pbcoretools.tasks.transcripts_to_datastore"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [get_f('transcripts-xml')]
+
+
+class TestDatastoreToSubreadSet(pbcommand.testkit.PbTestApp):
+    TASK_ID = "pbcoretools.tasks.datastore_to_subreads"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.barcoding emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.barcoding run-rtc '
+    INPUT_FILES = [generate_datastore('subreads-xml')]
+
+
+class TestDatastoreToCCS(pbcommand.testkit.PbTestApp):
+    TASK_ID = "pbcoretools.tasks.datastore_to_ccs"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.barcoding emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.barcoding run-rtc '
+    INPUT_FILES = [generate_datastore('ccs-barcoded')]
+
+
+class TestDatastoreToTranscriptSet(pbcommand.testkit.PbTestApp):
+    TASK_ID = "pbcoretools.tasks.datastore_to_transcripts"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [generate_datastore('transcripts-xml')]
+
+
+class TestDatastoreToAlignmentSet(pbcommand.testkit.PbTestApp):
+    TASK_ID = "pbcoretools.tasks.datastore_to_alignments"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [generate_datastore('aligned-ds-2')]
+
+
+class TestDatastoreToCCSAlignmentSet(pbcommand.testkit.PbTestApp):
+    TASK_ID = "pbcoretools.tasks.datastore_to_ccs_alignments"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [generate_datastore('ccs-xml-aligned')]
+
+
+class TestDatastoreToTranscriptAlignmentSet(pbcommand.testkit.PbTestApp):
+    TASK_ID = "pbcoretools.tasks.datastore_to_transcript_alignments"
+    DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
+    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
+    INPUT_FILES = [generate_datastore('transcript-alignments-xml')]

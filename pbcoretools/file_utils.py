@@ -4,27 +4,21 @@ File conversion utility functions.
 """
 
 from collections import defaultdict
-import subprocess
-import itertools
-import functools
 import tempfile
 import zipfile
 import logging
 import shutil
-import gzip
+import uuid
 import copy
 import csv
 import re
 import os.path as op
 import os
-import sys
 
-from pbcore.io import (SubreadSet, HdfSubreadSet, FastaReader, FastaWriter,
-                       FastqReader, FastqWriter, BarcodeSet, ExternalResource,
-                       ExternalResources, openDataSet, ContigSet, ReferenceSet,
-                       GmapReferenceSet, ConsensusReadSet)
+from pbcore.io import (SubreadSet, FastqReader, FastqWriter, BarcodeSet,
+                       openDataSet)
+from pbcore.io.dataset.DataSetUtils import loadMockCollectionMetadata
 from pbcommand.models import FileTypes, DataStore
-from pbcommand.utils import walker
 
 log = logging.getLogger(__name__)
 
@@ -98,14 +92,15 @@ def split_laa_fastq_archived(input_file_name, output_file_name, subreads_file_na
     return archive_files(fastq_files, output_file_name)
 
 
-def iterate_datastore_read_set_files(datastore_file):
+def iterate_datastore_read_set_files(datastore_file,
+                                     allowed_read_types=Constants.ALLOWED_BC_TYPES):
     """
-    Iterate over SubreadSet or ConsensusReadSet files listed in a datastore JSON.
+    Iterate over dataset (e.g., SubreadSet or ConsensusReadSet) files listed in a datastore JSON.
     """
     ds = DataStore.load_from_json(datastore_file)
     files = ds.files.values()
     for f in files:
-        if f.file_type_id in Constants.ALLOWED_BC_TYPES:
+        if f.file_type_id in allowed_read_types:
             yield f
 
 
@@ -246,7 +241,8 @@ def update_barcoded_sample_metadata(base_dir,
                                     datastore_file,
                                     input_reads,
                                     barcode_set,
-                                    isoseq_mode=False):
+                                    isoseq_mode=False,
+                                    use_barcode_uuids=True):
     """
     Given a datastore JSON of SubreadSets produced by barcoding, apply the
     following updates to each:
@@ -291,7 +287,22 @@ def update_barcoded_sample_metadata(base_dir,
             ds.name = get_ds_name(ds, parent_ds.name, barcode_label)
             ds.filters.addRequirement(
                 bq=[('>', Constants.BARCODE_QUALITY_GREATER_THAN)])
-            ds.newUuid()
+            def _get_uuid():
+                for collection in ds.metadata.collections:
+                    for bio_sample in collection.wellSample.bioSamples:
+                        for dna_bc in bio_sample.DNABarcodes:
+                            if dna_bc.name == barcode_label and dna_bc.uniqueId:
+                                return dna_bc.uniqueId
+            if use_barcode_uuids:
+                uuid = _get_uuid()
+                if uuid is not None:
+                    ds.objMetadata["UniqueId"] = uuid
+                    log.info("Set dataset UUID to %s", ds.uuid)
+                else:
+                    log.warn("No UUID defined for this barcoded dataset.")
+                    ds.newUuid()
+            else:
+                ds.newUuid()
             ds.updateCounts()
             ds.write(ds_out)
             f_new = copy.deepcopy(f)
@@ -299,3 +310,100 @@ def update_barcoded_sample_metadata(base_dir,
             f_new.uuid = ds.uuid
             datastore_files.append(f_new)
     return DataStore(datastore_files)
+
+
+def add_mock_collection_metadata(ds):
+    """
+    For every movie defined in the BAM headers, add a CollectionMetadata
+    object with dummy values if one does not already exist.  The 'Context'
+    field will be set to the movie name.
+    """
+    have_movies = {c.context for c in ds.metadata.collections}
+    all_movie_names = set([rg.MovieName for rg in ds.readGroupTable])
+    new_movie_names = sorted(list(all_movie_names - have_movies))
+    for movie_name in new_movie_names:
+        coll = loadMockCollectionMetadata()
+        coll.context = movie_name
+        # This is not really ideal, since it's supposed to correspond to the
+        # original SubreadSet UUID (I think).  But as long as it's unique, it
+        # shouldn't matter for downstream apps.
+        coll.uniqueId = uuid.uuid4()
+        ds.metadata.collections.append(coll)
+    return len(new_movie_names)
+
+
+def force_set_all_well_sample_names(ds, sample_name):
+    """
+    Set the WellSample name for all collections in the dataset metadata.
+    """
+    for collection in ds.metadata.collections:
+        collection.wellSample.name = sample_name
+
+
+def force_set_all_bio_sample_names(ds, sample_name):
+    """
+    Set the BioSample name(s) (adding new records if necessary) for all
+    collections in the dataset metadata.
+
+    :return: the number of BioSamples modified (including new samples)
+    """
+    n_total = 0
+    for collection in ds.metadata.collections:
+        bioSamples = collection.wellSample.bioSamples
+        n_samples = len(bioSamples)
+        n_total += max(1, n_samples)
+        if n_samples == 0:
+            log.debug("Adding new BioSample '%s' to collection '%s'",
+                      sample_name, collection.context)
+            bioSamples.addSample(sample_name)
+        elif n_samples == 1:
+            bioSamples[0].name = sample_name
+        else:
+            log.warn("Multiple BioSamples found for collection '%s': '%s'",
+                     collection.context,
+                     "', '".join([s.name for s in bioSamples]))
+            log.warn("These will be overwritten with '%s'", sample_name)
+            for sample in bioSamples:
+                sample.name = sample_name
+    return n_total
+
+
+# Regular expression pattern of sample strings: must be a string
+# of length >= 1, the leading character must be a letter or number,
+# the remaining characters must be in [a-zA-Z0-9\_\-]
+SAMPLE_CHARSET_RE_STR = '[a-zA-Z0-9\-\_]'
+SAMPLE_CHARSET_RE = re.compile(r"{}".format(SAMPLE_CHARSET_RE_STR))
+
+def sanitize_sample(sample):
+    """Simple method to sanitize sample to match sample pattern
+    ...doctest:
+        >>> def a_generator(): return 'a'
+        >>> sanitize_sample('1' * 20) # no length limit
+        '11111111111111111111'
+        >>> sanitize_sample('-123')
+        '-123'
+        >>> sanitize_sample('123 !&?') # all invalid characters go to '_'
+        '123____'
+    """
+    if len(sample) == 0:
+        raise ValueError('Sample must not be an empty string')
+    sanitized_sample = ''
+    for c in sample:
+        if not SAMPLE_CHARSET_RE.search(c):
+            c = '_'
+        sanitized_sample +=  c
+    return sanitized_sample
+
+
+def get_sanitized_bio_sample_name(subreads):
+    """Return sanitized biosample name"""
+    sample = get_bio_sample_name(subreads)
+    ssample = sanitize_sample(sample)
+    log.warning("Sanitize biosample name from {!r} to {!r}".format(sample, ssample))
+    return ssample
+
+
+def get_prefixes(subreads_file):
+    with SubreadSet(subreads_file) as subreads:
+       seqid_prefix = get_sanitized_bio_sample_name(subreads)
+       return ("{}_HQ_".format(seqid_prefix), "{}_LQ_".format(seqid_prefix))
