@@ -33,7 +33,7 @@ from pbcommand.models import PipelineChunk
 import pbcommand.testkit.core
 from pbcore.io import SubreadSet, ContigSet, FastaReader, FastqReader, \
     ConsensusReadSet, AlignmentSet, ConsensusAlignmentSet, HdfSubreadSet, \
-    ReferenceSet, BarcodeSet, TranscriptSet
+    ReferenceSet, BarcodeSet, TranscriptSet, DataSet
 
 import pbtestdata
 
@@ -92,6 +92,8 @@ class CompareScatteredRecordsBase(object):
                 n_rec_chunk = len([rec for rec in cs])
                 self.assertTrue(n_rec_chunk > 0)
                 n_rec_chunked += n_rec_chunk
+                if isinstance(cs, DataSet):
+                    self.assertTrue("chunked" in cs.tags)
         self.assertEqual(n_rec_chunked, n_rec)
 
 
@@ -139,9 +141,11 @@ class TestScatterContigSet(TestScatterFilterFasta,
 
 
 def make_tmp_dataset_xml(ds_type, *bam_files):
+    from pbcoretools.chunking.chunk_utils import _add_chunked_tag_if_missing
     suffix = ".{t}.xml".format(t=ds_type.__name__.lower())
     tmp_file = tempfile.NamedTemporaryFile(suffix=suffix).name
     ds = ds_type(*bam_files, strict=True)
+    _add_chunked_tag_if_missing(ds)
     ds.write(tmp_file)
     return tmp_file
 
@@ -220,6 +224,7 @@ class TestScatterAlignmentsReference(pbcommand.testkit.core.PbTestScatterApp):
             chunked = d[self.CHUNK_KEYS[0]]
             with self.READER_CLASS(chunked, **self.READER_KWARGS) as ds:
                 windows.append(ds.refWindows)
+                self.assertTrue("chunked" in ds.tags)
         self.assertEqual(windows, [
             [('lambda_NEB3011', 0, 24251)],
             [('lambda_NEB3011', 24251, 48502)]
@@ -342,6 +347,8 @@ class CompareGatheredRecordsBase(object):
         n_rec = 0
         with self.READER_CLASS(gathered_file, **self.READER_KWARGS) as f:
             n_rec = len([r for r in f])
+            if isinstance(f, DataSet):
+                self.assertTrue(not "chunked" in f.tags)
         n_rec_chunked = 0
         for chunk in chunks:
             d = chunk.chunk_d
