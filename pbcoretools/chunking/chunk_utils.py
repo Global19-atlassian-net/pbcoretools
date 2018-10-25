@@ -165,6 +165,7 @@ def write_contigset_records(pbcore_writer_class, records, file_name):
     write_pbcore_records(pbcore_writer_class, records, fasta_file_name)
     log.debug("Writing ContigSet XML to {f}".format(f=file_name))
     ds = ContigSet(fasta_file_name)
+    ds.tags = "chunked"
     ds.write(file_name)
 
 
@@ -188,7 +189,8 @@ def __to_chunked_fastx_files(write_records_func, pbcore_reader_class, pbcore_wri
 
     n_per_chunk = int(math.ceil(float(nrecords) / max_total_nchunks))
 
-    log.info("Found {n} total records. Max total chunks {m}. Splitting into chunks of approximately {x} records each".format(n=nrecords, x=n_per_chunk, m=max_total_nchunks))
+    log.info("Found {n} total records. Max total chunks {m}. Splitting into chunks of approximately {x} records each".format(
+        n=nrecords, x=n_per_chunk, m=max_total_nchunks))
     nchunks = 0
     with pbcore_reader_class(input_file) as r:
         it = iter(r)
@@ -220,7 +222,8 @@ def __to_chunked_fastx_files(write_records_func, pbcore_reader_class, pbcore_wri
             yield c
 
 
-_to_chunked_fastx_files = functools.partial(__to_chunked_fastx_files, write_pbcore_records)
+_to_chunked_fastx_files = functools.partial(
+    __to_chunked_fastx_files, write_pbcore_records)
 
 
 def to_chunked_fasta_files(fasta_path, max_total_nchunks, dir_name, base_name, ext, extra_chunk_keys=None):
@@ -257,15 +260,20 @@ def write_contigset_chunks_to_file(chunk_file, dataset_path, max_total_chunks, d
 
 def write_alignmentset_chunks_to_file(chunk_file, alignmentset_path,
                                       reference_path, max_total_chunks,
-                                      dir_name, chunk_base_name, chunk_ext, by_zmw = False):
+                                      dir_name, chunk_base_name, chunk_ext, by_zmw=False):
     chunks = list(to_chunked_alignmentset_files(alignmentset_path,
                                                 reference_path,
                                                 max_total_chunks,
                                                 Constants.CHUNK_KEY_ALNSET,
                                                 dir_name, chunk_base_name,
-                                                chunk_ext, by_zmw = by_zmw))
+                                                chunk_ext, by_zmw=by_zmw))
     write_chunks_to_json(chunks, chunk_file)
     return 0
+
+
+def _add_chunked_tag_if_missing(dset):
+    if not "chunked" in dset.tags:
+        dset.tags = ",".join(dset.tags.split(",") + ["chunked"])
 
 
 def to_chunked_alignmentset_files(alignmentset_path, reference_path,
@@ -276,7 +284,7 @@ def to_chunked_alignmentset_files(alignmentset_path, reference_path,
         dset_chunks = dset.split(zmws=True, maxChunks=max_total_nchunks)
     else:
         dset_chunks = dset.split(contigs=True, maxChunks=max_total_nchunks,
-                                         breakContigs=True)
+                                 breakContigs=True)
     # sanity checking
     reference_set = ReferenceSet(reference_path, strict=True)
     d = {}
@@ -284,6 +292,7 @@ def to_chunked_alignmentset_files(alignmentset_path, reference_path,
         chunk_id = '_'.join([base_name, str(i)])
         chunk_name = '.'.join([chunk_id, ext])
         chunk_path = os.path.join(dir_name, chunk_name)
+        _add_chunked_tag_if_missing(dset)
         dset.write(chunk_path)
         d[chunk_key] = os.path.abspath(chunk_path)
         d['$chunk.reference_id'] = reference_path
@@ -323,7 +332,8 @@ def _to_chunked_dataset_files(dataset_type, dataset_path, reference_path,
                               max_total_nchunks, chunk_key, dir_name,
                               base_name, ext):
     dset = dataset_type(dataset_path, strict=True)
-    dset_chunks = dset.split(zmws=True, chunks=max_total_nchunks, ignoreSubDatasets=True)
+    dset_chunks = dset.split(
+        zmws=True, chunks=max_total_nchunks, ignoreSubDatasets=True)
     d = {}
 
     # sanity checking
@@ -332,6 +342,7 @@ def _to_chunked_dataset_files(dataset_type, dataset_path, reference_path,
         chunk_id = '_'.join([base_name, str(i)])
         chunk_name = '.'.join([chunk_id, ext])
         chunk_path = os.path.join(dir_name, chunk_name)
+        _add_chunked_tag_if_missing(dset)
         dset.write(chunk_path)
         d[chunk_key] = os.path.abspath(chunk_path)
         d['$chunk.reference_id'] = reference_path
@@ -339,9 +350,9 @@ def _to_chunked_dataset_files(dataset_type, dataset_path, reference_path,
         yield c
 
 to_chunked_subreadset_files = functools.partial(_to_chunked_dataset_files,
-    SubreadSet)
+                                                SubreadSet)
 to_chunked_ccsset_files = functools.partial(_to_chunked_dataset_files,
-    ConsensusReadSet)
+                                            ConsensusReadSet)
 
 
 def _to_barcode_chunked_dataset_files(dataset_type, dataset_path,
@@ -357,6 +368,7 @@ def _to_barcode_chunked_dataset_files(dataset_type, dataset_path,
         chunk_id = '_'.join([base_name, str(i)])
         chunk_name = '.'.join([chunk_id, ext])
         chunk_path = os.path.join(dir_name, chunk_name)
+        _add_chunked_tag_if_missing(dset)
         dset.write(chunk_path)
         d[chunk_key] = os.path.abspath(chunk_path)
         if extra_chunk_keys is not None:
@@ -417,6 +429,7 @@ def _to_zmw_chunked_dataset_files(dataset_type, dataset_path,
         chunk_id = '_'.join([base_name, str(i)])
         chunk_name = '.'.join([chunk_id, ext])
         chunk_path = os.path.join(dir_name, chunk_name)
+        _add_chunked_tag_if_missing(dset)
         dset.write(chunk_path)
         d[chunk_key] = os.path.abspath(chunk_path)
         if extra_chunk_keys is not None:
@@ -441,11 +454,12 @@ def to_zmw_chunked_datastore_files(datastore_path, reference_path,
     dataset_path --- datastore.json file
     """
     datastorefile_objs, dataset_type_id, cls, dataset_ext = datastore_to_datastorefile_objs(
-            datastore_path)
+        datastore_path)
 
     dset = cls(*[f.path for f in datastorefile_objs], strict=True)
     dset.newUuid()
-    merged_dataset_xml = os.path.join(dir_name, base_name + '.merged.' + dataset_ext)
+    merged_dataset_xml = os.path.join(
+        dir_name, base_name + '.merged.' + dataset_ext)
     dset.write(merged_dataset_xml)
 
     dset = cls(merged_dataset_xml, strict=True)
@@ -459,16 +473,20 @@ def to_zmw_chunked_datastore_files(datastore_path, reference_path,
     for i, _dset in enumerate(dset_chunks):
         chunk_id = '_'.join([base_name, str(i)])
         # write chunk xml file, e.g., chunk_1.subreadset.xml
-        chunk_dataset_path = os.path.abspath(os.path.join(dir_name, chunk_id + '.' + dataset_ext))
+        chunk_dataset_path = os.path.abspath(
+            os.path.join(dir_name, chunk_id + '.' + dataset_ext))
+        _add_chunked_tag_if_missing(_dset)
         _dset.write(chunk_dataset_path)
 
         # write chunk datastore.json file.
-        chunk_datastore_path = os.path.abspath(os.path.join(dir_name, chunk_id + '.' + ext))
+        chunk_datastore_path = os.path.abspath(
+            os.path.join(dir_name, chunk_id + '.' + ext))
         dataset_to_datastore(chunk_dataset_path, chunk_datastore_path)
         d[chunk_key] = chunk_datastore_path
         d['$chunk.reference_id'] = reference_path
         c = PipelineChunk(chunk_id, **d)
         yield c
+
 
 def write_datastore_chunks_to_file(chunk_file, datastore_path,
                                    reference_path,
@@ -499,6 +517,7 @@ def _to_bam_chunked_dataset_files(dataset_type, dataset_path,
         chunk_id = '_'.join([base_name, str(i)])
         chunk_name = '.'.join([chunk_id, ext])
         chunk_path = os.path.join(dir_name, chunk_name)
+        _add_chunked_tag_if_missing(dset)
         dset.write(chunk_path)
         d[chunk_key] = os.path.abspath(chunk_path)
         if extra_chunk_keys is not None:
@@ -565,6 +584,7 @@ def to_chunked_hdfsubreadset_files(hdfsubreadset_path, max_total_nchunks,
         chunk_id = '_'.join([base_name, str(i)])
         chunk_name = '.'.join([chunk_id, ext])
         chunk_path = os.path.join(dir_name, chunk_name)
+        _add_chunked_tag_if_missing(dset)
         dset.write(chunk_path)
         d[chunk_key] = os.path.abspath(chunk_path)
         c = PipelineChunk(chunk_id, **d)

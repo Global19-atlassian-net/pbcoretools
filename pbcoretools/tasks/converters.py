@@ -403,5 +403,34 @@ def _run_transcripts_to_datastore(rtc):
                             source_id=rtc.task.task_id + "-out-0")
 
 
+@registry("update_consensus_reads", "0.1.0",
+          FileTypes.DS_CCS,
+          FileTypes.DS_CCS,
+          is_distributed=False, # requires skipCounts=True
+          nproc=1,
+          options=dict(use_run_design_uuid=False))
+def _run_update_consensus_reads(rtc):
+    with ConsensusReadSet(rtc.task.input_files[0], skipCounts=True) as ds:
+        run_design_uuid = None
+        if rtc.task.options["pbcoretools.task_options.use_run_design_uuid"]:
+            uuids = set([])
+            for collection in ds.metadata.collections:
+                if collection.consensusReadSetRef is not None:
+                    uuids.add(collection.consensusReadSetRef.uuid)
+            if len(uuids) == 1:
+                run_design_uuid = list(uuids)[0]
+            elif len(uuids) == 0:
+                log.warn("No pre-defined ConsensusReadSetRef UUID found")
+            else:
+                log.warn("Multiple ConsensusReadSetRef UUIDs found")
+        if run_design_uuid is not None:
+            ds.uuid = run_design_uuid
+        else:
+            ds.newUuid()
+        ds.name = re.sub(" (filtered)", "", ds.name)
+        ds.write(rtc.task.output_files[0])
+    return 0
+
+
 if __name__ == '__main__':
     sys.exit(registry_runner(registry, sys.argv[1:]))

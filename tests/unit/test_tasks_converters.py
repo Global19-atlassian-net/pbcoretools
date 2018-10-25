@@ -291,3 +291,26 @@ class TestDatastoreToTranscriptAlignmentSet(pbcommand.testkit.PbTestApp):
     DRIVER_EMIT = 'python -m pbcoretools.tasks.converters emit-tool-contract {i} '.format(i=TASK_ID)
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
     INPUT_FILES = [generate_datastore('transcript-alignments-xml')]
+
+
+class TestUpdateConsensusReads(pbcommand.testkit.PbTestApp):
+    TASK_ID = "pbcoretools.tasks.update_consensus_reads"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
+    DRIVER_RESOLVE = "python -m pbcoretools.tasks.converters run-rtc "
+    INPUT_FILES = [pbtestdata.get_file("ccs-sequel")]
+
+    def run_after(self, rtc, output_dir):
+        with ConsensusReadSet(rtc.task.output_files[0]) as ds:
+            self.assertNotEqual(ds.uuid, "5416f525-d3c7-496b-ba8c-18d7ec1b4499")
+
+
+class TestUpdateConsensusReadsUseUuid(pbcommand.testkit.PbTestApp):
+    TASK_ID = "pbcoretools.tasks.update_consensus_reads"
+    DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
+    DRIVER_RESOLVE = "python -m pbcoretools.tasks.converters run-rtc "
+    INPUT_FILES = [pbtestdata.get_file("ccs-sequel")]
+    TASK_OPTIONS = {"pbcoretools.task_options.use_run_design_uuid": True}
+
+    def run_after(self, rtc, output_dir):
+        with ConsensusReadSet(rtc.task.output_files[0]) as ds:
+            self.assertEqual(ds.uuid, "5416f525-d3c7-496b-ba8c-18d7ec1b4499")
