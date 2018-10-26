@@ -280,6 +280,7 @@ def update_barcoded_sample_metadata(base_dir,
                 raise IOError(
                     "The file {f} contains multiple barcodes: {b}".format(
                         f=f.path, b="; ".join([str(bc) for bc in ds_barcodes])))
+            assert parent_ds.datasetType == ds.datasetType
             ds.metadata.addParentDataSet(parent_ds.uuid,
                                          parent_ds.datasetType,
                                          createdBy="AnalysisJob",
