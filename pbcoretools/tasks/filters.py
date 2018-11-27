@@ -108,9 +108,9 @@ def run_filter_dataset(in_file, out_file, read_length, other_filters,
     return 0
 
 
-@registry("filterdataset", "0.3.1",
+@registry("filterdataset", "0.3.2",
           FileTypes.DS_SUBREADS,
-          subreads_file_type, is_distributed=True, nproc=1,
+          subreads_file_type, is_distributed=True, nproc=4,
           options={"read_length":rl_opt,
                    "downsample_factor":downsample_opt,
                    "other_filters":filters_opt})
