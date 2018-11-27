@@ -310,6 +310,12 @@ def update_barcoded_sample_metadata(base_dir,
             f_new.path = ds_out
             f_new.uuid = ds.uuid
             datastore_files.append(f_new)
+    # copy over the un-barcoded reads BAM
+    dstore = DataStore.load_from_json(datastore_file)
+    files = dstore.files.values()
+    for f in files:
+        if f.file_id != "barcoding.tasks.lima-0":
+            datastore_files.append(f)
     return DataStore(datastore_files)
 
 

@@ -94,7 +94,7 @@ def split_barcoded_dataset(file_name, ext=".subreadset.xml"):
             whitelist=[bc],
             use_barcodes=True)
         ds_files.append(DataStoreFile(uuid.uuid4(),
-                                      "barcoding.tasks.lima-out-0",
+                                      "barcoding.tasks.lima-0",
                                       ds_in.datasetType,
                                       ds_tmp))
     return DataStore(ds_files)
