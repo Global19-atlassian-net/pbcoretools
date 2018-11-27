@@ -257,6 +257,10 @@ def update_barcoded_sample_metadata(base_dir,
             barcode_names.append(rec.id)
     parent_ds = openDataSet(input_reads)
     for f in iterate_datastore_read_set_files(datastore_file):
+        # the unbarcoded BAM is also a ConsensusReadSet right now, but we
+        # shouldn't rely on that
+        if f.file_id != "barcoding.tasks.lima-0":
+            continue
         ds_out = op.join(base_dir, op.basename(f.path))
         with openDataSet(f.path, strict=True) as ds:
             assert ds.datasetType in Constants.ALLOWED_BC_TYPES, ds.datasetType
