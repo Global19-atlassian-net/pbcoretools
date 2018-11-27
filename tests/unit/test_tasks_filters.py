@@ -36,7 +36,7 @@ class TestFilterDataSet(pbcommand.testkit.PbTestApp):
         "pbcoretools.task_options.other_filters": "length <= 1400"}
     INPUT_FILES = [get_temp_file(suffix=".subreadset.xml")]
     MAX_NPROC = 24
-    RESOLVED_NPROC = 1
+    RESOLVED_NPROC = 4
     IS_DISTRIBUTED = True
     RESOLVED_IS_DISTRIBUTED = True
     READER_CLASS = SubreadSet
