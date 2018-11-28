@@ -246,16 +246,15 @@ def splitXml(args):
         chNums = ['_'.join(ds.barcodes).replace(
             '[', '').replace(']', '').replace(', ', '-') for ds in dss]
     nSuf = -2 if re.search(r".+\.\w+set\.xml", args.infile) else -1
+    default_prefix = '.'.join(args.infile.split('.')[:nSuf])
+    ext = '.'.join(args.infile.split('.')[nSuf:])
+    prefix = args.prefix if args.prefix is not None else default_prefix
     if not args.outfiles:
         if not args.outdir:
-            args.outfiles = ['.'.join(args.infile.split('.')[:nSuf] +
-                                      [infix.format(i=chNum)] +
-                                      args.infile.split('.')[nSuf:])
+            args.outfiles = ['.'.join([prefix, infix.format(i=chNum), ext])
                              for chNum in chNums]
         else:
-            args.outfiles = ['.'.join(args.infile.split('.')[:nSuf] +
-                                      [infix.format(i=chNum)] +
-                                      args.infile.split('.')[nSuf:])
+            args.outfiles = ['.'.join([prefix, infix.format(i=chNum), ext])
                              for chNum in chNums]
             args.outfiles = [os.path.join(args.outdir,
                                           os.path.basename(outfn))
@@ -305,6 +304,8 @@ def split_options(parser):
         help="Split using existing SubDataSets")
     pad("--outdir", default=False, type=validate_output_dir,
         help="Specify an output directory")
+    pad("--prefix", default=None, action="store",
+        help="Optional output file prefix")
     pad("outfiles", nargs=argparse.REMAINDER, type=str,
         help="The resulting XML files (optional)")
     parser.set_defaults(func=splitXml)
