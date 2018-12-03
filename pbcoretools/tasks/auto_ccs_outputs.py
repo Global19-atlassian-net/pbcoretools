@@ -13,7 +13,7 @@ from pbcommand.cli import pbparser_runner
 from pbcommand.utils import setup_log
 from pbcore.io import ConsensusReadSet
 
-from pbcoretools.bam2fastx import run_bam_to_fastq
+from pbcoretools.bam2fastx import run_bam_to_fastq, run_bam_to_fasta
 
 log = logging.getLogger(__name__)
 
@@ -23,9 +23,11 @@ class Constants(object):
     VERSION = "0.1.0"
     DRIVER = "python -m pbcoretools.tasks.auto_ccs_outputs --resolved-tool-contract"
     FASTQ_EXT = ".Q20.fastq"
+    FASTA_EXT = ".Q20.fasta"
     BAM_EXT = ".ccs.bam"
     FASTQ_ID = TOOL_ID + "-out-1"
     BAM_ID = TOOL_ID + "-out-2"
+    FASTA_ID = TOOL_ID + "-out-3"
 
 
 def _get_parser():
@@ -81,14 +83,23 @@ def run_ccs_bam_fastq_exports(ccs_dataset_file, base_dir, is_barcoded=False):
                               name=op.basename(bam_file_name), # XXX is this right?
                               description="CCS BAM file"))
         fastq_file = op.join(base_dir, file_prefix + Constants.FASTQ_EXT)
+        fasta_file = op.join(base_dir, file_prefix + Constants.FASTA_EXT)
         run_bam_to_fastq(ccs_dataset_file, fastq_file)
-        datastore_files.append(
+        run_bam_to_fasta(ccs_dataset_file, fasta_file)
+        datastore_files.extend([
             DataStoreFile(uuid.uuid4(),
                           Constants.FASTQ_ID,
                           FileTypes.FASTQ.file_type_id,
                           fastq_file,
                           name=op.basename(fastq_file),
-                          description="Q20 Reads"))
+                          description="Q20 Reads"),
+            DataStoreFile(uuid.uuid4(),
+                          Constants.FASTA_ID,
+                          FileTypes.FASTA.file_type_id,
+                          fasta_file,
+                          name=op.basename(fasta_file),
+                          description="Q20 Reads")
+        ])
     return datastore_files
 
 
