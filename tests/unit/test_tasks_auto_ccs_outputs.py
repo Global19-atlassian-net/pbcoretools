@@ -34,6 +34,7 @@ class TestAutoCCSOutputs(pbcommand.testkit.PbTestApp):
     def _check_datastore_files(self, files):
         file_names = sorted([op.basename(f.path) for f in files])
         self.assertEqual(file_names, [
+            "m54006_180707_211919.Q20.fasta",
             "m54006_180707_211919.Q20.fastq",
             "m54006_180707_211919.ccs.bam"
         ])
@@ -58,4 +59,4 @@ class TestAutoCCSBarcodedOutputs(pbcommand.testkit.PbTestApp):
 
     def run_after(self, rtc, output_dir):
         ds = DataStore.load_from_json(rtc.task.output_files[0])
-        self.assertEqual(len(ds.files), 1)
+        self.assertEqual(len(ds.files), 2)
