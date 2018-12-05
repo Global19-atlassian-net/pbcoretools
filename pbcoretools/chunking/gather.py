@@ -236,15 +236,19 @@ def __gather_contigset(resource_file_extension, input_files, output_file,
 gather_contigset = P(__gather_contigset, "fasta")
 
 
-def gather_fastq_contigset(input_files, output_file):
+def __gather_fastx_contigset(format_type, input_files, output_file):
     if len(input_files) == 1:
         shutil.copyfile(input_files[0], output_file)
     else:
         contigset_name = op.splitext(output_file)[0] + ".contigset.xml"
-        __gather_contigset("fastq", input_files, contigset_name,
+        __gather_contigset(format_type, input_files, contigset_name,
                            new_resource_file=output_file)
         assert op.isfile(output_file)
         return output_file
+
+
+gather_fasta_contigset = P(__gather_fastx_contigset, "fasta")
+gather_fastq_contigset = P(__gather_fastx_contigset, "fastq")
 
 
 def _uniqueify_metadata(ds):
