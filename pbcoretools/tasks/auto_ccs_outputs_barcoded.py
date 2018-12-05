@@ -55,7 +55,7 @@ def _run_auto_ccs_outputs_barcoded(datastore_in, datastore_out, nproc=Constants.
     files = DataStore.load_from_json(datastore_in).files.values()
     ccs_files = []
     for ds_file in files:
-        if ds_file.file_type_id == FileTypes.DS_CCS.file_type_id:
+        if ds_file.file_type_id == FileTypes.DS_CCS.file_type_id and ds_file.file_id == "barcoding.tasks.lima-0":
             ccs_files.append(ds_file.path)
             log.info("Exporting %s", ds_file.path)
     log.info("Exporting %d CCS datasets", len(ccs_files))
