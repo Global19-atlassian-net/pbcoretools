@@ -13,7 +13,7 @@ import sys
 from pbcommand.models import get_pbparser, FileTypes, ResourceTypes, DataStore, DataStoreFile
 from pbcommand.cli import pbparser_runner
 from pbcommand.utils import setup_log
-from pbcore.io import openDataSet
+from pbcore.io import openDataSet, AlignmentSet, ConsensusAlignmentSet, TranscriptAlignmentSet
 
 
 class Constants(object):
@@ -71,6 +71,14 @@ def bam_of_dataset(dataset_fn):
     return op.splitext(dataset_fn)[0] + ".bam"
 
 
+def get_reads_name(ds_in):
+    if isinstance(ds_in, TranscriptAlignmentSet):
+        return 'Aligned transcripts'
+    if isinstance(ds_in, ConsensusAlignmentSet):
+        return 'Aligned consensus reads'
+    return 'Aligned reads'
+
+
 def run_consolidate(dataset_file, output_file, datastore_file,
                     consolidate, n_files, task_id=Constants.TOOL_ID,
                     consolidate_f=lambda ds: ds.consolidate):
@@ -85,21 +93,31 @@ def run_consolidate(dataset_file, output_file, datastore_file,
             # XXX there is no uniqueness constraint on the sourceId, but this
             # seems sloppy nonetheless - unfortunately I don't know how else to
             # make view rule whitelisting work
+            reads_name = get_reads_name(ds_in)
             for ext_res in ds_in.externalResources:
                 if ext_res.resourceId.endswith(".bam"):
                     ds_file = DataStoreFile(
                         ext_res.uniqueId,
                         task_id + "-out-2",
                         ext_res.metaType,
-                        ext_res.bam)
+                        ext_res.bam,
+                        name=reads_name,
+                        description=reads_name)
                     datastore_files.append(ds_file)
+                    # Prevent duplicated index files being added to datastore, since consolidated
+                    # dataset may contain multiple indices pointing to the same physical file
+                    added_resources = set()
                     for index in ext_res.indices:
-                        if index.metaType in Constants.BAI_FILE_TYPES:
+                        if (index.metaType in Constants.BAI_FILE_TYPES and
+                            index.resourceId not in added_resources):
+                            added_resources.add(index.resourceId)
                             ds_file = DataStoreFile(
                                 index.uniqueId,
                                 task_id + "-out-3",
                                 index.metaType,
-                                index.resourceId)
+                                index.resourceId,
+                                name="Index of {}".format(reads_name.lower()),
+                                description="Index of {}".format(reads_name.lower()))
                             datastore_files.append(ds_file)
         ds_in.newUuid()
         ds_in.write(output_file)
