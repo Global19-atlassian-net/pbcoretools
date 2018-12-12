@@ -4,6 +4,7 @@ Simple gather tool for non-dataset file types
 """
 
 import logging
+import os.path as op
 import sys
 
 from pbcommand.cli import (pacbio_args_runner,
@@ -17,29 +18,28 @@ __version__ = "0.1"
 
 
 def run_args(args):
-    if not args.output_file.endswith(args.extension):
-        raise ValueError("Output file name {f} does not have expected extension {e}".format(f=args.output_file, e=args.extension))
-    args.func(args.chunked_files, args.output_file)
+    MODES = {
+        ".gff": gather_gff,
+        ".vcf": gather_vcf,
+        ".csv": gather_csv,
+        ".fasta": gather_fasta_contigset,
+        ".fastq": gather_fastq_contigset
+    }
+    base, ext = op.splitext(args.output_file)
+    if not ext in MODES:
+        raise IOError("Don't know how to gather files with extension %s" % ext)
+    func = MODES[ext]
+    func(args.chunked_files, args.output_file)
     return 0
 
 
 def _get_parser():
-    modes = [
-        ("gff", gather_gff),
-        ("vcf", gather_vcf),
-        ("csv", gather_csv),
-        ("fasta", gather_fasta_contigset),
-        ("fastq", gather_fastq_contigset)
-    ]
     p = get_default_argparser_with_base_opts(
         version=__version__,
         description=__doc__,
         default_level="INFO")
-    sp = p.add_subparsers()
-    for mode, runner in modes:
-        p_sub = sp.add_parser(mode, help="Gather {m} files".format(m=mode))
-        p_sub.set_defaults(func=runner, extension="." + mode)
-        p_sub.add_argument("output_file", help="Gathered output file")
+    p.add_argument("output_file", help="Gathered output file")
+    p.add_argument("chunked_files", nargs="+", help="Chunked input files")
     return p
 
 
