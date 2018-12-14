@@ -369,9 +369,9 @@ class TestBam2FastqBarcodedNoLabels(TestBam2FastaBarcodedNoLabels):
 
 
 def _setup_transcripts(hq_file, lq_file):
-    from pbcoretools.tasks.filters import _split_transcripts
+    from pbcoretools.tasks.filters import split_transcripts
     DS = "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/polished.transcriptset.xml"
-    _split_transcripts(DS, hq_file, lq_file, 0.98)
+    split_transcripts(DS, hq_file, lq_file, 0.98)
 
 
 @skip_unless_bam2fastx

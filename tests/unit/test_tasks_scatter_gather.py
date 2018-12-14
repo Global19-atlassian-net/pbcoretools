@@ -632,18 +632,20 @@ class TextRecordsGatherBase(object):
         pass
 
 
+MOCK_GFF_RECORDS = [
+    "contig1\tkinModCall\tmodified_base\t1\t1\t31\t+\t.\tcoverage=169",
+    "contig1\tkinModCall\tmodified_base\t2\t2\t41\t-\t.\tcoverage=170",
+    "contig1\tkinModCall\tmodified_base\t3\t3\t51\t+\t.\tcoverage=168",
+    "contig1\tkinModCall\tmodified_base\t4\t4\t60\t-\t.\tcoverage=173",
+]
+
 class TestGatherGFF(TextRecordsGatherBase,
                     pbcommand.testkit.core.PbTestGatherApp):
 
     """
     Test pbcoretools.tasks.gather_gff
     """
-    RECORDS = [
-        "contig1\tkinModCall\tmodified_base\t1\t1\t31\t+\t.\tcoverage=169",
-        "contig1\tkinModCall\tmodified_base\t2\t2\t41\t-\t.\tcoverage=170",
-        "contig1\tkinModCall\tmodified_base\t3\t3\t51\t+\t.\tcoverage=168",
-        "contig1\tkinModCall\tmodified_base\t4\t4\t60\t-\t.\tcoverage=173",
-    ]
+    RECORDS = MOCK_GFF_RECORDS
     RECORD_HEADER = "##gff-version 3\n##source-id ipdSummary\n"
     EXTENSION = "gff"
 
@@ -666,25 +668,29 @@ class TestGatherGFF(TextRecordsGatherBase,
         self.assertEqual(lines[1].strip(), "##source-id ipdSummary")
 
 
+MOCK_VCF_RECORDS = textwrap.dedent('''\
+    ecoliK12_pbi_March2013 84 . TG T 48 PASS DP=53
+    ecoliK12_pbi_March2013 218 . GA G 47 PASS DP=58
+    ecoliK12_pbi_March2013 1536 . G GC 47 PASS DP=91
+    ''').rstrip().replace(' ', '\t').split('\n')
+MOCK_VCF_HEADER = textwrap.dedent('''\
+    ##fileformat=VCFv4.3
+    ##fileDate=20170328
+    ##source=GenomicConsensusV2.2.0
+    ##reference=ecoliK12_pbi_March2013.fasta
+    ##contig=<ID=ecoliK12_pbi_March2013,length=4642522>
+    #CHROM POS ID REF ALT QUAL FILTER INFO
+    ''')
+
+
 class TestGatherVCF(TextRecordsGatherBase,
                     pbcommand.testkit.core.PbTestGatherApp):
 
     """
     Test pbcoretools.tasks.gather_vcf
     """
-    RECORDS = textwrap.dedent('''\
-        ecoliK12_pbi_March2013 84 . TG T 48 PASS DP=53
-        ecoliK12_pbi_March2013 218 . GA G 47 PASS DP=58
-        ecoliK12_pbi_March2013 1536 . G GC 47 PASS DP=91
-        ''').rstrip().replace(' ', '\t').split('\n')
-    RECORD_HEADER = textwrap.dedent('''\
-        ##fileformat=VCFv4.3
-        ##fileDate=20170328
-        ##source=GenomicConsensusV2.2.0
-        ##reference=ecoliK12_pbi_March2013.fasta
-        ##contig=<ID=ecoliK12_pbi_March2013,length=4642522>
-        #CHROM POS ID REF ALT QUAL FILTER INFO
-        ''')
+    RECORDS = MOCK_VCF_RECORDS
+    RECORD_HEADER = MOCK_VCF_HEADER
     EXTENSION = "vcf"
 
     DRIVER_BASE = "python -m pbcoretools.tasks.gather_vcf"
