@@ -39,14 +39,6 @@ setup(
     license=open('LICENSES.txt').read(),
     packages = find_packages('.'),
     package_dir = {'':'.'},
-    package_data = {'pbcoretools': ['data/*.h5', 'data/*.gff', 'data/*.fasta',
-                               'data/*.fasta.fai', 'data/*.fofn', 'data/*.m4',
-                               'data/*.fa', 'data/*.fa.fai',
-                               'data/*.m5', 'data/*.bam', 'data/*.bam.bai', "data/*.bam.pbi",
-                               'chemistry/resources/*.xml',
-                               'data/datasets/*.*',
-                               'data/datasets/yieldtest/*.*']
-                               },
     zip_safe = False,
     entry_points = {"console_scripts": [
         "dataset = pbcoretools.dataset:main",
