@@ -1,14 +1,17 @@
 
 # FIXME too much copy-paste from test_tasks_scatter_gather.py
 
+from zipfile import ZipFile
 import subprocess
 import tempfile
 import unittest
+import json
 import os.path as op
 
 from pbcore.io import FastaReader, FastaWriter, FastqReader, FastqWriter
 
 from test_tasks_scatter_gather import MOCK_GFF_RECORDS, MOCK_VCF_RECORDS, MOCK_VCF_HEADER
+from test_chunking_gather import create_zip
 
 
 class GatherTextRecordsBase(object):
@@ -162,3 +165,22 @@ class TestGatherToolFastqJoinContigs(TestGatherToolFastaJoinContigs):
         with FastqWriter(fn) as f:
             f.writeRecord("{h}{s}".format(h=header, s=suffix), seq, [35]*len(seq))
         return fn
+
+
+class TestGatherToolZip(unittest.TestCase):
+
+    def test_run_tool_and_validate(self):
+        inputs = []
+        for i in range(2):
+            fn = tempfile.NamedTemporaryFile(suffix=".zip").name
+            create_zip(fn)
+            inputs.append(fn)
+        tmp_out = tempfile.NamedTemporaryFile(suffix=".zip").name
+        args = ["pbtools-gather", tmp_out] + inputs
+        subprocess.check_call(args)
+        uuids = set()
+        with ZipFile(tmp_out, "r") as gathered:
+            for member in gathered.namelist():
+                d = json.loads(gathered.open(member).read())
+                uuids.add(d["uuid"])
+        self.assertEqual(len(uuids), 4)
