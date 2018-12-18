@@ -32,6 +32,7 @@ VERSION = "0.1.2"
 
 log = logging.getLogger(__name__)
 
+
 def _process_zmw_list(zmw_list):
     zmws = set()
     if zmw_list is None:
@@ -54,8 +55,10 @@ def _process_zmw_list(zmw_list):
         zmws.update(set([int(x) for x in zmw_list.split(",")]))
     return zmws
 
+
 def _make_qname(movie, zmw, start, stop):
     return '{}/{}/{}_{}'.format(movie, zmw, start, stop)
+
 
 def _make_qname_from_index_row(qid2mov, bam, i_rec):
     qid = bam.qId[i_rec]
@@ -64,6 +67,7 @@ def _make_qname_from_index_row(qid2mov, bam, i_rec):
     start = bam.qStart[i_rec]
     stop = bam.qEnd[i_rec]
     return _make_qname(movie_name, zmw, start, stop)
+
 
 def _process_subread_list(subread_list):
     def _get_subreads_from_dataset(subread_list):
@@ -99,6 +103,7 @@ def _process_subread_list(subread_list):
     else:
         subreads.update(set(subread_list.split(',')))
     return subreads
+
 
 def _anonymize_sequence(rec):
     rseq_ = [random.randint(0,3) for i in range(len(rec.query_sequence))]
@@ -169,6 +174,7 @@ def _process_bam_whitelist(bam_in, bam_out, whitelist, blacklist,
             if _is_whitelisted(zmw):
                 _add_read(i_rec)
     return len(have_records), have_zmws
+
 
 def filter_reads(input_bam,
                  output_bam,
