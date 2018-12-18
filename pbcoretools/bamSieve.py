@@ -84,13 +84,10 @@ def _process_subread_list(subread_list):
     subreads = set()
     if subread_list is None:
         return subreads
-
     elif isinstance(subread_list, set):
         return subread_list
-
     elif isinstance(subread_list, (list, tuple)):
         return set(subread_list)
-
     elif op.isfile(subread_list):
         base, ext = op.splitext(subread_list)
         if ext in ['.bam', '.xml']:
@@ -99,10 +96,8 @@ def _process_subread_list(subread_list):
             with open(subread_list) as f:
                 lines = f.read().splitlines()
                 subreads.update(set(lines))
-
     else:
         subreads.update(set(subread_list.split(',')))
-
     return subreads
 
 def _anonymize_sequence(rec):
@@ -197,7 +192,6 @@ def filter_reads(input_bam,
         log.error("Output path '{d}' does not exist.".format(
                   d=op.dirname(output_bam)))
         return 1
-
     n_specified = 4 - [whitelist, blacklist, percentage, count].count(None)
     if n_specified != 1:
         log.error("You must choose one and only one of the following "+
@@ -262,7 +256,6 @@ def filter_reads(input_bam,
                         scraps_in = IndexedBamReader(ext_res.scraps)
                         bam_readers.append(scraps_in)
             whitelist = _create_whitelist(bam_readers, percentage, count)
-
         # convert these to Python sets
         if use_subreads:
             _whitelist = _process_subread_list(whitelist)
@@ -270,7 +263,6 @@ def filter_reads(input_bam,
         else:
             _whitelist = _process_zmw_list(whitelist)
             _blacklist = _process_zmw_list(blacklist)
-
         scraps_in = None
         if output_ds is not None and output_ds.endswith(".subreadset.xml"):
             for ext_res in ds_in.externalResources:
@@ -295,7 +287,6 @@ def filter_reads(input_bam,
                     qid2mov=ds_in.qid2mov)
                 n_file_reads += n_records
                 have_zmws.update(have_zmws_)
-
         if scraps_in is not None:
             scraps_bam = re.sub("subreads.bam$", "scraps.bam", output_bam)
             with AlignmentFile(scraps_bam, 'wb',
