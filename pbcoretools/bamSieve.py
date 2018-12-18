@@ -32,7 +32,6 @@ VERSION = "0.1.2"
 
 log = logging.getLogger(__name__)
 
-
 def _process_zmw_list(zmw_list):
     zmws = set()
     if zmw_list is None:
@@ -55,10 +54,32 @@ def _process_zmw_list(zmw_list):
         zmws.update(set([int(x) for x in zmw_list.split(",")]))
     return zmws
 
+def _make_qname(movie, zmw, start, stop):
+    return '{}/{}/{}_{}'.format(movie, zmw, start, stop)
+
+def _make_qname_from_index_row(qid2mov, bam, i_rec):
+    qid = bam.qId[i_rec]
+    movie_name = qid2mov[qid]
+    zmw = bam.holeNumber[i_rec]
+    start = bam.qStart[i_rec]
+    stop = bam.qEnd[i_rec]
+    return _make_qname(movie_name, zmw, start, stop)
 
 def _process_subread_list(subread_list):
-    def _make_qname(movie, zmw, start, stop):
-        return '{}/{}/{}_{}'.format(movie, zmw, start, stop)
+    def _get_subreads_from_dataset(subread_list):
+        with openDataFile(subread_list) as ds_in:
+            if ds_in.isIndexed:
+                qid = ds_in.index.qId
+                mname = [ds_in.qid2mov[q] for q in qid]
+                zmws = ds_in.index.holeNumber
+                start = ds_in.index.qStart
+                stop = ds_in.index.qEnd
+                return set([_make_qname(*x) for x in zip(mname, zmws, start, stop)])
+            else:
+                subreads = set()
+                for record in ds_in:
+                    subreads.add(record.qName)
+                return subreads
 
     subreads = set()
     if subread_list is None:
@@ -73,14 +94,7 @@ def _process_subread_list(subread_list):
     elif op.isfile(subread_list):
         base, ext = op.splitext(subread_list)
         if ext in ['.bam', '.xml']:
-            with openDataFile(subread_list) as f:
-                qid = f.index.qId
-                mname = [f.qid2mov[q] for q in qid]
-                zmws = f.index.holeNumber
-                start = f.index.qStart
-                stop = f.index.qEnd
-            return set([_make_qname(*x) for x in zip(mname, zmws, start, stop)])
-
+            subreads = _get_subreads_from_dataset(subread_list)
         else:
             with open(subread_list) as f:
                 lines = f.read().splitlines()
@@ -127,14 +141,14 @@ def _create_whitelist(bam_readers, percentage=None, count=None):
 
 def _process_bam_whitelist(bam_in, bam_out, whitelist, blacklist,
                            use_barcodes=False, anonymize=False,
-                           use_subreads=False):
+                           use_subreads=False, qid2mov=None):
 
     def _is_whitelisted(x):
         if ((len(whitelist) > 0 and x in whitelist) or
             (len(blacklist) > 0 and not x in blacklist)):
             return True
 
-    def _add_read(i_rec, zmw):
+    def _add_read(i_rec):
         rec = bam_in[i_rec]
         if anonymize:
             _anonymize_sequence(rec.peer)
@@ -149,15 +163,16 @@ def _process_bam_whitelist(bam_in, bam_out, whitelist, blacklist,
             bc_fwd = bam_in.bcForward[i_rec]
             bc_rev = bam_in.bcReverse[i_rec]
             if _is_whitelisted(bc_fwd) or _is_whitelisted(bc_rev):
-                _add_read(i_rec, bam_in.holeNumber[i_rec])
+                _add_read(i_rec)
     elif use_subreads:
-        for i_rec, read in enumerate(bam_in):
-            if _is_whitelisted(read.qName):
-                _add_read(i_rec, read)
+        for i_rec in range(len(bam_in.holeNumber)):
+            qname = _make_qname_from_index_row(qid2mov, bam_in, i_rec)
+            if _is_whitelisted(qname):
+                _add_read(i_rec)
     else:
-        for i_rec, read in enumerate(bam_in):
-            if _is_whitelisted(read.holeNumber):
-                _add_read(i_rec, read)
+        for i_rec, zmw in enumerate(bam_in.holeNumber):
+            if _is_whitelisted(zmw):
+                _add_read(i_rec)
     return len(have_records), have_zmws
 
 def filter_reads(input_bam,
@@ -276,7 +291,8 @@ def filter_reads(input_bam,
                     blacklist=_blacklist,
                     use_barcodes=use_barcodes,
                     anonymize=anonymize,
-                    use_subreads=use_subreads)
+                    use_subreads=use_subreads,
+                    qid2mov=ds_in.qid2mov)
                 n_file_reads += n_records
                 have_zmws.update(have_zmws_)
 
