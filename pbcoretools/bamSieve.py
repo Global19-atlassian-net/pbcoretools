@@ -56,6 +56,55 @@ def _process_zmw_list(zmw_list):
     return zmws
 
 
+def _make_qname(movie, zmw, start, stop):
+    return '{}/{}/{}_{}'.format(movie, zmw, start, stop)
+
+
+def _make_qname_from_index_row(qid2mov, bam, i_rec):
+    qid = bam.qId[i_rec]
+    movie_name = qid2mov[qid]
+    zmw = bam.holeNumber[i_rec]
+    start = bam.qStart[i_rec]
+    stop = bam.qEnd[i_rec]
+    return _make_qname(movie_name, zmw, start, stop)
+
+
+def _process_subread_list(subread_list):
+    def _get_subreads_from_dataset(subread_list):
+        with openDataFile(subread_list) as ds_in:
+            if ds_in.isIndexed:
+                qid = ds_in.index.qId
+                mname = [ds_in.qid2mov[q] for q in qid]
+                zmws = ds_in.index.holeNumber
+                start = ds_in.index.qStart
+                stop = ds_in.index.qEnd
+                return set([_make_qname(*x) for x in zip(mname, zmws, start, stop)])
+            else:
+                subreads = set()
+                for record in ds_in:
+                    subreads.add(record.qName)
+                return subreads
+
+    subreads = set()
+    if subread_list is None:
+        return subreads
+    elif isinstance(subread_list, set):
+        return subread_list
+    elif isinstance(subread_list, (list, tuple)):
+        return set(subread_list)
+    elif op.isfile(subread_list):
+        base, ext = op.splitext(subread_list)
+        if ext in ['.bam', '.xml']:
+            subreads = _get_subreads_from_dataset(subread_list)
+        else:
+            with open(subread_list) as f:
+                lines = f.read().splitlines()
+                subreads.update(set(lines))
+    else:
+        subreads.update(set(subread_list.split(',')))
+    return subreads
+
+
 def _anonymize_sequence(rec):
     rseq_ = [random.randint(0,3) for i in range(len(rec.query_sequence))]
     rseq = "".join(["ACTG"[i] for i in rseq_])
@@ -91,30 +140,39 @@ def _create_whitelist(bam_readers, percentage=None, count=None):
 
 
 def _process_bam_whitelist(bam_in, bam_out, whitelist, blacklist,
-                           use_barcodes=False, anonymize=False):
+                           use_barcodes=False, anonymize=False,
+                           use_subreads=False, qid2mov=None):
+
     def _is_whitelisted(x):
         if ((len(whitelist) > 0 and x in whitelist) or
             (len(blacklist) > 0 and not x in blacklist)):
             return True
-    have_zmws = set()
-    have_records = []
-    def _add_read(i_rec, zmw):
+
+    def _add_read(i_rec):
         rec = bam_in[i_rec]
         if anonymize:
             _anonymize_sequence(rec.peer)
         bam_out.write(rec.peer)
-        have_zmws.add(zmw)
+        have_zmws.add(rec.holeNumber)
         have_records.append(i_rec)
+
+    have_zmws = set()
+    have_records = []
     if use_barcodes:
         for i_rec in range(len(bam_in.holeNumber)):
             bc_fwd = bam_in.bcForward[i_rec]
             bc_rev = bam_in.bcReverse[i_rec]
             if _is_whitelisted(bc_fwd) or _is_whitelisted(bc_rev):
-                _add_read(i_rec, bam_in.holeNumber[i_rec])
+                _add_read(i_rec)
+    elif use_subreads:
+        for i_rec in range(len(bam_in.holeNumber)):
+            qname = _make_qname_from_index_row(qid2mov, bam_in, i_rec)
+            if _is_whitelisted(qname):
+                _add_read(i_rec)
     else:
         for i_rec, zmw in enumerate(bam_in.holeNumber):
             if _is_whitelisted(zmw):
-                _add_read(i_rec, zmw)
+                _add_read(i_rec)
     return len(have_records), have_zmws
 
 
@@ -130,7 +188,8 @@ def filter_reads(input_bam,
                  anonymize=False,
                  use_barcodes=False,
                  sample_scraps=False,
-                 keep_original_uuid=False):
+                 keep_original_uuid=False,
+                 use_subreads=False):
     if output_bam is None:
         log.error("Must specify output file")
         return 1
@@ -204,8 +263,12 @@ def filter_reads(input_bam,
                         bam_readers.append(scraps_in)
             whitelist = _create_whitelist(bam_readers, percentage, count)
         # convert these to Python sets
-        _whitelist = _process_zmw_list(whitelist)
-        _blacklist = _process_zmw_list(blacklist)
+        if use_subreads:
+            _whitelist = _process_subread_list(whitelist)
+            _blacklist = _process_subread_list(blacklist)
+        else:
+            _whitelist = _process_zmw_list(whitelist)
+            _blacklist = _process_zmw_list(blacklist)
         scraps_in = None
         if output_ds is not None and output_ds.endswith(".subreadset.xml"):
             for ext_res in ds_in.externalResources:
@@ -220,12 +283,14 @@ def filter_reads(input_bam,
         with AlignmentFile(output_bam, 'wb',
                            template=f1.peer) as bam_out:
             for bam_in in ds_in.resourceReaders():
-                n_records, have_zmws_ =_process_bam_whitelist(
+                n_records, have_zmws_ = _process_bam_whitelist(
                     bam_in, bam_out,
                     whitelist=_whitelist,
                     blacklist=_blacklist,
                     use_barcodes=use_barcodes,
-                    anonymize=anonymize)
+                    anonymize=anonymize,
+                    use_subreads=use_subreads,
+                    qid2mov=ds_in.qid2mov)
                 n_file_reads += n_records
                 have_zmws.update(have_zmws_)
         if scraps_in is not None:
@@ -238,7 +303,8 @@ def filter_reads(input_bam,
                         n_records, have_zmws_ =_process_bam_whitelist(
                             scraps_in_, scraps_out, _whitelist, _blacklist,
                             use_barcodes=use_barcodes,
-                            anonymize=anonymize)
+                            anonymize=anonymize,
+                            use_subreads=use_subreads)
                         have_zmws.update(have_zmws_)
     if n_file_reads == 0:
         log.error("No reads written")
@@ -333,7 +399,8 @@ def run(args):
         anonymize=args.anonymize,
         use_barcodes=args.barcodes,
         sample_scraps=args.sample_scraps,
-        keep_original_uuid=args.keep_uuid)
+        keep_original_uuid=args.keep_uuid,
+        use_subreads=args.subreads)
 
 
 def get_parser():
@@ -354,6 +421,10 @@ def get_parser():
                         "BAM/DataSet file from which to extract ZMWs")
     p.add_argument("--blacklist", action="store", default=None,
                    help="Opposite of --whitelist, specifies ZMWs to discard")
+    p.add_argument("--subreads", action="store_true",
+                   help="If set, the whitelist or blacklist will be assumed to contain " +
+                        "one subread name per line, or " +
+                        "a BAM/DataSet file from which to extract subreads")
     p.add_argument("--percentage", action="store", type=float, default=None,
                    help="If you prefer to recover a percentage of a SMRTcell "
                         "rather than a specific list of reads specify that "

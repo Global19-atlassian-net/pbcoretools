@@ -56,6 +56,86 @@ class TestBamSieve(unittest.TestCase):
         with BamReader(ofn) as bam_out:
             self.assertEqual(117, len([rec for rec in bam_out]))
 
+    def test_subreads_whitelist(self):
+        ofn = tempfile.NamedTemporaryFile(suffix=".bam").name
+        ofn2 = tempfile.NamedTemporaryFile(suffix=".bam").name
+        WHITELIST = set(['m140905_042212_sidney_c100564852550000001823085912221377_s1_X0/1650/1920_2155',
+                         'm140905_042212_sidney_c100564852550000001823085912221377_s1_X0/7957/9554_9634',
+                         'm140905_042212_sidney_c100564852550000001823085912221377_s1_X0/1650/2200_3298'])
+        ZMWS = set([1650, 7957])
+
+        def _run_with_whitelist(wl):
+            rc = bamSieve.filter_reads(
+                input_bam=SUBREADS3,
+                output_bam=ofn,
+                whitelist=wl,
+                use_subreads=True)
+            self.assertEqual(rc, 0)
+            with BamReader(ofn) as bam_out:
+                have_zmws = set([rec.HoleNumber for rec in bam_out])
+                self.assertEqual(have_zmws, ZMWS)
+                qnames = set([rec.qName for rec in bam_out])
+                self.assertEqual(qnames, WHITELIST)
+
+        _run_with_whitelist(WHITELIST)
+        _run_with_whitelist(",".join([str(x) for x in list(WHITELIST)]))
+        tmp_wl = tempfile.NamedTemporaryFile(suffix=".txt").name
+        with open(tmp_wl, "w") as wl_out:
+            wl_out.write("\n".join([str(x) for x in list(WHITELIST)]))
+        _run_with_whitelist(tmp_wl)
+        # now with a BAM file as whitelist
+        rc = bamSieve.filter_reads(
+            input_bam=SUBREADS3,
+            output_bam=ofn2,
+            use_subreads=True,
+            whitelist=ofn)
+
+        with BamReader(ofn) as bam_out:
+            subreads = set([x.qName for x in bam_out])
+        with BamReader(ofn2) as bam_out:
+            subreads2 = set([x.qName for x in bam_out])
+        self.assertEqual(subreads, subreads2)
+
+    def test_subreads_blacklist(self):
+        ofn = tempfile.NamedTemporaryFile(suffix=".bam").name
+        ofn2 = tempfile.NamedTemporaryFile(suffix=".bam").name
+        BLACKLIST = set(['m140905_042212_sidney_c100564852550000001823085912221377_s1_X0/1650/1920_2155',
+                         'm140905_042212_sidney_c100564852550000001823085912221377_s1_X0/7957/9554_9634',
+                         'm140905_042212_sidney_c100564852550000001823085912221377_s1_X0/1650/2200_3298'])
+
+        def _run_with_blacklist(bl):
+            rc = bamSieve.filter_reads(
+                input_bam=SUBREADS3,
+                output_bam=ofn,
+                blacklist=bl,
+                use_subreads=True)
+            self.assertEqual(rc, 0)
+            with BamReader(ofn) as bam_out:
+                qnames = set([rec.qName for rec in bam_out])
+                self.assertEqual(qnames & BLACKLIST, set())
+                self.assertEqual(len([x for x in bam_out]), 114)
+
+        _run_with_blacklist(BLACKLIST)
+        _run_with_blacklist(",".join([str(x) for x in list(BLACKLIST)]))
+        tmp_wl = tempfile.NamedTemporaryFile(suffix=".txt").name
+        with open(tmp_wl, "w") as wl_out:
+            wl_out.write("\n".join([str(x) for x in list(BLACKLIST)]))
+        _run_with_blacklist(tmp_wl)
+
+        # now with a BAM file as blacklist
+        rc = bamSieve.filter_reads(
+            input_bam=SUBREADS3,
+            output_bam=ofn2,
+            use_subreads=True,
+            blacklist=ofn)
+
+        with BamReader(ofn) as bam_out:
+            subreads = set([x.qName for x in bam_out])
+        with BamReader(ofn2) as bam_out:
+            subreads2 = set([x.qName for x in bam_out])
+        self.assertEqual(subreads & subreads2, set())
+        self.assertEqual(subreads2, BLACKLIST)
+
     def test_dataset_io(self):
         ofn = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
         rc = bamSieve.filter_reads(

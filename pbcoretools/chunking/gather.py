@@ -236,15 +236,19 @@ def __gather_contigset(resource_file_extension, input_files, output_file,
 gather_contigset = P(__gather_contigset, "fasta")
 
 
-def gather_fastq_contigset(input_files, output_file):
+def __gather_fastx_contigset(format_type, input_files, output_file):
     if len(input_files) == 1:
         shutil.copyfile(input_files[0], output_file)
     else:
         contigset_name = op.splitext(output_file)[0] + ".contigset.xml"
-        __gather_contigset("fastq", input_files, contigset_name,
+        __gather_contigset(format_type, input_files, contigset_name,
                            new_resource_file=output_file)
         assert op.isfile(output_file)
         return output_file
+
+
+gather_fasta_contigset = P(__gather_fastx_contigset, "fasta")
+gather_fastq_contigset = P(__gather_fastx_contigset, "fastq")
 
 
 def _uniqueify_metadata(ds):
@@ -290,6 +294,7 @@ gather_transcripts = P(__gather_readset, TranscriptSet)
 gather_transcript_alignmentset = P(__gather_readset, TranscriptAlignmentSet)
 
 
+# FIXME we should kill this
 def gather_bigwig(input_files, output_file):
     import pyBigWig
     chr_lengths = {}
@@ -355,6 +360,9 @@ def gather_bigwig(input_files, output_file):
 
 
 def gather_tgz(input_files, output_file):
+    """
+    Deprecated, use ZIP files instead where possible.
+    """
     with tarfile.open(output_file, mode="w:gz") as tgz_out:
         for tgz_file in input_files:
             with tarfile.open(tgz_file, mode="r:gz") as tgz_in:
@@ -364,12 +372,31 @@ def gather_tgz(input_files, output_file):
 
 
 def gather_zip(input_files, output_file):
+    """
+    Gather ZIP archives; used in minor variants analysis.
+    """
     with ZipFile(output_file, "w", allowZip64=True) as zip_out:
         for zip_file in input_files:
             with ZipFile(zip_file, "r") as zip_in:
                 for member in zip_in.namelist():
                     f = zip_in.open(member)
                     zip_out.writestr(member, f.read())
+    return output_file
+
+
+def gather_json(input_files, output_file):
+    """
+    Gather chunked JSON dictionaries, which must have mutually non-overlapping
+    keys.  Used in minor variants analysis.
+    """
+    gathered = {}
+    for chunk_file in input_files:
+        with open(chunk_file) as json_in:
+            d = json.loads(json_in.read())
+            assert len(set(d.keys()).intersection(gathered)) == 0
+            gathered.update(d)
+    with open(output_file, "w") as json_out:
+        json_out.write(json.dumps(gathered))
     return output_file
 
 

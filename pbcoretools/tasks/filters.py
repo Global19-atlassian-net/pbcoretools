@@ -122,7 +122,7 @@ def run_filterDataSet(rtc):
         rtc.task.options["pbcoretools.task_options.downsample_factor"])
 
 
-def _split_transcripts(transcripts, hq_file, lq_file, cutoff):
+def split_transcripts(transcripts, hq_file, lq_file, cutoff):
     with TranscriptSet(transcripts, strict=True) as ds_in:
         ds_hq = ds_in.copy()
         ds_lq = ds_in.copy()
@@ -157,7 +157,7 @@ hq_qv_cutoff = QuickOpt(Constants.TRANSCRIPT_QV_CUTOFF,
           options={"hq_qv_cutoff": hq_qv_cutoff})
 def _run_split_transcripts(rtc):
     cutoff = rtc.task.options["pbcoretools.task_options.hq_qv_cutoff"]
-    return _split_transcripts(
+    return split_transcripts(
         rtc.task.input_files[0],
         rtc.task.output_files[0],
         rtc.task.output_files[1],
