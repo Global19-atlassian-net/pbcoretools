@@ -1,6 +1,7 @@
 #!/bin/bash
 type module >& /dev/null || . /mnt/software/Modules/current/init/bash
 module load python/2.7.9-mobs-pbcoretools
+module load git
 set -euo pipefail
 set -x
 
