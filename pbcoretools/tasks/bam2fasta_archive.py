@@ -49,7 +49,8 @@ def get_parser_impl(constants):
 
 
 def run_args_impl(f, args):
-    return f(args.bam, args.fasta_out)
+    out = args.fasta_out if hasattr(args, 'fasta_out') else args.fastq_out
+    return f(args.bam, out)
 
 
 def run_rtc_impl(f, rtc):
