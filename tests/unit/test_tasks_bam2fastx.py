@@ -414,3 +414,7 @@ class TestBam2FastqTranscripts(TestBam2FastaTranscripts):
     DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fastq_transcripts --emit-tool-contract"
     DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fastq_transcripts --resolved-tool-contract"
     READER_CLASS = FastqReader
+
+
+# Ensure that pytest ignores the base-class.
+del _BaseTestBam2Fasta

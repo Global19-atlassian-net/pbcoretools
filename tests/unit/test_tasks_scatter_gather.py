@@ -863,3 +863,7 @@ class TestGatherTranscripts(_SetupGatherApp):
 
     def _generate_chunk_output_file(self, i=None):
         return self._copy_mock_output_file(self.BASE_INPUT)
+
+
+# Ensure that pytest ignores the base-class.
+del _SetupGatherApp
