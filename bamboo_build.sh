@@ -68,3 +68,5 @@ $PIP install --user -e ./
 
 make test
 make pylint
+
+bash bamboo_wheel.sh
