@@ -62,7 +62,7 @@ PIP="pip --cache-dir=${bamboo_build_working_directory:-$PWD}/.pip"
 $PIP install --user --no-compile --no-index --find-link $WHEELHOUSE -r requirements-ci.txt
 $PIP install --user --no-compile --no-index --find-link $WHEELHOUSE -r requirements-dev.txt
 #$PIP install --user --no-compile --no-index --find-link $WHEELHOUSE "pylint<2.0.0"
-$PIP install --user --no-compile --no-index --find-link $WHEELHOUSE pbtestdata pbcommand pbcore
+$PIP install --user --no-compile --no-index --find-link $WHEELHOUSE pbtestdata pbcommand pbcore h5py
 
 $PIP install --user -e ./
 
