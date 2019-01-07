@@ -2,11 +2,14 @@
 Generate single-file CCS BAM and FASTQ outputs from a ConsensusReadSet.
 """
 
+import tempfile
 import logging
 import uuid
 import sys
 import os.path as op
 import re
+
+import numpy as np
 
 from pbcommand.models import FileTypes, ResourceTypes, get_pbparser, DataStoreFile, DataStore
 from pbcommand.cli import pbparser_runner
@@ -14,20 +17,23 @@ from pbcommand.utils import setup_log
 from pbcore.io import ConsensusReadSet
 
 from pbcoretools.bam2fastx import run_bam_to_fastq, run_bam_to_fasta
+from pbcoretools.tasks.filters import combine_filters
 
 log = logging.getLogger(__name__)
 
 
 class Constants(object):
     TOOL_ID = "pbcoretools.tasks.auto_ccs_outputs"
-    VERSION = "0.1.0"
+    VERSION = "0.2.0"
     DRIVER = "python -m pbcoretools.tasks.auto_ccs_outputs --resolved-tool-contract"
-    FASTQ_EXT = ".Q20.fastq"
-    FASTA_EXT = ".Q20.fasta"
+    BASE_EXT = ".Q20"
+    CUSTOM_EXT = ".QV_all"
     BAM_EXT = ".ccs.bam"
     FASTQ_ID = TOOL_ID + "-out-1"
     BAM_ID = TOOL_ID + "-out-2"
     FASTA_ID = TOOL_ID + "-out-3"
+    FASTQ2_ID = TOOL_ID + "-out-4"
+    FASTA2_ID = TOOL_ID + "-out-5"
 
 
 def _get_parser():
@@ -82,10 +88,16 @@ def run_ccs_bam_fastq_exports(ccs_dataset_file, base_dir, is_barcoded=False):
                               bam_file_name,
                               name=op.basename(bam_file_name), # XXX is this right?
                               description="CCS BAM file"))
-        fastq_file = op.join(base_dir, file_prefix + Constants.FASTQ_EXT)
-        fasta_file = op.join(base_dir, file_prefix + Constants.FASTA_EXT)
-        run_bam_to_fastq(ccs_dataset_file, fastq_file)
-        run_bam_to_fasta(ccs_dataset_file, fasta_file)
+        fastq_file = op.join(base_dir, file_prefix + Constants.BASE_EXT + ".fastq")
+        fasta_file = op.join(base_dir, file_prefix + Constants.BASE_EXT + ".fasta")
+        ccs_q20 = ccs_dataset_file
+        is_all_q20_or_better = np.all(ccs.index.readQual >= 0.99)
+        if not is_all_q20_or_better:
+            ccs_q20 = tempfile.NamedTemporaryFile(suffix=".consensusreadset.xml").name
+            combine_filters(ccs, {"rq": [('>=', 0.99)]})
+            ccs.write(ccs_q20)
+        run_bam_to_fastq(ccs_q20, fastq_file)
+        run_bam_to_fasta(ccs_q20, fasta_file)
         datastore_files.extend([
             DataStoreFile(uuid.uuid4(),
                           Constants.FASTQ_ID,
@@ -100,6 +112,25 @@ def run_ccs_bam_fastq_exports(ccs_dataset_file, base_dir, is_barcoded=False):
                           name=op.basename(fasta_file),
                           description="Q20 Reads")
         ])
+        if not is_all_q20_or_better:
+            fastq2_file = op.join(base_dir, file_prefix + Constants.CUSTOM_EXT + ".fastq")
+            fasta2_file = op.join(base_dir, file_prefix + Constants.CUSTOM_EXT + ".fasta")
+            run_bam_to_fastq(ccs_dataset_file, fastq2_file)
+            run_bam_to_fasta(ccs_dataset_file, fasta2_file)
+            datastore_files.extend([
+                DataStoreFile(uuid.uuid4(),
+                              Constants.FASTQ2_ID,
+                              FileTypes.FASTQ.file_type_id,
+                              fastq2_file,
+                              name=op.basename(fastq2_file),
+                              description="All CCS Reads"),
+                DataStoreFile(uuid.uuid4(),
+                              Constants.FASTA2_ID,
+                              FileTypes.FASTA.file_type_id,
+                              fasta2_file,
+                              name=op.basename(fasta2_file),
+                              description="All CCS Reads")
+            ])
     return datastore_files
 
 
