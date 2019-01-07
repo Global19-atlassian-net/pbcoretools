@@ -1,4 +1,5 @@
 .PHONY: clean doc doc-clean tests check test install build bdist gh-pages
+WHEELHOUSE?=./wheelhouse
 
 build:
 	python setup.py build
@@ -58,3 +59,8 @@ pip-install:
       && pip uninstall -y pbcoretools \
       || echo -n ''
 	@pip install --no-index ./
+
+wheel:
+	which pip
+	pip wheel -v --wheel-dir=${WHEELHOUSE} --no-deps .
+	ls -larth ${WHEELHOUSE}
