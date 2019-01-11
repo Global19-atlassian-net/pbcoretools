@@ -60,6 +60,7 @@ class TestAutoCCSOutputs(pbcommand.testkit.PbTestApp):
         with FastaReader(files[2].path) as fasta_q20:
             records = [rec.id for rec in fasta_q20]
             self.assertEqual(records, ["m150404_101626_42267_c100807920800000001823174110291514_s1_p0/480/ccs"])
+        self.assertEqual(files[4].description, "Q0 Reads")
         with FastaReader(files[4].path) as fasta_lq:
             records = [rec.id for rec in fasta_lq]
             self.assertEqual(records, ["m150404_101626_42267_c100807920800000001823174110291514_s1_p0/480/ccs", "m150803_002149_42161_c100745121910000001823165807071563_s1_p0/137/ccs"])
