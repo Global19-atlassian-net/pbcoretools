@@ -82,7 +82,7 @@ def make_mock_laa_inputs(fastq_file, csv_file):
 
 
 def split_barcoded_dataset(file_name, ext=".subreadset.xml"):
-    from pbcoretools.bamSieve import filter_reads
+    from pbcoretools.bamsieve import filter_reads
     ds_in = openDataSet(file_name)
     ds_dir = tempfile.mkdtemp()
     ds_files = []

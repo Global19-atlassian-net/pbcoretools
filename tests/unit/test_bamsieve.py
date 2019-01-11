@@ -12,7 +12,7 @@ from pbcore.io import openDataFile, BamReader, SubreadSet
 
 import pbtestdata
 
-from pbcoretools import bamSieve
+from pbcoretools import bamsieve
 
 DATA_DIR = op.join(op.dirname(op.dirname(__file__)), "data")
 SUBREADS1 = op.join(DATA_DIR, "tst_1_subreads.bam")
@@ -34,7 +34,7 @@ class TestBamSieve(unittest.TestCase):
         WHITELIST = set([24962, 32901, 30983])
 
         def _run_with_whitelist(wl):
-            rc = bamSieve.filter_reads(
+            rc = bamsieve.filter_reads(
                 input_bam=SUBREADS3,
                 output_bam=ofn,
                 whitelist=wl)
@@ -49,7 +49,7 @@ class TestBamSieve(unittest.TestCase):
             wl_out.write("\n".join([str(x) for x in list(WHITELIST)]))
         _run_with_whitelist(tmp_wl)
         # now with a BAM file as whitelist
-        rc = bamSieve.filter_reads(
+        rc = bamsieve.filter_reads(
             input_bam=SUBREADS3,
             output_bam=ofn,
             whitelist=SUBREADS4)
@@ -65,7 +65,7 @@ class TestBamSieve(unittest.TestCase):
         ZMWS = set([1650, 7957])
 
         def _run_with_whitelist(wl):
-            rc = bamSieve.filter_reads(
+            rc = bamsieve.filter_reads(
                 input_bam=SUBREADS3,
                 output_bam=ofn,
                 whitelist=wl,
@@ -84,7 +84,7 @@ class TestBamSieve(unittest.TestCase):
             wl_out.write("\n".join([str(x) for x in list(WHITELIST)]))
         _run_with_whitelist(tmp_wl)
         # now with a BAM file as whitelist
-        rc = bamSieve.filter_reads(
+        rc = bamsieve.filter_reads(
             input_bam=SUBREADS3,
             output_bam=ofn2,
             use_subreads=True,
@@ -104,7 +104,7 @@ class TestBamSieve(unittest.TestCase):
                          'm140905_042212_sidney_c100564852550000001823085912221377_s1_X0/1650/2200_3298'])
 
         def _run_with_blacklist(bl):
-            rc = bamSieve.filter_reads(
+            rc = bamsieve.filter_reads(
                 input_bam=SUBREADS3,
                 output_bam=ofn,
                 blacklist=bl,
@@ -123,7 +123,7 @@ class TestBamSieve(unittest.TestCase):
         _run_with_blacklist(tmp_wl)
 
         # now with a BAM file as blacklist
-        rc = bamSieve.filter_reads(
+        rc = bamsieve.filter_reads(
             input_bam=SUBREADS3,
             output_bam=ofn2,
             use_subreads=True,
@@ -138,7 +138,7 @@ class TestBamSieve(unittest.TestCase):
 
     def test_dataset_io(self):
         ofn = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
-        rc = bamSieve.filter_reads(
+        rc = bamsieve.filter_reads(
             input_bam=DS2,
             output_bam=ofn,
             whitelist="8")
@@ -159,7 +159,7 @@ class TestBamSieve(unittest.TestCase):
     def test_dataset_relative_paths(self):
         ofn = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
         basename = op.basename(ofn).split(".")[0]
-        rc = bamSieve.filter_reads(
+        rc = bamsieve.filter_reads(
             input_bam=DS2,
             output_bam=ofn,
             whitelist="8",
@@ -179,12 +179,12 @@ class TestBamSieve(unittest.TestCase):
     def test_anonymize(self):
         ofn1 = tempfile.NamedTemporaryFile(suffix=".bam").name
         ofn2 = tempfile.NamedTemporaryFile(suffix=".bam").name
-        rc = bamSieve.filter_reads(
+        rc = bamsieve.filter_reads(
             input_bam=SUBREADS3,
             output_bam=ofn1,
             whitelist=set([24962]))
         self.assertEqual(rc, 0)
-        rc = bamSieve.filter_reads(
+        rc = bamsieve.filter_reads(
             input_bam=SUBREADS3,
             output_bam=ofn2,
             whitelist=set([24962]),
@@ -200,7 +200,7 @@ class TestBamSieve(unittest.TestCase):
         ofn = tempfile.NamedTemporaryFile(suffix=".bam").name
 
         def _run_with_blacklist(bl):
-            rc = bamSieve.filter_reads(
+            rc = bamsieve.filter_reads(
                 input_bam=SUBREADS2,
                 output_bam=ofn,
                 blacklist=bl)
@@ -217,7 +217,7 @@ class TestBamSieve(unittest.TestCase):
 
     def test_barcodes(self):
         ofn = tempfile.NamedTemporaryFile(suffix=".bam").name
-        rc = bamSieve.filter_reads(
+        rc = bamsieve.filter_reads(
             input_bam=BARCODED,
             output_bam=ofn,
             whitelist=[0],
@@ -229,7 +229,7 @@ class TestBamSieve(unittest.TestCase):
 
     def test_subreadset_scraps(self):
         ofn = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
-        rc = bamSieve.filter_reads(
+        rc = bamsieve.filter_reads(
             input_bam=BARCODED_DS,
             output_bam=ofn,
             whitelist=[74056024])
@@ -245,13 +245,13 @@ class TestBamSieve(unittest.TestCase):
                         self.assertEqual(len(zmws), 1)
                         self.assertTrue(74056024 in zmws)
         _verify()
-        rc = bamSieve.filter_reads(
+        rc = bamsieve.filter_reads(
             input_bam=BARCODED_DS,
             output_bam=ofn,
             count=1,
             seed=1)
         _verify()
-        rc = bamSieve.filter_reads(
+        rc = bamsieve.filter_reads(
             input_bam=BARCODED_DS,
             output_bam=ofn,
             blacklist=[28901719])
@@ -259,7 +259,7 @@ class TestBamSieve(unittest.TestCase):
 
     def test_percentage(self):
         ofn = tempfile.NamedTemporaryFile(suffix=".bam").name
-        rc = bamSieve.filter_reads(
+        rc = bamsieve.filter_reads(
             input_bam=SUBREADS3,
             output_bam=ofn,
             percentage=50,
@@ -271,7 +271,7 @@ class TestBamSieve(unittest.TestCase):
 
     def test_count(self):
         ofn = tempfile.NamedTemporaryFile(suffix=".bam").name
-        rc = bamSieve.filter_reads(
+        rc = bamsieve.filter_reads(
             input_bam=SUBREADS3,
             output_bam=ofn,
             count=1,
@@ -284,7 +284,7 @@ class TestBamSieve(unittest.TestCase):
     def test_count_overflow(self):
         ofn = tempfile.NamedTemporaryFile(suffix=".bam").name
         with warnings.catch_warnings(record=True) as w:
-            rc = bamSieve.filter_reads(
+            rc = bamsieve.filter_reads(
                 input_bam=SUBREADS3,
                 output_bam=ofn,
                 count=100000,
@@ -297,7 +297,7 @@ class TestBamSieve(unittest.TestCase):
 
     def test_sts_xml(self):
         ofn = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
-        rc = bamSieve.filter_reads(
+        rc = bamsieve.filter_reads(
             input_bam=SUBREADS_STS,
             output_bam=ofn,
             count=1,
@@ -318,24 +318,24 @@ class TestBamSieve(unittest.TestCase):
 
     def test_error(self):
         ofn = tempfile.NamedTemporaryFile(suffix=".bam").name
-        rc = bamSieve.filter_reads(
+        rc = bamsieve.filter_reads(
             input_bam=DS1,
             output_bam=ofn,
             whitelist=set([5, 6, 7, 8]),
             blacklist=set([1, 2, 3, 4]))
         self.assertEqual(rc, 1)
-        rc = bamSieve.filter_reads(
+        rc = bamsieve.filter_reads(
             input_bam=DS1,
             output_bam=ofn,
             whitelist=set([5, 6, 7, 8]),
             percentage=50)
         self.assertEqual(rc, 1)
-        rc = bamSieve.filter_reads(
+        rc = bamsieve.filter_reads(
             input_bam=DS1,
             output_bam=ofn,
             percentage=500)
         self.assertEqual(rc, 1)
-        rc = bamSieve.filter_reads(
+        rc = bamsieve.filter_reads(
             input_bam=DS1,
             output_bam=ofn,
             percentage=50,
@@ -343,21 +343,21 @@ class TestBamSieve(unittest.TestCase):
         self.assertEqual(rc, 1)
         # dataset output, but BAM input
         ofn = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
-        rc = bamSieve.filter_reads(
+        rc = bamsieve.filter_reads(
             input_bam=SUBREADS2,
             output_bam=ofn,
             percentage=50)
         self.assertEqual(rc, 1)
 
     def test_integration(self):
-        args = ["bamSieve", "--help"]
+        args = ["bamsieve", "--help"]
         with tempfile.TemporaryFile() as stdout:
             with tempfile.TemporaryFile() as stderr:
                 rc = subprocess.call(args, stdout=stdout, stderr=stderr)
                 self.assertEqual(rc, 0)
         ofn = tempfile.NamedTemporaryFile(suffix=".bam").name
         args = [
-            "bamSieve",
+            "bamsieve",
             "--log-level", "ERROR",
             "--whitelist", "8,233",
             SUBREADS2,

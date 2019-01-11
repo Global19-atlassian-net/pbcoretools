@@ -9,7 +9,7 @@ from pbcoretools.tasks.filters import (run_filter_dataset,
 from pbcore.io import openDataFile, openDataSet
 import pbcore.data.datasets as data
 
-from pbcoretools import bamSieve
+from pbcoretools import bamsieve
 
 class TestFilterDataSet(unittest.TestCase):
 
