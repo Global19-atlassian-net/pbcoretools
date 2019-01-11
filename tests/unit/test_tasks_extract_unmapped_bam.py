@@ -9,7 +9,7 @@ from pbcore.io import AlignmentSet, SubreadSet
 
 from pbcoretools.tasks.extract_unmapped_bam import (run_extract_unmapped,
                                                     make_unmapped_bam)
-from pbcoretools import bamSieve
+from pbcoretools import bamsieve
 
 import pbtestdata
 
@@ -37,7 +37,7 @@ def assert_no_reads_in_common(self, alignment_file, output_file):
 
 def _make_filtered(ds_file):
     tmp_file = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
-    bamSieve.filter_reads(
+    bamsieve.filter_reads(
         input_bam=ds_file,
         output_bam=tmp_file,
         blacklist={49050})

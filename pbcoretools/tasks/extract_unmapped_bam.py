@@ -1,4 +1,4 @@
-# FIXME consolidate with bamSieve
+# FIXME consolidate with bamsieve
 
 """
 Write a dataset containing only unmapped reads.

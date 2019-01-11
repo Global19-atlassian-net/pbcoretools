@@ -132,7 +132,7 @@ Now a ReferenceSet XML file (i.e. Fasta sequences)
   [1]
 
 
-bamSieve:
+bamsieve:
 
-  $ bamSieve  --show-zmws $DATA/tst_1_subreads.bam
+  $ bamsieve  --show-zmws $DATA/tst_1_subreads.bam
   54130

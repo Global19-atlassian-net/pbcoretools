@@ -43,7 +43,7 @@ setup(
     entry_points = {"console_scripts": [
         "dataset = pbcoretools.dataset:main",
         'pbvalidate = pbcoretools.pbvalidate.main:main',
-        'bamSieve = pbcoretools.bamSieve:main',
+        'bamsieve = pbcoretools.bamsieve:main',
         'pbtools-gather = pbcoretools.tasks2.gather:main'
     ]},
     install_requires=_get_local_requirements(REQUIREMENTS_TXT),

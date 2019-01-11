@@ -28,7 +28,7 @@ from pbcommand.cli import (pacbio_args_runner,
 from pbcommand.utils import setup_log
 from pbcore.io import openDataFile, openDataSet, BamReader, IndexedBamReader, ReadSet
 
-VERSION = "0.1.2"
+VERSION = "0.2.0"
 
 log = logging.getLogger(__name__)
 
