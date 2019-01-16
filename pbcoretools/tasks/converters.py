@@ -150,7 +150,7 @@ def __run_fasta_to_reference(program_name, dataset_class,
 
     # For historical reasons, there's some munging between the ReferenceSet
     # name and the sub directories that are created within the job dir.
-    rx = re.compile('[^A-Za-z0-9_]')
+    rx = re.compile('[^A-Za-z0-9_\-\.]')
     sanitized_name = re.sub(rx, '_', reference_name)
 
     if len(ds_in.externalResources) > 1:
