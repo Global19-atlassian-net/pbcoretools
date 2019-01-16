@@ -90,7 +90,7 @@ def _run_update_barcoded_sample_metadata(rtc):
           FileTypes.DATASTORE,
           is_distributed=False,
           nproc=1)
-def _run_update_barcoded_sample_metadata(rtc):
+def _run_update_barcoded_sample_metadata_ccs(rtc):
     base_dir = op.dirname(rtc.task.output_files[0])
     datastore = update_barcoded_sample_metadata(
         base_dir=op.dirname(rtc.task.output_files[0]),
@@ -145,7 +145,7 @@ def _run_reparent_subreads(rtc):
           is_distributed=False,
           nproc=1,
           options={"new_dataset_name": ds_name_opt})
-def _run_reparent_subreads(rtc):
+def _run_reparent_subreads_ccs(rtc):
     return _reparent_dataset_rtc(rtc)
 
 

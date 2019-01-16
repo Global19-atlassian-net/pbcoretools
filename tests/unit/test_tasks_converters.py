@@ -314,3 +314,7 @@ class TestUpdateConsensusReadsUseUuid(pbcommand.testkit.PbTestApp):
     def run_after(self, rtc, output_dir):
         with ConsensusReadSet(rtc.task.output_files[0]) as ds:
             self.assertEqual(ds.uuid, "5416f525-d3c7-496b-ba8c-18d7ec1b4499")
+
+
+# Ensure that pytest ignores the base-class.
+del _BaseTestBam2Fasta

@@ -1,7 +1,7 @@
-bamSieve - a tool for dataset reduction
+bamsieve - a tool for dataset reduction
 =======================================
 
-``bamSieve`` is a utility for the generation of sub-datasets by filtering reads
+``bamsieve`` is a utility for the generation of sub-datasets by filtering reads
 on a per-ZMW basis (keeping all subreads within a read together), inspired on
 the ``baxSieve`` program for RSII datasets.
 Although it is BAM-centric it has some support for
@@ -23,9 +23,9 @@ ZMWs may be whitelisted or blacklisted in one of several ways:
 Command-line usage
 ------------------
 
-Output of ``bamSieve --help``::
+Output of ``bamsieve --help``::
 
-  usage: bamSieve [-h] [--version] [--log-file LOG_FILE]
+  usage: bamsieve [-h] [--version] [--log-file LOG_FILE]
                   [--log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL} | --debug | --quiet | -v]
                   [--show-zmws] [--whitelist WHITELIST] [--blacklist BLACKLIST]
                   [--percentage PERCENTAGE] [-n COUNT] [-s SEED]
@@ -80,54 +80,54 @@ Examples
 
 Pulling out two ZMWs from a BAM file::
 
-  $ bamSieve --whitelist 111111,222222 full.subreads.bam sample.subreads.bam
+  $ bamsieve --whitelist 111111,222222 full.subreads.bam sample.subreads.bam
 
 The dataset equivalent::
 
-  $ bamSieve --whitelist 111111,222222 full.subreadset.xml sample.subreadset.xml
+  $ bamsieve --whitelist 111111,222222 full.subreadset.xml sample.subreadset.xml
 
 Using a text whitelist::
 
-  $ bamSieve --whitelist zmws.txt full.subreads.bam sample.subreads.bam
+  $ bamsieve --whitelist zmws.txt full.subreads.bam sample.subreads.bam
 
 Using another BAM or dataset as a whitelist::
 
-  $ bamSieve --whitelist mapped.alignmentset.xml full.subreads.bam mappable.subreads.bam
+  $ bamsieve --whitelist mapped.alignmentset.xml full.subreads.bam mappable.subreads.bam
 
 Generate a whitelist from a dataset::
 
-  $ bamSieve --show-zmws mapped.alignmentset.xml > mapped_zmws.txt
+  $ bamsieve --show-zmws mapped.alignmentset.xml > mapped_zmws.txt
 
 Anonymizing a dataset::
 
-  $ bamSieve --whitelist zmws.txt --ignore-metadata --anonymize full.subreadset.xml anonymous_sample.subreadset.xml
+  $ bamsieve --whitelist zmws.txt --ignore-metadata --anonymize full.subreadset.xml anonymous_sample.subreadset.xml
 
 Removing a read::
 
-  $ bamSieve --blacklist 111111 full.subreadset.xml filtered.subreadset.xml
+  $ bamsieve --blacklist 111111 full.subreadset.xml filtered.subreadset.xml
 
 Selecting 0.1% of reads::
 
-  $ bamSieve --percentage 0.1 full.subreads.bam random_sample.subreads.bam
+  $ bamsieve --percentage 0.1 full.subreads.bam random_sample.subreads.bam
 
 Selecting a different 0.1% of reads::
 
-  $ bamSieve --percentage 0.1 --seed 98765 full.subreads.bam random_sample.subreads.bam
+  $ bamsieve --percentage 0.1 --seed 98765 full.subreads.bam random_sample.subreads.bam
 
 Selecting just two ZMWs/reads at random::
 
-  $ bamSieve --count 2 full.subreads.bam two_reads.subreads.bam
+  $ bamsieve --count 2 full.subreads.bam two_reads.subreads.bam
 
 Selecting by barcode::
 
-  $ bamSieve --barcodes --whitelist 4,7 full.subreads.bam two_barcodes.subreads.bam
+  $ bamsieve --barcodes --whitelist 4,7 full.subreads.bam two_barcodes.subreads.bam
 
 Generating a tiny BAM file that contains only mappable reads::
 
-  $ bamSieve --whitelist mapped.subreads.bam full.subreads.bam mappable.subreads.bam
-  $ bamSieve --count 4 mappable.subreads.bam tiny.subreads.bam
+  $ bamsieve --whitelist mapped.subreads.bam full.subreads.bam mappable.subreads.bam
+  $ bamsieve --count 4 mappable.subreads.bam tiny.subreads.bam
 
 Splitting a dataset into two halves::
 
-  $ bamSieve --percentage 50 full.subreadset.xml split.1of2.subreadset.xml
-  $ bamSieve --blacklist split.1of2.subreadset.xml full.subreadset.xml split.2of2.subreadset.xml
+  $ bamsieve --percentage 50 full.subreadset.xml split.1of2.subreadset.xml
+  $ bamsieve --blacklist split.1of2.subreadset.xml full.subreadset.xml split.2of2.subreadset.xml
