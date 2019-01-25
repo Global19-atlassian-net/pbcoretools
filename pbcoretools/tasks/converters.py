@@ -403,7 +403,7 @@ def _run_transcripts_to_datastore(rtc):
                             source_id=rtc.task.task_id + "-out-0")
 
 
-@registry("update_consensus_reads", "0.1.0",
+@registry("update_consensus_reads", "0.1.1",
           FileTypes.DS_CCS,
           FileTypes.DS_CCS,
           is_distributed=False, # requires skipCounts=True
@@ -428,6 +428,10 @@ def _run_update_consensus_reads(rtc):
         else:
             ds.newUuid()
         ds.name = re.sub(" (filtered)", "", ds.name)
+        tags = [t.strip() for t in ds.tags.split(",")]
+        if "hidden" in tags:
+            tags.remove("hidden")
+        ds.tags = ",".join(tags)
         ds.write(rtc.task.output_files[0])
     return 0
 
