@@ -2,6 +2,7 @@
 import unittest
 import tempfile
 import logging
+import uuid
 import os.path as op
 
 from pbcore.io import (FastaReader, FastqReader, openDataSet, HdfSubreadSet,
@@ -46,6 +47,10 @@ class TestFilterDataSet(pbcommand.testkit.PbTestApp):
     @classmethod
     def setUpClass(cls):
         ds = SubreadSet(data.getXml(10), strict=True)
+        ds.metadata.addParentDataSet(uuid.uuid4(),
+                                     ds.datasetType,
+                                     createdBy="AnalysisJob",
+                                     timeStampedName="")
         ds.write(cls.INPUT_FILES[0])
         cls._n_input = len(ds)
 
@@ -64,6 +69,7 @@ class TestFilterDataSet(pbcommand.testkit.PbTestApp):
         self.assertEqual(self._get_filters(rtc), self.EXPECTED_FILTER_STR)
         self.assertEqual(n_actual, n_expected)
         ds = openDataSet(rtc.task.output_files[0])
+        self.assertEqual(len(ds.metadata.provenance), 0)
         self.assertTrue(ds.name.endswith("(filtered)"))
         self.assertTrue("filtered" in ds.tags)
         return ds

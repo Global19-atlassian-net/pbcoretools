@@ -63,7 +63,7 @@ skip_unless_fasta2gmap = unittest.skipUnless(HAVE_FASTA2GMAP, SKIP_MSG_FASTA2GMA
 skip_unless_slimbam = unittest.skipUnless(HAVE_SLIMBAM, SKIP_MSG_SLIMBAM)
 
 
-def _get_bax2bam_inputs():
+def _get_bax2bam_inputs(hdf_subread_xml):
     """Little hackery to get the setup class Inputs and to avoid calls to
     setupclass if skiptest is used
 
@@ -72,7 +72,6 @@ def _get_bax2bam_inputs():
     bax files in testdata
     """
     if HAVE_DATA_AND_BAX2BAM:
-        hdf_subread_xml = tempfile.NamedTemporaryFile(suffix=".hdfsubreadset.xml").name
 
         bax_files = (SIV_DATA_DIR + "/SA3-RS/lambda/2372215/0007_tiny/Analysis_Results/m150404_101626_42267_c100807920800000001823174110291514_s1_p0.1.bax.h5",
                      pbtestdata.get_file("rsii-bax-h5"))
@@ -93,13 +92,19 @@ class TestBax2Bam(pbcommand.testkit.PbTestApp):
     DRIVER_RESOLVE = 'python -m pbcoretools.tasks.converters run-rtc '
 
     # See comments above
-    INPUT_FILES = _get_bax2bam_inputs()
+    INPUT_FILES = [
+        tempfile.NamedTemporaryFile(suffix=".hdfsubreadset.xml").name
+    ]
     MAX_NPROC = 24
 
     RESOLVED_NPROC = 1
     RESOLVED_TASK_OPTIONS = {}
     IS_DISTRIBUTED = True
     RESOLVED_IS_DISTRIBUTED = True
+
+    @classmethod
+    def setUpClass(cls):
+        _get_bax2bam_inputs(cls.INPUT_FILES[0])
 
     def run_after(self, rtc, output_dir):
         with SubreadSet(rtc.task.output_files[0]) as ds_out:
@@ -308,12 +313,21 @@ class TestUpdateConsensusReadsUseUuid(pbcommand.testkit.PbTestApp):
     TASK_ID = "pbcoretools.tasks.update_consensus_reads"
     DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
     DRIVER_RESOLVE = "python -m pbcoretools.tasks.converters run-rtc "
-    INPUT_FILES = [pbtestdata.get_file("ccs-sequel")]
+    INPUT_FILES = [
+        tempfile.NamedTemporaryFile(suffix=".consensusreadset.xml").name
+    ]
     TASK_OPTIONS = {"pbcoretools.task_options.use_run_design_uuid": True}
+
+    @classmethod
+    def setUpClass(cls):
+        ds = openDataSet(pbtestdata.get_file("ccs-sequel"))
+        ds.tags = "ccs,hidden,testdata"
+        ds.write(cls.INPUT_FILES[0])
 
     def run_after(self, rtc, output_dir):
         with ConsensusReadSet(rtc.task.output_files[0]) as ds:
             self.assertEqual(ds.uuid, "5416f525-d3c7-496b-ba8c-18d7ec1b4499")
+            self.assertEqual(ds.tags, "ccs,testdata")
 
 
 # Ensure that pytest ignores the base-class.

@@ -150,7 +150,7 @@ def __run_fasta_to_reference(program_name, dataset_class,
 
     # For historical reasons, there's some munging between the ReferenceSet
     # name and the sub directories that are created within the job dir.
-    rx = re.compile('[^A-Za-z0-9_]')
+    rx = re.compile('[^A-Za-z0-9_\-\.]')
     sanitized_name = re.sub(rx, '_', reference_name)
 
     if len(ds_in.externalResources) > 1:
@@ -403,7 +403,7 @@ def _run_transcripts_to_datastore(rtc):
                             source_id=rtc.task.task_id + "-out-0")
 
 
-@registry("update_consensus_reads", "0.1.0",
+@registry("update_consensus_reads", "0.1.1",
           FileTypes.DS_CCS,
           FileTypes.DS_CCS,
           is_distributed=False, # requires skipCounts=True
@@ -428,6 +428,10 @@ def _run_update_consensus_reads(rtc):
         else:
             ds.newUuid()
         ds.name = re.sub(" (filtered)", "", ds.name)
+        tags = [t.strip() for t in ds.tags.split(",")]
+        if "hidden" in tags:
+            tags.remove("hidden")
+        ds.tags = ",".join(tags)
         ds.write(rtc.task.output_files[0])
     return 0
 
