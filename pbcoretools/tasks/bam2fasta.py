@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 
 class Constants(object):
     TOOL_ID = "pbcoretools.tasks.bam2fasta"
-    VERSION = "0.2.0"
+    VERSION = "0.2.1"
     DRIVER = "python -m pbcoretools.tasks.bam2fasta --resolved-tool-contract"
 
 
