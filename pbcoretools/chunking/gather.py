@@ -27,6 +27,8 @@ from pbcore.io.FastqIO import FastqReader, FastqWriter
 from pbcore.io.GffIO import merge_gffs_sorted
 from pbcore.io.VcfIO import merge_vcfs_sorted
 
+from pbcoretools.file_utils import sanitize_dataset_tags
+
 log = logging.getLogger(__name__)
 
 __version__ = '1.1'
@@ -193,14 +195,6 @@ def gather_fofn(input_files, output_file, skip_empty=True):
     return output_file
 
 
-def _sanitize_dataset_tags(dset):
-    tags = set(dset.tags.split(","))
-    if "chunked" in tags or "filtered" in tags:
-        tags.discard("chunked")
-        tags.discard("filtered")
-        dset.tags = ",".join(sorted(list(tags)))
-
-
 def __gather_contigset(resource_file_extension, input_files, output_file,
                        new_resource_file=None,
                        skip_empty=True):
@@ -228,7 +222,7 @@ def __gather_contigset(resource_file_extension, input_files, output_file,
             new_resource_file = output_file[:-3] + resource_file_extension
     tbr.consolidate(new_resource_file)
     tbr.newUuid()
-    _sanitize_dataset_tags(tbr)
+    sanitize_dataset_tags(tbr)
     tbr.write(output_file)
     return output_file
 
@@ -281,7 +275,7 @@ def __gather_readset(dataset_type, input_files, output_file, skip_empty=True,
         tbr.consolidate(new_resource_file, numFiles=consolidate_n_files)
         tbr.induceIndices()
     tbr.newUuid()
-    _sanitize_dataset_tags(tbr)
+    sanitize_dataset_tags(tbr)
     tbr.write(output_file)
     return output_file
 

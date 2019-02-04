@@ -21,7 +21,7 @@ from pbcommand.models import FileTypes, SymbolTypes, OutputFileType, DataStore, 
 from pbcommand.engine import run_cmd
 
 from pbcoretools.tasks.barcoding import _ds_to_datastore
-from pbcoretools.file_utils import iterate_datastore_read_set_files
+from pbcoretools.file_utils import iterate_datastore_read_set_files, sanitize_dataset_tags
 
 log = logging.getLogger(__name__)
 
@@ -427,11 +427,7 @@ def _run_update_consensus_reads(rtc):
             ds.uuid = run_design_uuid
         else:
             ds.newUuid()
-        ds.name = re.sub(" (filtered)", "", ds.name)
-        tags = [t.strip() for t in ds.tags.split(",")]
-        if "hidden" in tags:
-            tags.remove("hidden")
-        ds.tags = ",".join(tags)
+        sanitize_dataset_tags(ds, remove_hidden=True)
         ds.write(rtc.task.output_files[0])
     return 0
 
