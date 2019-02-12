@@ -26,6 +26,7 @@ log = logging.getLogger(__name__)
 class Constants(object):
     TOOL_NAMESPACE = 'pbcoretools'
     DRIVER_BASE = "python -m pbcoretools.tasks.barcoding "
+    EMPTY_DS_MSG = "No demultiplexed datasets were created.  This could be caused by selection of incorrect barcodes or primers when creating the analysis, incorrect input data, or a sample-handling error."
 
 
 registry = registry_builder(Constants.TOOL_NAMESPACE, Constants.DRIVER_BASE)
@@ -44,7 +45,7 @@ def run_datastore_to_subreads(rtc):
             ds.newUuid()
             ds.write(rtc.task.output_files[0])
     else:
-        raise ValueError("Expected one or more SubreadSets in datastore")
+        raise ValueError(Constants.EMPTY_DS_MSG)
     return 0
 
 
@@ -61,7 +62,7 @@ def run_datastore_to_ccs(rtc):
             ds.newUuid()
             ds.write(rtc.task.output_files[0])
     else:
-        raise ValueError("Expected one or more ConsensusReadSets in datastore")
+        raise ValueError(Constants.EMPTY_DS_MSG)
     return 0
 
 
