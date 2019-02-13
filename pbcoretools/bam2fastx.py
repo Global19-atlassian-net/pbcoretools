@@ -7,6 +7,7 @@ import functools
 import tempfile
 import logging
 import gzip
+import time
 import re
 import os.path as op
 import pipes
@@ -37,21 +38,30 @@ def _check_exists_and_not_empty(fn):
         raise IOError('File {!r} is empty.'.format(fn))
 
 
-def _ungzip_fastx(gzip_file_name, fastx_file_name):
+def _ungzip_fastx(gzip_file_name, fastx_file_name, retry=True):
     """
     Decompress an output from bam2fastx.
     """
-    # An empty file gzips to a non-empty gzip file.
-    # So an empty gzip-file is likely incomplete, but it
-    # would be accepted by gzip.open().
-    _check_exists_and_not_empty(gzip_file_name)
+    try:
+        # An empty file gzips to a non-empty gzip file.
+        # So an empty gzip-file is likely incomplete, but it
+        # would be accepted by gzip.open().
+        _check_exists_and_not_empty(gzip_file_name)
 
-    with gzip.open(gzip_file_name, "rb") as gz_in:
-        with open(fastx_file_name, "wb") as fastx_out:
-            def _fread():
-                return gz_in.read(1024)
-            for chunk in iter(_fread, ''):
-                fastx_out.write(chunk)
+        with gzip.open(gzip_file_name, "rb") as gz_in:
+            with open(fastx_file_name, "wb") as fastx_out:
+                def _fread():
+                    return gz_in.read(1024)
+                for chunk in iter(_fread, ''):
+                    fastx_out.write(chunk)
+    except IOError as e:
+        if retry:
+            log.error(e)
+            log.warn("Will re-try in 10 seconds in case of NFS glitch")
+            time.sleep(10)
+            return _ungzip_fastx(gzip_file_name, fastx_file_name, retry=False)
+        else:
+            raise
 
 
 def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,

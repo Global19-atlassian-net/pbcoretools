@@ -418,3 +418,17 @@ def get_prefixes(subreads_file):
     with SubreadSet(subreads_file) as subreads:
        seqid_prefix = get_sanitized_bio_sample_name(subreads)
        return ("{}_HQ_".format(seqid_prefix), "{}_LQ_".format(seqid_prefix))
+
+
+def sanitize_dataset_tags(dset, remove_hidden=False):
+    tags = set(dset.tags.split(","))
+    if "chunked" in tags or "filtered" in tags:
+        tags.discard("chunked")
+        tags.discard("filtered")
+    if "hidden" in tags and remove_hidden:
+        tags.discard("hidden")
+    dset.tags = ",".join(sorted(list(tags)))
+    name_fields = dset.name.split()
+    if "(filtered)" in name_fields:
+        name_fields.remove("(filtered)")
+    dset.name = " ".join(name_fields)

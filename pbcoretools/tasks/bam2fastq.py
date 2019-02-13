@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 
 class Constants(object):
     TOOL_ID = "pbcoretools.tasks.bam2fastq"
-    VERSION = "0.4.0"
+    VERSION = "0.4.1"
     DRIVER = "python -m pbcoretools.tasks.bam2fastq --resolved-tool-contract"
 
 

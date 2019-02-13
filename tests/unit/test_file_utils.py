@@ -33,7 +33,8 @@ from pbcoretools.file_utils import (
     discard_bio_samples,
     add_mock_collection_metadata,
     force_set_all_well_sample_names,
-    force_set_all_bio_sample_names)
+    force_set_all_bio_sample_names,
+    sanitize_dataset_tags)
 
 
 HAVE_XMLLINT = which("xmllint")
@@ -329,3 +330,15 @@ class TestBarcodeUtils(unittest.TestCase):
         ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))
         force_set_all_bio_sample_names(ds, "My Test BioSample")
         self.assertEqual(ds.metadata.collections[0].wellSample.bioSamples[0].name, "My Test BioSample")
+
+    def test_sanitize_dataset_tags(self):
+        ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))
+        base_name = ds.name
+        ds.name = ds.name + " (filtered) (CCS)"
+        ds.tags = "subreads,hidden,testdata,filtered"
+        sanitize_dataset_tags(ds)
+        self.assertEqual(ds.name, base_name + " (CCS)")
+        self.assertEqual(ds.tags, "hidden,subreads,testdata")
+        sanitize_dataset_tags(ds, remove_hidden=True)
+        self.assertEqual(ds.name, base_name + " (CCS)")
+        self.assertEqual(ds.tags, "subreads,testdata")
