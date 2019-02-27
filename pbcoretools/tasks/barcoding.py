@@ -90,16 +90,19 @@ def _run_update_barcoded_sample_metadata(rtc):
           (FileTypes.JSON, FileTypes.DS_CCS, FileTypes.DS_BARCODE),
           FileTypes.DATASTORE,
           is_distributed=False,
-          nproc=1)
+          nproc=1,
+          options={"use_barcode_uuids": False, "isoseq_mode": False})
 def _run_update_barcoded_sample_metadata_ccs(rtc):
     base_dir = op.dirname(rtc.task.output_files[0])
+    use_barcode_uuids = rtc.task.options["pbcoretools.task_options.use_barcode_uuids"]
+    isoseq_mode = rtc.task.options["pbcoretools.task_options.isoseq_mode"]
     datastore = update_barcoded_sample_metadata(
         base_dir=op.dirname(rtc.task.output_files[0]),
         datastore_file=rtc.task.input_files[0],
         input_reads=rtc.task.input_files[1],
         barcode_set=rtc.task.input_files[2],
-        isoseq_mode=True,
-        use_barcode_uuids=False)
+        isoseq_mode=isoseq_mode,
+        use_barcode_uuids=use_barcode_uuids)
     datastore.write_json(rtc.task.output_files[0])
     return 0
 
