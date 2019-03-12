@@ -335,10 +335,13 @@ class TestBarcodeUtils(unittest.TestCase):
         ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))
         base_name = ds.name
         ds.name = ds.name + " (filtered) (CCS)"
-        ds.tags = "subreads,hidden,testdata,filtered"
+        ds.tags = "subreads,hidden,testdata,filtered "
         sanitize_dataset_tags(ds)
         self.assertEqual(ds.name, base_name + " (CCS)")
         self.assertEqual(ds.tags, "hidden,subreads,testdata")
         sanitize_dataset_tags(ds, remove_hidden=True)
         self.assertEqual(ds.name, base_name + " (CCS)")
         self.assertEqual(ds.tags, "subreads,testdata")
+        ds.tags = ", hidden, ccs"
+        sanitize_dataset_tags(ds, remove_hidden=True)
+        self.assertEqual(ds.tags, "ccs")
