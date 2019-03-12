@@ -245,7 +245,7 @@ def splitXml(args):
         infix = '{i}'
         chNums = ['_'.join(ds.barcodes).replace(
             '[', '').replace(']', '').replace(', ', '-') for ds in dss]
-    nSuf = -2 if re.search(r".+\.\w+set\.xml", args.infile) else -1
+    nSuf = -2 if re.search(r".+\.\w+set\.xml", args.infile.lower()) else -1
     default_prefix = '.'.join(args.infile.split('.')[:nSuf])
     ext = '.'.join(args.infile.split('.')[nSuf:])
     prefix = args.prefix if args.prefix is not None else default_prefix
