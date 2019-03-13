@@ -450,12 +450,14 @@ def get_prefixes(subreads_file):
 
 
 def sanitize_dataset_tags(dset, remove_hidden=False):
-    tags = set(dset.tags.split(","))
+    tags = {t.strip() for t in dset.tags.split(",")}
     if "chunked" in tags or "filtered" in tags:
         tags.discard("chunked")
         tags.discard("filtered")
     if "hidden" in tags and remove_hidden:
         tags.discard("hidden")
+    if "" in tags:
+        tags.discard("")
     dset.tags = ",".join(sorted(list(tags)))
     name_fields = dset.name.split()
     if "(filtered)" in name_fields:
