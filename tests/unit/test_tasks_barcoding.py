@@ -72,6 +72,8 @@ class TestUpdateBarcodedSampleMetadata(pbcommand.testkit.PbTestApp):
         pbtestdata.get_file("barcoded-subreadset"),
         pbtestdata.get_file("barcodeset")
     ]
+    MAX_NPROC = 3
+    RESOLVED_NPROC = 3
 
     @classmethod
     def setUpClass(cls):
@@ -103,6 +105,8 @@ class TestUpdateBarcodedSampleMetadataCCS(pbcommand.testkit.PbTestApp):
         pbtestdata.get_file("ccs-barcoded"),
         pbtestdata.get_file("barcodeset")
     ]
+    MAX_NPROC = 3
+    RESOLVED_NPROC = 3
 
     @classmethod
     def setUpClass(cls):
