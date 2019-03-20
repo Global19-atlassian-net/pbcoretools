@@ -155,6 +155,26 @@ class TestFilterDataSet(unittest.TestCase):
             '( length gte 1000 AND length lte 5000 AND rq >= .7 )')
 
 
+    def test_filter_more(self):
+        ssfn = data.getXml(8)
+        ofn = tempfile.NamedTemporaryFile(suffix=".xml").name
+
+        # zm=[3,4,5] condition
+        run_filter_dataset(ssfn, ofn, 0,
+                           "length >= 1000 AND zm=[3,4,5]")
+        ds = openDataSet(ofn)
+        self.assertEqual(
+            str(ds.filters),
+            '( zm = [3,4,5] AND length >= 1000 )')
+
+        # zm=[3,4,5] condition by itself
+        run_filter_dataset(ssfn, ofn, 0,
+                           "zm=[3,4,5]")
+        ds = openDataSet(ofn)
+        self.assertEqual(
+            str(ds.filters),
+            '( zm = [3,4,5] )')
+
     def test_datset_name(self):
         ssfn = data.getXml(8)
         ofn = tempfile.NamedTemporaryFile(suffix=".xml").name
