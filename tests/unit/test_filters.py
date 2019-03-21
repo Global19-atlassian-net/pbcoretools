@@ -126,35 +126,34 @@ class TestFilterDataSet(unittest.TestCase):
         self.assertEqual(str(ds.filters),
                          "( rq > .7 AND length >= 100 )")
 
-        # AND concatenation
+        # AND conjunction
         run_filter_dataset(ssfn, ofn, "100", "rq > .7 AND length < 5000")
         ds = openDataSet(ofn)
         self.assertEqual(
             str(ds.filters),
             '( length < 5000 AND rq > .7 AND length >= 100 )')
 
-        ## comma concatenation
-        # We will un-comment these soon when we add suppor for semicolon.
+        ## semicolon conjunction
 
-        #run_filter_dataset(ssfn, ofn, "100", "rq > .7, length < 5000")
-        #ds = openDataSet(ofn)
-        #self.assertEqual(
-        #    str(ds.filters),
-        #    '( length < 5000 AND rq > .7 AND length >= 100 )')
+        run_filter_dataset(ssfn, ofn, "100", "rq > .7; length < 5000")
+        ds = openDataSet(ofn)
+        self.assertEqual(
+            str(ds.filters),
+            '( length < 5000 AND rq > .7 AND length >= 100 )')
 
-        #run_filter_dataset(ssfn, ofn, 0,
-        #                   "rq>=.7, length >= 1000, length <= 5000")
-        #ds = openDataSet(ofn)
-        #self.assertEqual(
-        #    str(ds.filters),
-        #    '( length >= 1000 AND length <= 5000 AND rq >= .7 )')
+        run_filter_dataset(ssfn, ofn, 0,
+                           "rq>=.7; length >= 1000; length <= 5000")
+        ds = openDataSet(ofn)
+        self.assertEqual(
+            str(ds.filters),
+            '( length >= 1000 AND length <= 5000 AND rq >= .7 )')
 
-        #run_filter_dataset(ssfn, ofn, 0,
-        #                   "rq>=.7, length gte 1000, length lte 5000")
-        #ds = openDataSet(ofn)
-        #self.assertEqual(
-        #    str(ds.filters),
-        #    '( length gte 1000 AND length lte 5000 AND rq >= .7 )')
+        run_filter_dataset(ssfn, ofn, 0,
+                           "rq>=.7; length gte 1000; length lte 5000")
+        ds = openDataSet(ofn)
+        self.assertEqual(
+            str(ds.filters),
+            '( length gte 1000 AND length lte 5000 AND rq >= .7 )')
 
 
     def test_filter_more(self):
@@ -164,6 +163,14 @@ class TestFilterDataSet(unittest.TestCase):
         # zm=[3,4,5] condition
         run_filter_dataset(ssfn, ofn, 0,
                            "length >= 1000 AND zm=[3,4,5]")
+        ds = openDataSet(ofn)
+        self.assertEqual(
+            str(ds.filters),
+            '( zm = [3,4,5] AND length >= 1000 )')
+
+        # zm=[3,4,5] condition
+        run_filter_dataset(ssfn, ofn, 0,
+                           "length >= 1000; zm=[3,4,5]")
         ds = openDataSet(ofn)
         self.assertEqual(
             str(ds.filters),
