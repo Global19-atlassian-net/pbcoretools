@@ -1,4 +1,4 @@
-
+import nose.tools
 import subprocess
 import tempfile
 import unittest
@@ -155,6 +155,12 @@ class TestFilterDataSet(unittest.TestCase):
             str(ds.filters),
             '( length gte 1000 AND length lte 5000 AND rq >= .7 )')
 
+    @nose.tools.raises(ValueError)
+    def test_filter_comma_raises(self):
+        ssfn = data.getXml(8)
+        ofn = tempfile.NamedTemporaryFile(suffix=".xml").name
+
+        run_filter_dataset(ssfn, ofn, "100", "rq > .7, length < 5000")
 
     def test_filter_more(self):
         ssfn = data.getXml(8)
