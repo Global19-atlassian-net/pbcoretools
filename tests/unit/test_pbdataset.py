@@ -594,8 +594,8 @@ class TestDataSet(unittest.TestCase):
             self.assertEqual(len(ds.metadata.collections), 1)
             self.assertEqual(ds.metadata.collections[0].wellSample.name,
                              "WELLSAMPLE")
-            self.assertEqual(ds.metadata.collections[0].wellSample.bioSamples[0].name, "BIOSAMPLE")
-            self.assertEqual(len(ds.metadata.collections[0].wellSample.bioSamples), 1)
+            self.assertEqual(ds.metadata.bioSamples[0].name, "BIOSAMPLE")
+            self.assertEqual(len(ds.metadata.bioSamples), 1)
         # now with existing samples
         outfile = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
         cmd = " ".join(["dataset", "create", "--force", outfile, pbtestdata.get_file("barcoded-subreadset")] + sample_args)
@@ -604,5 +604,5 @@ class TestDataSet(unittest.TestCase):
             self.assertEqual(len(ds.metadata.collections), 1)
             self.assertEqual(ds.metadata.collections[0].wellSample.name,
                              "WELLSAMPLE")
-            biosamples = {s.name for s in ds.metadata.collections[0].wellSample.bioSamples}
+            biosamples = {s.name for s in ds.metadata.bioSamples}
             self.assertEqual(biosamples, {"BIOSAMPLE"})
