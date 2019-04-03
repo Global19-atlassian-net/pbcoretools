@@ -302,7 +302,10 @@ class TestUpdateConsensusReads(pbcommand.testkit.PbTestApp):
     TASK_ID = "pbcoretools.tasks.update_consensus_reads"
     DRIVER_EMIT = "python -m pbcoretools.tasks.converters emit-tool-contract {i} ".format(i=TASK_ID)
     DRIVER_RESOLVE = "python -m pbcoretools.tasks.converters run-rtc "
-    INPUT_FILES = [pbtestdata.get_file("ccs-sequel")]
+    INPUT_FILES = [
+        pbtestdata.get_file("ccs-sequel"),
+        pbtestdata.get_file("subreads-sequel")
+    ]
 
     def run_after(self, rtc, output_dir):
         with ConsensusReadSet(rtc.task.output_files[0]) as ds:
