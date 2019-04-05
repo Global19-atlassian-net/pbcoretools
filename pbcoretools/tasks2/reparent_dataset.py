@@ -17,7 +17,7 @@ __version__ = "0.1"
 
 
 def run_args(args):
-    return _reparent_dataset(
+    return reparent_dataset(
         input_file=args.input_reads,
         dataset_name=args.dataset_name,
         output_file=args.output_file)
