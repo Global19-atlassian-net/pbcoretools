@@ -239,14 +239,16 @@ def _get_uuid(ds, barcode_label):
                 return dna_bc.uniqueId
 
 
-def _update_barcoded_sample_metadata(base_dir,
-                                     ds_file,
-                                     barcode_names,
-                                     parent_info,
-                                     isoseq_mode,
-                                     use_barcode_uuids,
-                                     bio_samples_d,
-                                     barcode_uuids_d):
+def _update_barcoded_sample_metadata(
+        base_dir,
+        ds_file,
+        barcode_names,
+        parent_info,
+        isoseq_mode,
+        use_barcode_uuids,
+        bio_samples_d,
+        barcode_uuids_d,
+        min_score_filter=Constants.BARCODE_QUALITY_GREATER_THAN):
     # the unbarcoded BAM is also a ConsensusReadSet right now, but we
     # shouldn't rely on that
     assert ds_file.file_id == "barcoding.tasks.lima-0"
@@ -278,8 +280,7 @@ def _update_barcoded_sample_metadata(base_dir,
                                      createdBy="AnalysisJob",
                                      timeStampedName="")
         ds.name = get_ds_name(ds, parent_name, barcode_label)
-        ds.filters.addRequirement(
-            bq=[('>', Constants.BARCODE_QUALITY_GREATER_THAN)])
+        ds.filters.addRequirement(bq=[('>', min_score_filter)])
         if use_barcode_uuids:
             uuid = barcode_uuids_d.get(barcode_label, None)
             if uuid is not None:
