@@ -10,7 +10,7 @@ from pbcommand.cli import (pacbio_args_runner,
     get_default_argparser_with_base_opts)
 from pbcommand.utils import setup_log
 
-from pbcoretools.file_utils import _reparent_dataset
+from pbcoretools.file_utils import reparent_dataset
 
 log = logging.getLogger(__name__)
 __version__ = "0.1"

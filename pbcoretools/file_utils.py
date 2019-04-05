@@ -461,3 +461,15 @@ def sanitize_dataset_tags(dset, remove_hidden=False):
     if "(filtered)" in name_fields:
         name_fields.remove("(filtered)")
     dset.name = " ".join(name_fields)
+
+
+def reparent_dataset(input_file, dataset_name, output_file):
+    with openDataSet(input_file, strict=True, skipCounts=True) as ds_in:
+        if len(ds_in.metadata.provenance) > 0:
+            log.warn("Removing existing provenance record: %s",
+                     ds_in.metadata.provenance)
+            ds_in.metadata.provenance = None
+        ds_in.name = dataset_name
+        ds_in.newUuid(random=True)
+        ds_in.write(output_file)
+    return 0

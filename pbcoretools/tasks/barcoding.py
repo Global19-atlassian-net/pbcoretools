@@ -17,7 +17,8 @@ from pbcommand.utils import get_dataset_metadata
 from pbcommand.models import FileTypes, SymbolTypes, OutputFileType, DataStore, DataStoreFile
 
 from pbcoretools.file_utils import (update_barcoded_sample_metadata,
-                                    iterate_datastore_read_set_files)
+                                    iterate_datastore_read_set_files,
+                                    reparent_dataset)
 
 
 log = logging.getLogger(__name__)
@@ -109,25 +110,13 @@ def _run_update_barcoded_sample_metadata_ccs(rtc):
     return 0
 
 
-def _reparent_dataset(input_file, dataset_name, output_file):
-    with openDataSet(input_file, strict=True, skipCounts=True) as ds_in:
-        if len(ds_in.metadata.provenance) > 0:
-            log.warn("Removing existing provenance record: %s",
-                     ds_in.metadata.provenance)
-            ds_in.metadata.provenance = None
-        ds_in.name = dataset_name
-        ds_in.newUuid(random=True)
-        ds_in.write(output_file)
-    return 0
-
-
 def _reparent_dataset_rtc(rtc):
     NAME_OPT_ID = "pbcoretools.task_options.new_dataset_name"
     if rtc.task.options[NAME_OPT_ID].strip() == "":
         raise ValueError("New dataset name is required")
-    return _reparent_dataset(rtc.task.input_files[0],
-                             rtc.task.options[NAME_OPT_ID],
-                             rtc.task.output_files[0])
+    return reparent_dataset(rtc.task.input_files[0],
+                            rtc.task.options[NAME_OPT_ID],
+                            rtc.task.output_files[0])
 
 
 ds_name_opt = QuickOpt("", "Name of Output Data Set",
