@@ -239,14 +239,16 @@ def _get_uuid(ds, barcode_label):
                 return dna_bc.uniqueId
 
 
-def _update_barcoded_sample_metadata(base_dir,
-                                     ds_file,
-                                     barcode_names,
-                                     parent_info,
-                                     isoseq_mode,
-                                     use_barcode_uuids,
-                                     bio_samples_d,
-                                     barcode_uuids_d):
+def _update_barcoded_sample_metadata(
+        base_dir,
+        ds_file,
+        barcode_names,
+        parent_info,
+        isoseq_mode,
+        use_barcode_uuids,
+        bio_samples_d,
+        barcode_uuids_d,
+        min_score_filter=Constants.BARCODE_QUALITY_GREATER_THAN):
     # the unbarcoded BAM is also a ConsensusReadSet right now, but we
     # shouldn't rely on that
     assert ds_file.file_id == "barcoding.tasks.lima-0"
@@ -278,8 +280,7 @@ def _update_barcoded_sample_metadata(base_dir,
                                      createdBy="AnalysisJob",
                                      timeStampedName="")
         ds.name = get_ds_name(ds, parent_name, barcode_label)
-        ds.filters.addRequirement(
-            bq=[('>', Constants.BARCODE_QUALITY_GREATER_THAN)])
+        ds.filters.addRequirement(bq=[('>', min_score_filter)])
         if use_barcode_uuids:
             uuid = barcode_uuids_d.get(barcode_label, None)
             if uuid is not None:
@@ -460,3 +461,15 @@ def sanitize_dataset_tags(dset, remove_hidden=False):
     if "(filtered)" in name_fields:
         name_fields.remove("(filtered)")
     dset.name = " ".join(name_fields)
+
+
+def reparent_dataset(input_file, dataset_name, output_file):
+    with openDataSet(input_file, strict=True, skipCounts=True) as ds_in:
+        if len(ds_in.metadata.provenance) > 0:
+            log.warn("Removing existing provenance record: %s",
+                     ds_in.metadata.provenance)
+            ds_in.metadata.provenance = None
+        ds_in.name = dataset_name
+        ds_in.newUuid(random=True)
+        ds_in.write(output_file)
+    return 0
