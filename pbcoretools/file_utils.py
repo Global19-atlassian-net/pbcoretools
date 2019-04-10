@@ -17,7 +17,7 @@ import os.path as op
 import os
 
 from pbcore.io import (SubreadSet, FastqReader, FastqWriter, BarcodeSet,
-                       openDataSet)
+                       openDataSet, ConsensusReadSet)
 from pbcore.io.dataset.DataSetUtils import loadMockCollectionMetadata
 from pbcommand.models import FileTypes, DataStore
 
@@ -472,4 +472,31 @@ def reparent_dataset(input_file, dataset_name, output_file):
         ds_in.name = dataset_name
         ds_in.newUuid(random=True)
         ds_in.write(output_file)
+    return 0
+
+
+def update_consensus_reads(ccs_in, subreads_in, ccs_out, use_run_design_uuid=False):
+    ds_subreads = SubreadSet(subreads_in, skipCounts=True)
+    with ConsensusReadSet(ccs_in, skipCounts=True) as ds:
+        run_design_uuid = None
+        if use_run_design_uuid:
+            uuids = set([])
+            for collection in ds.metadata.collections:
+                if collection.consensusReadSetRef is not None:
+                    uuids.add(collection.consensusReadSetRef.uuid)
+            if len(uuids) == 1:
+                run_design_uuid = list(uuids)[0]
+            elif len(uuids) == 0:
+                log.warn("No pre-defined ConsensusReadSetRef UUID found")
+            else:
+                log.warn("Multiple ConsensusReadSetRef UUIDs found")
+        if len(ds.metadata.bioSamples) == 0:
+            for bio_sample in ds_subreads.metadata.bioSamples:
+                ds.metadata.bioSamples.append(bio_sample)
+        if run_design_uuid is not None:
+            ds.uuid = run_design_uuid
+        else:
+            ds.newUuid()
+        sanitize_dataset_tags(ds, remove_hidden=True)
+        ds.write(ccs_out)
     return 0
