@@ -299,13 +299,15 @@ def _update_barcoded_sample_metadata(
         return f_new
 
 
-def update_barcoded_sample_metadata(base_dir,
-                                    datastore_file,
-                                    input_reads,
-                                    barcode_set,
-                                    isoseq_mode=False,
-                                    use_barcode_uuids=True,
-                                    nproc=1):
+def update_barcoded_sample_metadata(
+        base_dir,
+        datastore_file,
+        input_reads,
+        barcode_set,
+        isoseq_mode=False,
+        use_barcode_uuids=True,
+        nproc=1,
+        min_score_filter=Constants.BARCODE_QUALITY_GREATER_THAN):
     """
     Given a datastore JSON of SubreadSets produced by barcoding, apply the
     following updates to each:
