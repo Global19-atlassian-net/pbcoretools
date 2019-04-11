@@ -343,7 +343,8 @@ def update_barcoded_sample_metadata(
                               isoseq_mode,
                               use_barcode_uuids,
                               bio_samples_d,
-                              barcode_uuids_d)))
+                              barcode_uuids_d,
+                              min_score_filter)))
     pool.close()
     pool.join()
     datastore_files = [r.get() for r in _results]
