@@ -11,7 +11,7 @@ from pbcommand.cli import (pacbio_args_runner,
     get_default_argparser_with_base_opts)
 from pbcommand.utils import setup_log
 
-from pbcoretools.file_utils import update_barcoded_sample_metadata
+from pbcoretools.file_utils import update_barcoded_sample_metadata, Constants
 
 log = logging.getLogger(__name__)
 __version__ = "0.1"
@@ -25,7 +25,8 @@ def run_args(args):
         barcode_set=args.barcodes,
         isoseq_mode=args.isoseq_mode,
         use_barcode_uuids=args.use_barcode_uuids,
-        nproc=args.nproc)
+        nproc=args.nproc,
+        min_score_filter=args.min_bq_filter)
     datastore.write_json(args.out_json)
     return 0
 
@@ -43,6 +44,9 @@ def _get_parser():
                    help="Iso-Seq mode")
     p.add_argument("--use-barcode-uuids", action="store_true", default=False,
                    help="Apply pre-defined barcoded dataset UUIDs from input_reads")
+    p.add_argument("--min-bq-filter", action="store", type=int,
+                   default=Constants.BARCODE_QUALITY_GREATER_THAN,
+                   help="Minimum barcode quality encoded in dataset filter")
     p.add_argument("-j", "--nproc", dest="nproc", action="store", type=int,
                    default=1, help="Number of processors to use")
     return p
