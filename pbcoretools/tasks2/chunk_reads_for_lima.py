@@ -25,6 +25,10 @@ def split_reads(ds_file, max_chunks, target_size, lima_peek_guess):
         log.info("--peek-guess is being used, writing single chunk")
         reads.write("chunk_all.{e}".format(e=ds_type.ext))
         return 1
+    elif len(reads) < target_size:
+        log.info("Dataset is < %d reads, writing single chunk", target_size)
+        reads.write("chunk_all.{e}".format(e=ds_type.ext))
+        return 1
     else:
         chunks = reads.split(maxChunks=max_chunks,
                              targetSize=target_size,
@@ -32,7 +36,7 @@ def split_reads(ds_file, max_chunks, target_size, lima_peek_guess):
         log.info("%d chunked datasets will be written", len(chunks))
         for i, ds in enumerate(chunks):
             file_name = "chunk{i}.{e}".format(i=i, e=ds_type.ext)
-            chunks[i].write(file_name)
+            ds.write(file_name)
             log.debug("Wrote %s", file_name)
         return len(chunks)
 
