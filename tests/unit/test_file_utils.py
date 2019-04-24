@@ -126,23 +126,17 @@ def validate_barcoded_datastore_files(self, subreads, datastore,
             self.assertEqual(ds.uuid, f.uuid)
             bc_label = op.basename(f.path).split(".")[1]
             bio_name = bio_sample_names[bc_label]
-            expected_tags = ["TotalLength", "NumRecords", "Provenance"]
-            if have_collection_metadata:
-                coll = ds.metadata.collections[0]
-                self.assertEqual(len(coll.wellSample.bioSamples), 1)
-                self.assertEqual(coll.wellSample.bioSamples[0].name, bio_name)
-                self.assertEqual(ds.metadata.provenance.parentDataSet.uniqueId,
-                                 ds_in.uuid)
-                self.assertEqual(ds.name, "{n} ({s})".format(n=ds_in.name,
-                                                             s=bio_name))
-                expected_tags.append("Collections")
-                if use_barcode_uuids:
-                    self.assertEqual(ds.uuid, dna_bc_uuids[bc_label])
-                else:
-                    self.assertNotEqual(ds.uuid, dna_bc_uuids[bc_label])
+            expected_tags = ["TotalLength", "NumRecords", "Provenance", "BioSamples"]
+            self.assertEqual(len(ds.metadata.bioSamples), 1)
+            self.assertEqual(ds.metadata.bioSamples[0].name, bio_name)
+            self.assertEqual(ds.metadata.provenance.parentDataSet.uniqueId,
+                             ds_in.uuid)
+            self.assertEqual(ds.name, "{n} ({s})".format(n=ds_in.name,
+                                                         s=bio_name))
+            if use_barcode_uuids:
+                self.assertEqual(ds.uuid, dna_bc_uuids[bc_label])
             else:
-                self.assertEqual(ds.name, "{n} ({b})".format(n=ds_in.name,
-                                                             b=bc_label))
+                self.assertNotEqual(ds.uuid, dna_bc_uuids[bc_label])
             md_tags = [r['tag'] for r in ds.metadata.record['children']]
             self.assertEqual(md_tags[0:4], expected_tags)
 
@@ -190,7 +184,7 @@ class TestSplitLAA(unittest.TestCase):
         with SubreadSet(self._subreads) as ds:
             # just double-checking that the XML defines more samples than are
             # actually present in the BAM
-            assert len(ds.metadata.collections[0].wellSample.bioSamples) == 3
+            assert len(ds.metadata.bioSamples) == 3
         samples = get_barcode_sample_mappings(SubreadSet(self._subreads))
         self.assertEqual(samples, {'lbc3--lbc3': 'Charles',
                                    'lbc1--lbc1': 'Alice'})
@@ -228,48 +222,43 @@ class TestBarcodeUtils(unittest.TestCase):
         ds = SubreadSet(self.SUBREADS)
         discard_bio_samples(ds, "lbc1--lbc1")
         coll = ds.metadata.collections[0]
-        self.assertEqual(len(coll.wellSample.bioSamples), 1)
-        self.assertEqual(coll.wellSample.bioSamples[0].name, "Alice")
+        self.assertEqual(len(ds.metadata.bioSamples), 1)
+        self.assertEqual(ds.metadata.bioSamples[0].name, "Alice")
         # No matching BioSample records
         ds = SubreadSet(self.SUBREADS)
-        coll = ds.metadata.collections[0]
-        coll.wellSample.bioSamples.pop(1)
-        coll.wellSample.bioSamples.pop(1)
-        bioSample = coll.wellSample.bioSamples[0]
+        ds.metadata.bioSamples.pop(1)
+        ds.metadata.bioSamples.pop(1)
+        bioSample = ds.metadata.bioSamples[0]
         while len(bioSample.DNABarcodes) > 0:
             bioSample.DNABarcodes.pop(0)
-        self.assertEqual(len(coll.wellSample.bioSamples), 1)
+        self.assertEqual(len(ds.metadata.bioSamples), 1)
         discard_bio_samples(ds, "lbc1--lbc1")
-        self.assertEqual(len(coll.wellSample.bioSamples), 1)
-        self.assertEqual(coll.wellSample.bioSamples[0].name, "lbc1--lbc1")
-        self.assertEqual(coll.wellSample.bioSamples[
+        self.assertEqual(len(ds.metadata.bioSamples), 1)
+        self.assertEqual(ds.metadata.bioSamples[0].name, "lbc1--lbc1")
+        self.assertEqual(ds.metadata.bioSamples[
                          0].DNABarcodes[0].name, "lbc1--lbc1")
         # no BioSample records
         ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))
-        coll = ds.metadata.collections[0]
-        self.assertEqual(len(coll.wellSample.bioSamples), 0)
+        self.assertEqual(len(ds.metadata.bioSamples), 0)
         discard_bio_samples(ds, "lbc1--lbc1")
-        self.assertEqual(len(coll.wellSample.bioSamples), 1)
-        self.assertEqual(coll.wellSample.bioSamples[0].name, "lbc1--lbc1")
-        self.assertEqual(coll.wellSample.bioSamples[
+        self.assertEqual(len(ds.metadata.bioSamples), 1)
+        self.assertEqual(ds.metadata.bioSamples[0].name, "lbc1--lbc1")
+        self.assertEqual(ds.metadata.bioSamples[
                          0].DNABarcodes[0].name, "lbc1--lbc1")
 
     def test_get_ds_name(self):
         ds = SubreadSet(self.SUBREADS)
         name = get_ds_name(ds, "My Data", "My Barcode")
         self.assertEqual(name, "My Data (multiple samples)")
-        for coll in ds.metadata.collections:
-            while len(coll.wellSample.bioSamples) > 0:
-                coll.wellSample.bioSamples.pop(0)
+        while len(ds.metadata.bioSamples) > 0:
+            ds.metadata.bioSamples.pop(0)
         name = get_ds_name(ds, "My Data", "My Barcode")
         self.assertEqual(name, "My Data (My Barcode)")
         ds = SubreadSet(self.SUBREADS)
-        for coll in ds.metadata.collections:
-            while len(coll.wellSample.bioSamples) > 1:
-                coll.wellSample.bioSamples.pop(1)
+        while len(ds.metadata.bioSamples) > 1:
+            ds.metadata.bioSamples.pop(1)
         name = get_ds_name(ds, "My Data", "My Barcode")
-        expected = "My Data ({s})".format(
-            s=ds.metadata.collections[0].wellSample.bioSamples[0].name)
+        expected = "My Data ({s})".format(s=ds.metadata.bioSamples[0].name)
         self.assertEqual(name, expected)
         ds = SubreadSet(ds.externalResources[0].bam)
         name = get_ds_name(ds, "My Data", "My Barcode")
@@ -329,7 +318,7 @@ class TestBarcodeUtils(unittest.TestCase):
     def test_force_set_all_bio_sample_names(self):
         ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))
         force_set_all_bio_sample_names(ds, "My Test BioSample")
-        self.assertEqual(ds.metadata.collections[0].wellSample.bioSamples[0].name, "My Test BioSample")
+        self.assertEqual(ds.metadata.bioSamples[0].name, "My Test BioSample")
 
     def test_sanitize_dataset_tags(self):
         ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))

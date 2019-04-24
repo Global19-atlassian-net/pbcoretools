@@ -1,4 +1,4 @@
-
+import nose.tools
 import subprocess
 import tempfile
 import unittest
@@ -38,31 +38,31 @@ class TestFilterDataSet(unittest.TestCase):
         run_filter_dataset(ssfn, ofn, " -1 ", "none")
         run_filter_dataset(ssfn, ofn, -1, "none")
         run_filter_dataset(ssfn, ofn, "-1", "blah")
-        run_filter_dataset(ssfn, ofn, "-1", "None, None")
-        run_filter_dataset(ssfn, ofn, "1.0", "None, None")
-        run_filter_dataset(ssfn, ofn, " 1.0 ", "None, None")
+        run_filter_dataset(ssfn, ofn, "-1", "None AND None")
+        run_filter_dataset(ssfn, ofn, "1.0", "None AND None")
+        run_filter_dataset(ssfn, ofn, " 1.0 ", "None AND None")
         with self.assertRaises(ValueError):
-            run_filter_dataset(ssfn, ofn, " 1. 0 ", "None, None")
+            run_filter_dataset(ssfn, ofn, " 1. 0 ", "None AND None")
         with self.assertRaises(ValueError):
-            run_filter_dataset(ssfn, ofn, "1. 0", "None, None")
-        run_filter_dataset(ssfn, ofn, "10.0", "None, None")
-        run_filter_dataset(ssfn, ofn, "0.01", "None, None")
-        run_filter_dataset(ssfn, ofn, "100000.01", "None, None")
-        run_filter_dataset(ssfn, ofn, ".00", "None, None")
-        run_filter_dataset(ssfn, ofn, 1.0, "None, None")
-        run_filter_dataset(ssfn, ofn, 10.0, "None, None")
-        run_filter_dataset(ssfn, ofn, 0.01, "None, None")
-        run_filter_dataset(ssfn, ofn, 100000.01, "None, None")
-        run_filter_dataset(ssfn, ofn, 100000, "None, None")
-        run_filter_dataset(ssfn, ofn, .00, "None, None")
-        run_filter_dataset(ssfn, ofn, 1., "None, None")
-        run_filter_dataset(ssfn, ofn, "1.", "None, None")
+            run_filter_dataset(ssfn, ofn, "1. 0", "None AND None")
+        run_filter_dataset(ssfn, ofn, "10.0", "None AND None")
+        run_filter_dataset(ssfn, ofn, "0.01", "None AND None")
+        run_filter_dataset(ssfn, ofn, "100000.01", "None AND None")
+        run_filter_dataset(ssfn, ofn, ".00", "None AND None")
+        run_filter_dataset(ssfn, ofn, 1.0, "None AND None")
+        run_filter_dataset(ssfn, ofn, 10.0, "None AND None")
+        run_filter_dataset(ssfn, ofn, 0.01, "None AND None")
+        run_filter_dataset(ssfn, ofn, 100000.01, "None AND None")
+        run_filter_dataset(ssfn, ofn, 100000, "None AND None")
+        run_filter_dataset(ssfn, ofn, .00, "None AND None")
+        run_filter_dataset(ssfn, ofn, 1., "None AND None")
+        run_filter_dataset(ssfn, ofn, "1.", "None AND None")
         with self.assertRaises(ValueError):
-            run_filter_dataset(ssfn, ofn, "None.1", "None, None")
+            run_filter_dataset(ssfn, ofn, "None.1", "None AND None")
         with self.assertRaises(ValueError):
-            run_filter_dataset(ssfn, ofn, "None1", "None, None")
+            run_filter_dataset(ssfn, ofn, "None1", "None AND None")
         with self.assertRaises(ValueError):
-            run_filter_dataset(ssfn, ofn, "1.1None", "None, None")
+            run_filter_dataset(ssfn, ofn, "1.1None", "None AND None")
 
         self.assertEqual(None, sanitize_read_length(""))
         self.assertEqual(None, sanitize_read_length(0))
@@ -126,34 +126,69 @@ class TestFilterDataSet(unittest.TestCase):
         self.assertEqual(str(ds.filters),
                          "( rq > .7 AND length >= 100 )")
 
-        # semicolon:
+        # AND conjunction
         run_filter_dataset(ssfn, ofn, "100", "rq > .7 AND length < 5000")
         ds = openDataSet(ofn)
         self.assertEqual(
             str(ds.filters),
             '( length < 5000 AND rq > .7 AND length >= 100 )')
 
-        # comma
-        run_filter_dataset(ssfn, ofn, "100", "rq > .7, length < 5000")
+        ## semicolon conjunction
+
+        run_filter_dataset(ssfn, ofn, "100", "rq > .7; length < 5000")
         ds = openDataSet(ofn)
         self.assertEqual(
             str(ds.filters),
             '( length < 5000 AND rq > .7 AND length >= 100 )')
 
         run_filter_dataset(ssfn, ofn, 0,
-                           "rq>=.7, length >= 1000, length <= 5000")
+                           "rq>=.7; length >= 1000; length <= 5000")
         ds = openDataSet(ofn)
         self.assertEqual(
             str(ds.filters),
             '( length >= 1000 AND length <= 5000 AND rq >= .7 )')
 
         run_filter_dataset(ssfn, ofn, 0,
-                           "rq>=.7, length gte 1000, length lte 5000")
+                           "rq>=.7; length gte 1000; length lte 5000")
         ds = openDataSet(ofn)
         self.assertEqual(
             str(ds.filters),
             '( length gte 1000 AND length lte 5000 AND rq >= .7 )')
 
+    @nose.tools.raises(ValueError)
+    def test_filter_comma_raises(self):
+        ssfn = data.getXml(8)
+        ofn = tempfile.NamedTemporaryFile(suffix=".xml").name
+
+        run_filter_dataset(ssfn, ofn, "100", "rq > .7, length < 5000")
+
+    def test_filter_more(self):
+        ssfn = data.getXml(8)
+        ofn = tempfile.NamedTemporaryFile(suffix=".xml").name
+
+        # zm=[3,4,5] condition
+        run_filter_dataset(ssfn, ofn, 0,
+                           "length >= 1000 AND zm=[3,4,5]")
+        ds = openDataSet(ofn)
+        self.assertEqual(
+            str(ds.filters),
+            '( zm = [3,4,5] AND length >= 1000 )')
+
+        # zm=[3,4,5] condition
+        run_filter_dataset(ssfn, ofn, 0,
+                           "length >= 1000; zm=[3,4,5]")
+        ds = openDataSet(ofn)
+        self.assertEqual(
+            str(ds.filters),
+            '( zm = [3,4,5] AND length >= 1000 )')
+
+        # zm=[3,4,5] condition by itself
+        run_filter_dataset(ssfn, ofn, 0,
+                           "zm=[3,4,5]")
+        ds = openDataSet(ofn)
+        self.assertEqual(
+            str(ds.filters),
+            '( zm = [3,4,5] )')
 
     def test_datset_name(self):
         ssfn = data.getXml(8)

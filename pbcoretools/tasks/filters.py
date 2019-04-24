@@ -79,10 +79,7 @@ def run_filter_dataset(in_file, out_file, read_length, other_filters,
     rlen = sanitize_read_length(read_length)
     filters = {}
     if other_filters and other_filters != "None":
-        if ' AND ' in str(other_filters):
-            filters = parse_filter_list(str(other_filters).split(' AND '))
-        else:
-            filters = parse_filter_list(str(other_filters).split(','))
+        filters = parse_filter_list([str(other_filters)])
         log.info("{i} other filters will be added".format(i=len(filters)))
     tags = set()
     if rlen or len(filters) > 0 or not downsample_factor in [0, 1]:

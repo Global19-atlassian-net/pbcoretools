@@ -20,6 +20,7 @@ from pbcommand.validators import validate_output_dir
 from pbcoretools.file_utils import (add_mock_collection_metadata,
                                     force_set_all_well_sample_names,
                                     force_set_all_bio_sample_names)
+import pbcoretools.utils
 
 log = logging.getLogger(__name__)
 
@@ -175,11 +176,17 @@ def parse_filter_list(filtStrs):
     separators = OPMAP.keys()
     # pad the ones that start and end with letters
     separators = pad_separators(separators)
-    for filt in filtStrs:
+    for filtStr in filtStrs:
+      for filt in pbcoretools.utils.split_filtStr(filtStr):
         for sep in separators:
             if sep in filt:
-                param, condition = filt.split(sep)
+                try:
+                    param, condition = filt.split(sep)
+                except ValueError:
+                    log.exception('{!r}.split({!r})'.format(filt, sep))
+                    raise
                 condition = (sep.strip(), condition.strip())
+                log.debug('filt={!r} param={!r} condition={!r}'.format(filt, param, condition))
                 filters[param.strip()].append(condition)
                 break
     return filters
@@ -245,7 +252,7 @@ def splitXml(args):
         infix = '{i}'
         chNums = ['_'.join(ds.barcodes).replace(
             '[', '').replace(']', '').replace(', ', '-') for ds in dss]
-    nSuf = -2 if re.search(r".+\.\w+set\.xml", args.infile) else -1
+    nSuf = -2 if re.search(r".+\.\w+set\.xml", args.infile.lower()) else -1
     default_prefix = '.'.join(args.infile.split('.')[:nSuf])
     ext = '.'.join(args.infile.split('.')[nSuf:])
     prefix = args.prefix if args.prefix is not None else default_prefix

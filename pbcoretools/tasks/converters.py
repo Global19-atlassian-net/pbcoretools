@@ -21,7 +21,9 @@ from pbcommand.models import FileTypes, SymbolTypes, OutputFileType, DataStore, 
 from pbcommand.engine import run_cmd
 
 from pbcoretools.tasks.barcoding import _ds_to_datastore
-from pbcoretools.file_utils import iterate_datastore_read_set_files, sanitize_dataset_tags
+from pbcoretools.file_utils import (iterate_datastore_read_set_files,
+                                    update_consensus_reads,
+                                    sanitize_dataset_tags)
 
 log = logging.getLogger(__name__)
 
@@ -403,33 +405,18 @@ def _run_transcripts_to_datastore(rtc):
                             source_id=rtc.task.task_id + "-out-0")
 
 
-@registry("update_consensus_reads", "0.1.1",
-          FileTypes.DS_CCS,
+@registry("update_consensus_reads", "0.2.1",
+          (FileTypes.DS_CCS, FileTypes.DS_SUBREADS),
           FileTypes.DS_CCS,
           is_distributed=False, # requires skipCounts=True
           nproc=1,
           options=dict(use_run_design_uuid=False))
 def _run_update_consensus_reads(rtc):
-    with ConsensusReadSet(rtc.task.input_files[0], skipCounts=True) as ds:
-        run_design_uuid = None
-        if rtc.task.options["pbcoretools.task_options.use_run_design_uuid"]:
-            uuids = set([])
-            for collection in ds.metadata.collections:
-                if collection.consensusReadSetRef is not None:
-                    uuids.add(collection.consensusReadSetRef.uuid)
-            if len(uuids) == 1:
-                run_design_uuid = list(uuids)[0]
-            elif len(uuids) == 0:
-                log.warn("No pre-defined ConsensusReadSetRef UUID found")
-            else:
-                log.warn("Multiple ConsensusReadSetRef UUIDs found")
-        if run_design_uuid is not None:
-            ds.uuid = run_design_uuid
-        else:
-            ds.newUuid()
-        sanitize_dataset_tags(ds, remove_hidden=True)
-        ds.write(rtc.task.output_files[0])
-    return 0
+    return update_consensus_reads(
+        ccs_in=rtc.task.input_files[0],
+        subreads_in=rtc.task.input_files[1],
+        ccs_out=rtc.task.output_files[0],
+        use_run_design_uuid=rtc.task.options["pbcoretools.task_options.use_run_design_uuid"])
 
 
 if __name__ == '__main__':
