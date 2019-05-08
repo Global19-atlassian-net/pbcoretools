@@ -86,7 +86,7 @@ def run_ccs_bam_fastq_exports(ccs_dataset_file, base_dir, is_barcoded=False):
                 DataStoreFile(uuid.uuid4(),
                               Constants.BAM_ID,
                               FileTypes.BAM_CCS.file_type_id,
-                              bam_file_name,
+                              op.abspath(bam_file_name),
                               name=op.basename(bam_file_name), # XXX is this right?
                               description="CCS BAM file"))
         fastq_file = op.join(base_dir, file_prefix + Constants.BASE_EXT + ".fastq")
@@ -104,13 +104,13 @@ def run_ccs_bam_fastq_exports(ccs_dataset_file, base_dir, is_barcoded=False):
             DataStoreFile(uuid.uuid4(),
                           Constants.FASTQ_ID,
                           FileTypes.FASTQ.file_type_id,
-                          fastq_file,
+                          op.abspath(fastq_file),
                           name=op.basename(fastq_file),
                           description="Q20 Reads"),
             DataStoreFile(uuid.uuid4(),
                           Constants.FASTA_ID,
                           FileTypes.FASTA.file_type_id,
-                          fasta_file,
+                          op.abspath(fasta_file),
                           name=op.basename(fasta_file),
                           description="Q20 Reads")
         ])
@@ -129,13 +129,13 @@ def run_ccs_bam_fastq_exports(ccs_dataset_file, base_dir, is_barcoded=False):
                 DataStoreFile(uuid.uuid4(),
                               Constants.FASTQ2_ID,
                               FileTypes.FASTQ.file_type_id,
-                              fastq2_file,
+                              op.abspath(fastq2_file),
                               name=op.basename(fastq2_file),
                               description="Q{q} Reads".format(q=min_qv)),
                 DataStoreFile(uuid.uuid4(),
                               Constants.FASTA2_ID,
                               FileTypes.FASTA.file_type_id,
-                              fasta2_file,
+                              op.abspath(fasta2_file),
                               name=op.basename(fasta2_file),
                               description="Q{q} Reads".format(q=min_qv))
             ])
