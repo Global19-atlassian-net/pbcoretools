@@ -20,7 +20,8 @@ from pbcoretools.chunking.gather import (
     gather_gff,
     gather_json,
     gather_vcf,
-    gather_zip)
+    gather_zip,
+    gather_fofn)
 
 log = logging.getLogger(__name__)
 __version__ = "0.1"
@@ -36,7 +37,8 @@ def run_args(args):
         ".fasta": fasta_gather,
         ".fastq": fastq_gather,
         ".json": gather_json,
-        ".zip": gather_zip
+        ".zip": gather_zip,
+        '.fofn': gather_fofn
     }
     base, ext = op.splitext(args.output_file)
     if not ext in MODES:

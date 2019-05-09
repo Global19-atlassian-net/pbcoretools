@@ -545,3 +545,4 @@ run_main_gather_transcript_alignmentset = P(
 run_main_gather_bigwig = P(__gather_runner, gather_bigwig)
 run_main_gather_tgz = P(__gather_runner, gather_tgz)
 run_main_gather_zip = P(__gather_runner, gather_zip)
+run_main_gather_fofn = P(__gather_runner, gather_fofn)

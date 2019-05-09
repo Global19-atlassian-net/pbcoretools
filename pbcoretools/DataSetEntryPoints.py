@@ -359,7 +359,9 @@ def relativize_options(parser):
 def absolutizeXml(args):
     dss = openDataSet(args.infile, strict=args.strict)
     outfn = args.infile
-    if args.outdir:
+    if args.output_xml:
+        outfn = args.output_xml
+    elif args.outdir:
         if os.path.isdir(args.outdir):
             outfn = _swapPath(args.outdir, args.infile)
         else:
@@ -378,6 +380,8 @@ def absolutize_options(parser):
                         help="The XML file to absolutize")
     parser.add_argument("--outdir", default=None, type=str,
                         help="Specify an optional output directory")
+    parser.add_argument("--output-xml", default=None, type=str,
+                        help="Specify an optional output file")
     parser.add_argument("--update", default=False, action="store_true",
                         dest="updateCounts",
                         help="Update dataset metadata")

@@ -17,7 +17,7 @@ import os.path as op
 import os
 
 from pbcore.io import (SubreadSet, FastqReader, FastqWriter, BarcodeSet,
-                       openDataSet, ConsensusReadSet)
+                       openDataSet, ConsensusReadSet, DataSet)
 from pbcore.io.dataset.DataSetUtils import loadMockCollectionMetadata
 from pbcommand.models import FileTypes, DataStore
 
@@ -201,8 +201,8 @@ def discard_bio_samples(subreads, barcode_label):
         subreads.metadata.bioSamples[0].DNABarcodes.addBarcode(barcode_label)
 
 
-def get_bio_sample_name(subreads):
-    bio_samples = {s.name for s in subreads.metadata.bioSamples}
+def get_bio_sample_name(ds):
+    bio_samples = {s.name for s in ds.metadata.bioSamples}
     if len(bio_samples) == 0:
         log.warn("No BioSample records present")
         return "unknown_sample"
@@ -436,19 +436,22 @@ def sanitize_sample(sample):
     return sanitized_sample
 
 
-def get_sanitized_bio_sample_name(subreads):
+def get_sanitized_bio_sample_name(ds):
     """Return sanitized biosample name"""
-    sample = get_bio_sample_name(subreads)
+    sample = get_bio_sample_name(ds)
     ssample = sanitize_sample(sample)
     log.warning("Sanitize biosample name from {!r} to {!r}".format(sample, ssample))
     return ssample
 
 
-def get_prefixes(subreads_file):
-    with SubreadSet(subreads_file) as subreads:
-       seqid_prefix = get_sanitized_bio_sample_name(subreads)
+def get_prefixes(ds_file):
+    if not ds_file.endswith('.subreadset.xml') and not ds_file.endswith('.consensusreadset.xml'):
+        raise ValueError("Unsupported readtype {}, must either be SubreadSet or ConsensusReadSet!".
+                format(ds_file))
+    cls = SubreadSet if ds_file.endswith('subreadset.xml') else ConsensusReadSet
+    with cls(ds_file) as ds:
+       seqid_prefix = get_sanitized_bio_sample_name(ds)
        return ("{}_HQ_".format(seqid_prefix), "{}_LQ_".format(seqid_prefix))
-
 
 def sanitize_dataset_tags(dset, remove_hidden=False):
     tags = {t.strip() for t in dset.tags.split(",")}
