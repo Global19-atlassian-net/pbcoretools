@@ -513,6 +513,7 @@ def reparent_dataset(input_file, dataset_name, output_file):
 def update_consensus_reads(ccs_in, subreads_in, ccs_out, use_run_design_uuid=False):
     ds_subreads = SubreadSet(subreads_in, skipCounts=True)
     with ConsensusReadSet(ccs_in, skipCounts=True) as ds:
+        ds.name = ds_subreads.name + " (CCS)"
         run_design_uuid = None
         if use_run_design_uuid:
             uuids = set([])
