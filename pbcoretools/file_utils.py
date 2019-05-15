@@ -517,7 +517,7 @@ def update_consensus_reads(ccs_in, subreads_in, ccs_out, use_run_design_uuid=Fal
         run_design_uuid = None
         if use_run_design_uuid:
             uuids = set([])
-            for collection in ds_subreads.metadata.collections:
+            for collection in ds.metadata.collections:
                 if collection.consensusReadSetRef is not None:
                     uuids.add(collection.consensusReadSetRef.uuid)
             if len(uuids) == 1:
