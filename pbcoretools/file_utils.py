@@ -179,6 +179,19 @@ def make_combined_laa_zip(fastq_file, summary_csv, input_subreads, output_file_n
         shutil.rmtree(tmp_dir)
 
 
+def consolidate_barcodes(ds, bio_sample):
+    deletions = []
+    for k, bc in enumerate(bio_sample.DNABarcodes):
+        if bc.uniqueId != ds.uuid:
+            log.debug("Discarding DNABarcode tag %s", bc)
+            deletions.append(k)
+    if len(deletions) == len(bio_sample.DNABarcodes):
+        bio_sample.DNABarcodes[0].uniqueId = ds.uuid
+        deletions = deletions[1:]
+    for k in reversed(deletions):
+        bio_sample.DNABarcodes.pop(k)
+
+
 def discard_bio_samples(subreads, barcode_label):
     """
     Remove any BioSample records from a SubreadSet that are not associated
@@ -188,6 +201,8 @@ def discard_bio_samples(subreads, barcode_label):
     for k, bio_sample in enumerate(subreads.metadata.bioSamples):
         barcodes = set([bc.name for bc in bio_sample.DNABarcodes])
         if barcode_label in barcodes:
+            if len(bio_sample.DNABarcodes) > 1:
+                consolidate_barcodes(subreads, bio_sample)
             continue
         if len(barcodes) == 0:
             log.warn("No barcodes defined for sample %s", bio_sample.name)
@@ -239,6 +254,17 @@ def _get_uuid(ds, barcode_label):
                 return dna_bc.uniqueId
 
 
+def _uniqueify_collections(metadata):
+    uuids = set()
+    deletions = []
+    for k, collection in enumerate(metadata.collections):
+        if collection.uniqueId in uuids:
+            deletions.append(k)
+        uuids.add(collection.uniqueId)
+    for k in reversed(deletions):
+        metadata.collections.pop(k)
+
+
 def _update_barcoded_sample_metadata(
         base_dir,
         ds_file,
@@ -256,6 +282,7 @@ def _update_barcoded_sample_metadata(
     ds_out = op.join(base_dir, op.basename(ds_file.path))
     with openDataSet(ds_file.path, strict=True) as ds:
         assert ds.datasetType in Constants.ALLOWED_BC_TYPES, ds.datasetType
+        _uniqueify_collections(ds.metadata)
         barcode_label = None
         ds_barcodes = sorted(
             list(set(zip(ds.index.bcForward, ds.index.bcReverse))))
@@ -275,6 +302,7 @@ def _update_barcoded_sample_metadata(
                 "The file {f} contains multiple barcodes: {b}".format(
                     f=ds_file.path, b="; ".join([str(bc) for bc in ds_barcodes])))
         assert parent_type == ds.datasetType
+        ds.subdatasets = []
         ds.metadata.addParentDataSet(parent_uuid,
                                      parent_type,
                                      createdBy="AnalysisJob",
@@ -294,6 +322,7 @@ def _update_barcoded_sample_metadata(
         ds.updateCounts()
         ds.write(ds_out)
         f_new = copy.deepcopy(ds_file)
+        f_new.name = ds.name
         f_new.path = ds_out
         f_new.uuid = ds.uuid
         return f_new
@@ -484,6 +513,7 @@ def reparent_dataset(input_file, dataset_name, output_file):
 def update_consensus_reads(ccs_in, subreads_in, ccs_out, use_run_design_uuid=False):
     ds_subreads = SubreadSet(subreads_in, skipCounts=True)
     with ConsensusReadSet(ccs_in, skipCounts=True) as ds:
+        ds.name = ds_subreads.name + " (CCS)"
         run_design_uuid = None
         if use_run_design_uuid:
             uuids = set([])

@@ -94,7 +94,7 @@ def run_extract_unmapped(alignment_file,
             DataStoreFile(uuid.uuid4(),
                           Constants.TASK_ID + "-out-1",
                           FileTypes.BAM_SUB.file_type_id,
-                          output_bam))
+                          op.abspath(output_bam)))
     else:
         log.warn("extract_unaligned=False, will write empty datastore")
     datastore = DataStore(datastore_files)
