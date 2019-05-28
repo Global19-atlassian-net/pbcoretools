@@ -45,6 +45,8 @@ def show_validation_errors(errors, out=sys.stdout, verbose=False):
     Display a human-readable summary.  By default this will only print one
     error of each category; this can be overridden using the verbose flag.
     """
+    if len(errors) == 0:
+        return 0
     for msg in _get_validation_error_lines(errors, verbose):
         print(msg, file=out)
 
