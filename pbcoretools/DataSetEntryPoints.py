@@ -110,6 +110,11 @@ def createXml(args):
         if args.bio_sample_name:
             force_set_all_bio_sample_names(dset, args.bio_sample_name)
     log.debug("Dataset created")
+    if isinstance(dset, ContigSet):
+        if args.organism:
+            dset.metadata.organism = args.organism
+        if args.ploidy:
+            dset.metadata.ploidy = args.ploidy
     dset.newUuid()
     dset.write(args.outfile, validate=args.novalidate, relPaths=args.relative)
     log.debug("Dataset written")
@@ -143,6 +148,10 @@ def create_options(parser):
     pad("--relative", action='store_true', default=False,
         help=("Make the included paths relative instead of "
               "absolute (not compatible with --novalidate)"))
+    pad("--organism", action="store", default="unknown",
+        help="Organism name (for ReferenceSet only)")
+    pad("--ploidy", action="store", default="haploid",
+        help="Genome ploidy (for ReferenceSet only)")
     pad("--well-sample-name",
         help=("Set the WellSample name for all movies (will generate new "
               "CollectionMetadata from blank template for any movies that are "

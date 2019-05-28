@@ -4,4 +4,3 @@ jinja2
 jsonschema
 xmlbuilder
 functools32
-pyBigWig <= 0.3.14

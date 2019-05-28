@@ -16,15 +16,6 @@ import sys
 import textwrap
 
 import pysam
-try:
-    import pyBigWig
-except ImportError:
-    pyBigWig = None
-try:
-    import h5py
-except ImportError:
-    h5py = None
-
 
 from pbcommand.pb_io.common import load_pipeline_chunks_from_json, \
     write_pipeline_chunks
@@ -32,7 +23,7 @@ from pbcommand.pb_io.report import load_report_from_json
 from pbcommand.models import PipelineChunk
 import pbcommand.testkit.core
 from pbcore.io import SubreadSet, ContigSet, FastaReader, FastqReader, \
-    ConsensusReadSet, AlignmentSet, ConsensusAlignmentSet, HdfSubreadSet, \
+    ConsensusReadSet, AlignmentSet, ConsensusAlignmentSet, \
     ReferenceSet, BarcodeSet, TranscriptSet, DataSet
 
 import pbtestdata
@@ -49,9 +40,6 @@ DATA = op.join(op.dirname(op.dirname(__file__)), "data")
 MNT_DATA = "/pbi/dept/secondary/siv/testdata"
 skip_if_missing_testdata = unittest.skipUnless(op.isdir(MNT_DATA),
     "Missing {d}".format(d=MNT_DATA))
-skip_if_no_pybigwig = unittest.skipUnless(pyBigWig is not None,
-    "pyBigWig is not installed")
-skip_if_no_h5py = unittest.skipUnless(h5py is not None, "h5py is not installed")
 
 
 def _write_fasta_or_contigset(file_name, make_faidx=False, n_records=251,
@@ -183,26 +171,6 @@ class TestScatterCCSZMWs(CompareScatteredRecordsBase,
     MAX_NCHUNKS = 6
     RESOLVED_MAX_NCHUNKS = 6
     CHUNK_KEYS = ("$chunk.ccsset_id",)
-
-
-# XXX it would be better to use local files for this but it's the least
-# important test in this file
-@skip_if_missing_testdata
-@skip_if_no_h5py
-class TestScatterHdfSubreads(CompareScatteredRecordsBase,
-                             pbcommand.testkit.core.PbTestScatterApp):
-
-    """
-    Test pbcoretools.tasks.scatter_hdfsubreads
-    """
-    READER_CLASS = HdfSubreadSet
-    DRIVER_BASE = "python -m pbcoretools.tasks.scatter_hdfsubreads"
-    INPUT_FILES = [
-        "/pbi/dept/secondary/siv/testdata/SA3-DS/lambda/2372215/0007_tiny/Analysis_Results/m150404_101626_42267_c100807920800000001823174110291514_s1_p0.all.hdfsubreadset.xml"
-    ]
-    MAX_NCHUNKS = 8
-    RESOLVED_MAX_NCHUNKS = 8
-    CHUNK_KEYS = ("$chunk.hdf5subreadset_id",)
 
 
 class TestScatterAlignmentsReference(pbcommand.testkit.core.PbTestScatterApp):
@@ -774,48 +742,6 @@ class TestGatherTxt(_SetupGatherApp):
         with open(fn, "w") as f:
             f.write("Output text {i}".format(i=i))
         return fn
-
-
-@skip_if_no_pybigwig
-class TestGatherBigwig(_SetupGatherApp):
-    DRIVER_BASE = "python -m pbcoretools.tasks.gather_bigwig"
-    NCHUNKS = 2
-
-    def _generate_chunk_output_file(self, i=None):
-        records = [
-            ("chr1", 4, 5, 0.45),
-            ("chr2", 8, 9, 1.0),
-            ("chr2", 9, 10, 6.7),
-            ("chr1", 1, 2, 1.5),
-            ("chr1", 2, 3, 4.5),
-            ("chr1", 3, 4, 1.9)
-        ]
-        fn = tempfile.NamedTemporaryFile(suffix=".bw").name
-        _records = records[(i*3):(i*3)+3]
-        assert len(_records) == 3
-        ranges = {}
-        for rec in _records:
-            seqid = rec[0]
-            pos = rec[1]
-            ranges.setdefault(seqid, (sys.maxsize, 0))
-            ranges[seqid] = (min(ranges[seqid][0], pos),
-                             max(ranges[seqid][1], pos))
-        bw = pyBigWig.open(fn, "w")
-        regions = [ (s, ranges[s][1]+1) for s in sorted(ranges.keys()) ]
-        bw.addHeader(regions)
-        bw.addEntries([rec[0] for rec in _records],
-                      [rec[1]-1 for rec in _records],
-                      ends=[rec[2]-1 for rec in _records],
-                      values=[rec[3] for rec in _records])
-        bw.close()
-        return fn
-
-    def run_after(self, rtc, output_dir):
-        bw = pyBigWig.open(rtc.task.output_files[0])
-        nrec = bw.header()["nBasesCovered"]
-        self.assertEqual(nrec, 6, "{n} != 6".format(n=nrec))
-        self.assertAlmostEqual(bw.stats("chr1", 2, 3)[0], 1.9, places=5)
-        self.assertAlmostEqual(bw.stats("chr2", 7, 8)[0], 1.0, places=5)
 
 
 class TestGatherTgz(_SetupGatherApp):

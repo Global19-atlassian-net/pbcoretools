@@ -37,7 +37,6 @@ def get_parser(parser=None):
             description=__doc__,
             default_level="CRITICAL")
     parser.add_argument('file', help="BAM, FASTA, or DataSet XML file")
-    parser.add_argument("-c", dest="use_termcolor", action="store_true")
     parser.add_argument("--quick", dest="quick", action="store_true",
                         help="Limits validation to the first 100 records "+
                              "(plus file header); equivalent to "+
@@ -59,6 +58,8 @@ def get_parser(parser=None):
                              "DataSet XML")
     parser.add_argument("-x", "--xunit-out", dest="xunit_out", action="store",
                         default=None, help="Xunit test results for Jenkins")
+    parser.add_argument("--alarms", dest="alarms_out", action="store",
+                        default=None, help="alarms.json for errors")
     g1 = parser.add_argument_group('bam', "BAM options")
     g2 = parser.add_argument_group('fasta', "Fasta options")
     bam.get_format_specific_args(g1)
@@ -133,8 +134,9 @@ class run_validator (object):
             raise NotImplementedError("No validator found for '%s'." % ext)
         self.t_end = time.time()
         if not args.quiet:
-            utils.show_validation_errors(self.errors, out=out,
-                                         use_termcolor=args.use_termcolor)
+            utils.show_validation_errors(self.errors, out=out)
+        if args.alarms_out:
+            utils.dump_alarms_json(self.errors, args.alarms_out)
         if args.xunit_out is not None:
             doc = self.to_xml()
             with open(args.xunit_out, "w") as xml_out:
