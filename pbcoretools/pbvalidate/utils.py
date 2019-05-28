@@ -3,8 +3,11 @@ from __future__ import division, print_function
 from collections import defaultdict
 from xml.dom import minidom
 import unittest
+import logging
+import json
 import sys
 
+log = logging.getLogger(__name__)
 
 def iter_non_redundant_errors(errors):
     """
@@ -22,36 +25,44 @@ def iter_non_redundant_errors(errors):
             yield error, counts[error]
 
 
-def show_validation_errors(errors, out=sys.stdout, verbose=False,
-                           use_termcolor=False):
+def _get_validation_error_lines(errors, verbose=False):
+    if (len(errors) == 0):
+        yield "(no spec violations detected)"
+    else:
+        yield "%d spec violation(s) detected:" % len(errors)
+    if verbose:
+        for error in errors:
+            yield str(error)
+    else:
+        for error, n_error in iter_non_redundant_errors(errors):
+            yield "  " + str(error)
+            if (n_error > 1):
+                yield "    [%d similar error(s) not displayed]" % (n_error - 1)
+
+
+def show_validation_errors(errors, out=sys.stdout, verbose=False):
     """
     Display a human-readable summary.  By default this will only print one
     error of each category; this can be overridden using the verbose flag.
     """
-    try:
-        import termcolor
-    except ImportError as e:
-        termcolor = None
+    for msg in _get_validation_error_lines(errors, verbose):
+        print(msg, file=out)
 
-    def _cprint(msg, c="yellow"):
-        if not use_termcolor or termcolor is None:
-            print(msg, file=out)
-        else:
-            termcolor.cprint(msg, c, attrs=['bold'], file=out)
-    if (len(errors) == 0):
-        if verbose:
-            _cprint("(no spec violations detected)", c="green")
-    else:
-        _cprint("%d spec violation(s) detected:" % len(errors), c="red")
-    if verbose:
-        for error in errors:
-            _cprint(str(error))
-    else:
-        for error, n_error in iter_non_redundant_errors(errors):
-            _cprint("  " + str(error))
-            if (n_error > 1):
-                print("    [%d similar error(s) not displayed]" % (n_error - 1),
-                      file=out)
+
+def dump_alarms_json(errors, alarms_out):
+    if len(errors) == 0:
+        log.info("Not writing %s because no errors were found", alarms_out)
+        return False
+    from pbcommand.models.common import PacBioAlarm
+    msg = "\n".join(list(_get_validation_error_lines(errors)))
+    PacBioAlarm.dump_error(
+        alarms_out,
+        None,
+        None,
+        msg,
+        "pbvalidate error",
+        logging.ERROR)
+    return True
 
 
 def generate_multiple_file_junit_report(results, xml_out, skipped_files=()):

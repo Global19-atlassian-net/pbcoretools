@@ -1,5 +1,4 @@
 [MASTER]
-extension-pkg-whitelist=pyBigWig
 
 [TYPECHECK]
 

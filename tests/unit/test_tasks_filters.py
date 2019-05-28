@@ -5,7 +5,7 @@ import logging
 import uuid
 import os.path as op
 
-from pbcore.io import (FastaReader, FastqReader, openDataSet, HdfSubreadSet,
+from pbcore.io import (FastaReader, FastqReader, openDataSet,
                        SubreadSet, ConsensusReadSet, TranscriptSet)
 import pbcore.data.datasets as data
 import pbcommand.testkit
