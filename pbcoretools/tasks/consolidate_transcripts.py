@@ -55,22 +55,26 @@ def get_consolidate_parser(tool_id, file_type, driver_exe, version, description)
     p.add_output_file_type(file_type,
                            "hq_ds_out",
                            "Output High Quality ",
-                           description="Output {t} of consolidated bam files".format(t=ds_type),
+                           description="Output {t} of consolidated bam files".format(
+                               t=ds_type),
                            default_name="combined.hq")
     p.add_output_file_type(file_type,
                            "lq_ds_out",
                            "Output Low Quality ",
-                           description="Output {t} of consolidated bam files".format(t=ds_type),
+                           description="Output {t} of consolidated bam files".format(
+                               t=ds_type),
                            default_name="combined.lq")
     p.add_output_file_type(FileTypes.JSON,
                            "hq_datastore",
                            "JSON Datastore",
-                           description="Datastore containing High Quality {t}".format(t=ds_type),
+                           description="Datastore containing High Quality {t}".format(
+                               t=ds_type),
                            default_name="resources.hq")
     p.add_output_file_type(FileTypes.JSON,
                            "lq_datastore",
                            "JSON Datastore",
-                           description="Datastore containing Low Quality {t}".format(t=ds_type),
+                           description="Datastore containing Low Quality {t}".format(
+                               t=ds_type),
                            default_name="resources.lq")
     return p
 
@@ -91,7 +95,8 @@ def consolidate_transcripts(ds_in, prefix):
     def _consolidate_transcripts_f(new_resource_file, numFiles, useTmp,
                                    perfix=prefix, ds_in=ds_in):
         external_files = ds_in.toExternalFiles()
-        assert len(external_files) >= 1, "{!r} must contain one or more bam files".format(ds_in)
+        assert len(
+            external_files) >= 1, "{!r} must contain one or more bam files".format(ds_in)
         header = AlignmentFile(external_files[0], 'rb', check_sq=False).header
         with AlignmentFile(new_resource_file, 'wb', header=header) as writer:
             for external_file in external_files:
@@ -143,8 +148,10 @@ def args_runner(args):
 def rtc_runner(rtc):
     hq_prefix, lq_prefix = get_prefixes(rtc.task.input_files[0])
     ds_items = [
-        (rtc.task.input_files[1], rtc.task.output_files[0], rtc.task.output_files[2], hq_prefix),
-        (rtc.task.input_files[2], rtc.task.output_files[1], rtc.task.output_files[3], lq_prefix)
+        (rtc.task.input_files[1], rtc.task.output_files[0],
+         rtc.task.output_files[2], hq_prefix),
+        (rtc.task.input_files[2], rtc.task.output_files[1],
+         rtc.task.output_files[3], lq_prefix)
     ]
     return __runner(ds_items)
 

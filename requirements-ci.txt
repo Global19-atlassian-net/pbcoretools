@@ -4,3 +4,5 @@ jinja2
 jsonschema
 xmlbuilder
 functools32
+pytest-xdist
+pytest-cov

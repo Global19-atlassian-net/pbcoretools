@@ -10,7 +10,7 @@ import os.path as op
 import sys
 
 from pbcommand.cli import (pacbio_args_runner,
-    get_default_argparser_with_base_opts)
+                           get_default_argparser_with_base_opts)
 from pbcommand.utils import setup_log
 
 from pbcoretools.tasks.filters import run_filter_dataset

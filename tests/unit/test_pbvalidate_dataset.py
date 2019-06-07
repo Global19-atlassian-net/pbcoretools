@@ -121,7 +121,7 @@ class TestCase (unittest.TestCase):
     @unittest.skipUnless(os.path.isdir(TESTDATA_DIR), "Testdata not available")
     def test_validate_transcriptset(self):
         DS = "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/unpolished.transcriptset.xml"
-        self.assertEqual(subprocess.call(["pbvalidate", DS]), 0)
+        self.assertEqual(subprocess.call(["pbvalidate", "--max-records", "1", DS]), 0)
 
 
 class TestToolContract(pbcommand.testkit.PbTestApp):

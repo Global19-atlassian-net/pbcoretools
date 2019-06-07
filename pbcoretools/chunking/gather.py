@@ -435,6 +435,7 @@ def __rtc_gather_runner(func, rtc):
 def __args_gather_runner(func, args):
     return __gather_runner(func, args.chunk_json, args.output, args.chunk_key)
 
+
 # These make assumptions about the CLI argparser args labels (e.g.,
 # args.chunk_key)
 _args_runner_gather_fasta = P(__args_gather_runner, gather_fasta)

@@ -13,6 +13,7 @@ from pbcoretools.chunking.gather import run_main_gather_report
 
 log = logging.getLogger(__name__)
 
+
 class Constants(object):
     TOOL_ID = "pbcoretools.tasks.gather_json"
     CHUNK_KEY = "$chunk.report_id"

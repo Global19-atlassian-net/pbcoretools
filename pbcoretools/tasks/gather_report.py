@@ -10,6 +10,7 @@ from pbcoretools.chunking.gather import run_main_gather_report
 
 log = logging.getLogger(__name__)
 
+
 class Constants(object):
     TOOL_ID = "pbcoretools.tasks.gather_report"
     CHUNK_KEY = "$chunk.report_id"
@@ -45,6 +46,7 @@ def get_parser(constants=Constants):
 
 def args_runner(args):
     return run_main_gather_report(args.cjson_in, args.json_out, args.chunk_key)
+
 
 def rtc_runner(rtc):
     return run_main_gather_report(rtc.task.input_files[0], rtc.task.output_files[0], Constants.CHUNK_KEY)

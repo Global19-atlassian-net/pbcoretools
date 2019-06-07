@@ -1,4 +1,5 @@
 import logging
+import tempfile
 import unittest
 import os
 import sys
@@ -48,6 +49,10 @@ class TextFileReader(ReaderBase):
             yield i.rstrip()
 
 
+def _get_tmp(fn):
+    return tempfile.NamedTemporaryFile(suffix="."+fn).name
+
+
 def _write_example_file(lines, path):
     with open(path, 'w+') as w:
         w.write("\n".join(lines))
@@ -67,7 +72,7 @@ def _to_max_records(max_records):
 
 
 class TestValidatorsContext(unittest.TestCase):
-    FILE_PATH = "tmp_file.txt"
+    FILE_PATH = _get_tmp("tmp_file.txt")
     DATA = ["cat dog bird", "dog"]
 
     def setUp(self):
@@ -81,7 +86,7 @@ class TestValidatorsContext(unittest.TestCase):
         """This is a valid file format"""
         validators = [ValidateTxtCatRecord(), ValidateTxtDogRecord(),
                       ValidateTxtFile()]
-        file_path = "file.txt"
+        file_path = _get_tmp("file.txt")
         contents = ["cat dog ", "cat dog bird", "cat dog tree"]
         _write_example_file(contents, file_path)
         errors, metrics = run_validators(ValidatorContextFirstError, file_path,
@@ -93,7 +98,7 @@ class TestValidatorsContext(unittest.TestCase):
         """This file has many errors"""
         validators = [
             ValidateTxtCatRecord(), ValidateTxtDogRecord(), ValidateTxtFile()]
-        file_path = "file.doc"
+        file_path = _get_tmp("file.doc")
         contents = ["cat dog ", "cat dog bird", "cat dog tree"]
         # records with errors
         contents.extend(["fish"] * 5)
@@ -110,7 +115,7 @@ class TestValidatorsContext(unittest.TestCase):
         """Test for consistent behavior when a validator is broken"""
         validators = [ValidateTxtCatRecord(), ValidateTxtDogRecord(),
                       ValidateTxtFile(), ValidateBad()]
-        file_path = "file.txt"
+        file_path = _get_tmp("file.txt")
         contents = ["cat dog ", "cat dog bird", "cat dog tree"]
         contents.extend(["fish"] * 1)
         _write_example_file(contents, file_path)
@@ -120,7 +125,3 @@ class TestValidatorsContext(unittest.TestCase):
         os.remove(file_path)
         # TODO figure out how to check for log error output showing traceback
         # of exception raised by failed validator
-
-
-if __name__ == "__main__":
-    unittest.main()

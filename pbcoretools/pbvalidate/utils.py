@@ -9,6 +9,7 @@ import sys
 
 log = logging.getLogger(__name__)
 
+
 def iter_non_redundant_errors(errors):
     """
     Iterate over errors, skipping any that are judged to be duplicates

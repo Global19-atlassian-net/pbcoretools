@@ -24,6 +24,7 @@ from pbcoretools.tasks.bam2fasta_archive import get_parser_impl
 
 log = logging.getLogger(__name__)
 
+
 class Constants(object):
     TOOL_ID = "pbcoretools.tasks.bam2fastq_ccs"
     VERSION = "0.3.1"
@@ -61,6 +62,7 @@ def main(argv=sys.argv):
                            run_rtc,
                            log,
                            setup_log)
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

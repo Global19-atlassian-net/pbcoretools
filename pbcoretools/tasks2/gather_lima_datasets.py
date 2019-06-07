@@ -19,7 +19,6 @@ log = logging.getLogger(__name__)
 __version__ = "0.1"
 
 
-
 def _merge_chunks(file_names, datastore_file):
     output_file = op.basename(file_names[0])
     ds = openDataSet(*file_names)

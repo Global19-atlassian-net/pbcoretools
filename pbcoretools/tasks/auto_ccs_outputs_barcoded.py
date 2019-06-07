@@ -23,7 +23,7 @@ class Constants(object):
     TOOL_ID = "pbcoretools.tasks.auto_ccs_outputs_barcoded"
     VERSION = "0.1.0"
     DRIVER = "python -m pbcoretools.tasks.auto_ccs_outputs_barcoded --resolved-tool-contract"
-    MAX_NPROC = 8 # just a guess
+    MAX_NPROC = 8  # just a guess
 
 
 def _get_parser():
@@ -34,7 +34,7 @@ def _get_parser():
                      Constants.DRIVER,
                      is_distributed=True,
                      nproc=Constants.MAX_NPROC)
-                     #resource_types=(ResourceTypes.TMP_DIR,))
+    # resource_types=(ResourceTypes.TMP_DIR,))
     p.add_input_file_type(FileTypes.DATASTORE, "datastore_in",
                           "DataStore JSON",
                           "DataStore JSON of ConsensusReadSet files")
@@ -83,6 +83,7 @@ def _main(argv=sys.argv):
                            _run_rtc,
                            log,
                            setup_log)
+
 
 if __name__ == "__main__":
     sys.exit(_main(sys.argv))

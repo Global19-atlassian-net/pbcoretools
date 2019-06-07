@@ -8,7 +8,7 @@ import os.path as op
 import sys
 
 from pbcommand.cli import (pacbio_args_runner,
-    get_default_argparser_with_base_opts)
+                           get_default_argparser_with_base_opts)
 from pbcommand.utils import setup_log
 
 from pbcoretools.tasks.filters import split_transcripts, Constants
@@ -37,7 +37,7 @@ def _get_parser():
                    help="Name of output high-quality TranscriptSet")
     p.add_argument("--cutoff", action="store", type=float,
                    default=Constants.TRANSCRIPT_QV_CUTOFF,
-                   help="Minimum read quality (0 to 1.0) of high-quality "+
+                   help="Minimum read quality (0 to 1.0) of high-quality " +
                         "transcripts")
     return p
 

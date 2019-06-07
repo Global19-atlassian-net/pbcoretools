@@ -138,7 +138,7 @@ class RootTagError(ValidatorError):
 
 
 class NumRecordsError(ValidatorError):
-    MESSAGE_FORMAT = "The number of records specified in the metadata (%s) "+\
+    MESSAGE_FORMAT = "The number of records specified in the metadata (%s) " +\
         "is greater than the number of records in the data file(s) (%s)."
 
 
@@ -150,9 +150,10 @@ class ValidateXML(ValidateFile):
             DataSetValidator.validateFile(path, skipResources=True)
         except pyxbexceptions.StructuralBadDocumentError as e:
             emsg = "{t} ('<{n}>')".format(t=type(e).__name__,
-                    n=e.node.tagName) # pylint: disable=no-member
+                                          n=e.node.tagName)  # pylint: disable=no-member
         except pyxbexceptions.ValidationError as e:
-            emsg = "{t}: {m}".format(t=type(e).__name__, m=e.details()) # pylint: disable=no-member
+            emsg = "{t}: {m}".format(
+                t=type(e).__name__, m=e.details())  # pylint: disable=no-member
         except pyxbexceptions.PyXBException as e:
             emsg = "{t}: {m})".format(t=type(e).__name__, m=str(e.message))
         except Exception as e:
@@ -196,7 +197,7 @@ class ValidateEncoding(ValidateXML):
 
             def handle_xml_decl(version, encoding, standalone):
                 if (not self._has_xml_declaration and
-                    (encoding is None or encoding.lower() != "utf-8")):
+                        (encoding is None or encoding.lower() != "utf-8")):
                     e.append(MissingEncodingError.from_args(path))
                 self._has_xml_declaration = True
             p.XmlDeclHandler = handle_xml_decl
@@ -370,7 +371,8 @@ class ValidateFileProxy (ValidateFileObject):
     validator_class = None
 
     def __init__(self, **kwds):
-        self._validator = self.validator_class(**kwds) # pylint: disable=not-callable
+        self._validator = self.validator_class(
+            **kwds)  # pylint: disable=not-callable
         self._errors = set([])
 
     def validate(self, file_obj):
@@ -442,7 +444,6 @@ class ValidateNumRecords(ValidateResources):
         if nr_metadata > nr_actual:
             return [NumRecordsError.from_args(ds, nr_metadata, nr_actual)]
         return []
-
 
 
 class DatasetReader (object):
@@ -521,16 +522,16 @@ def validate_dataset(
     log.debug("ReaderClass: %s" % ReaderClass.__name__)
     try:
         # XXX suppressing logging errors temporarily
-        #logging.disable(logging.CRITICAL)
+        # logging.disable(logging.CRITICAL)
         try:
             ds = ReaderClass(file_name, strict=True)
         finally:
-            pass #logging.disable(logging.NOTSET)
+            pass  # logging.disable(logging.NOTSET)
     except Exception as e:
         # XXX in strict mode the reader will cough up an IOError if the
         # requested dataset type does not agree with the XML.  if this happens
         # there's no point doing any additional validation.
-        if False: #True:
+        if False:  # True:
             # XXX actually, it can cough up other errors too if there is
             # something wrong with the underlying files and it tries to read
             # them immediately.  Still treating this as a validation error, but

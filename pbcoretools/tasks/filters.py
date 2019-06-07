@@ -40,6 +40,7 @@ subreads_file_type = OutputFileType(FileTypes.DS_SUBREADS.file_type_id,
                                     "SubreadSet", "Filtered SubreadSet XML",
                                     "Filtered SubreadSet XML", "filtered")
 
+
 def sanitize_read_length(read_length):
     if read_length:
         if not re.search('^-?\d*(\.\d*)?$', str(read_length).strip()):
@@ -54,7 +55,8 @@ def sanitize_read_length(read_length):
 def combine_filters(ds, filters):
     if len(ds.filters) > 0:
         for old_filter in ds.filters:
-            log.info("Combining user-supplied filters with existing filter '%s", old_filter)
+            log.info(
+                "Combining user-supplied filters with existing filter '%s", old_filter)
             for name, options in filters.items():
                 for option_params in options:
                     oper, value = option_params[0:2]
@@ -84,7 +86,7 @@ def run_filter_dataset(in_file, out_file, read_length, other_filters,
     tags = set()
     if rlen or len(filters) > 0 or not downsample_factor in [0, 1]:
         dataSet = openDataSet(in_file)
-        dataSet.updateCounts() # just in case
+        dataSet.updateCounts()  # just in case
         combine_filters(dataSet, filters)
         tags.update({t.strip() for t in dataSet.tags.strip().split(",")})
         if rlen:
@@ -112,9 +114,9 @@ def run_filter_dataset(in_file, out_file, read_length, other_filters,
 @registry("filterdataset", "0.3.2",
           FileTypes.DS_SUBREADS,
           subreads_file_type, is_distributed=True, nproc=4,
-          options={"read_length":rl_opt,
-                   "downsample_factor":downsample_opt,
-                   "other_filters":filters_opt})
+          options={"read_length": rl_opt,
+                   "downsample_factor": downsample_opt,
+                   "other_filters": filters_opt})
 def run_filterDataSet(rtc):
     return run_filter_dataset(
         rtc.task.input_files[0], rtc.task.output_files[0],
@@ -149,6 +151,7 @@ lq_file_type = OutputFileType(FileTypes.DS_TRANSCRIPT.file_type_id,
 hq_qv_cutoff = QuickOpt(Constants.TRANSCRIPT_QV_CUTOFF,
                         "QV cutoff for HQ transcripts",
                         "Minimum read quality required for a transcript to be considered 'high-quality'")
+
 
 @registry("split_transcripts", "0.1.1",
           FileTypes.DS_TRANSCRIPT,

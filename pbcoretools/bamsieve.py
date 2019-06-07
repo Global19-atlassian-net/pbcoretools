@@ -17,14 +17,14 @@ import re
 import sys
 
 try:
-    from pysam.calignmentfile import AlignmentFile # pylint: disable=no-name-in-module, import-error, fixme, line-too-long
+    from pysam.calignmentfile import AlignmentFile  # pylint: disable=no-name-in-module, import-error, fixme, line-too-long
 except ImportError:
-    from pysam.libcalignmentfile import AlignmentFile # pylint: disable=no-name-in-module, import-error, fixme, line-too-long
+    from pysam.libcalignmentfile import AlignmentFile  # pylint: disable=no-name-in-module, import-error, fixme, line-too-long
 
 from pbcommand.common_options import (add_log_quiet_option,
-    add_log_verbose_option)
+                                      add_log_verbose_option)
 from pbcommand.cli import (pacbio_args_runner,
-    get_default_argparser_with_base_opts)
+                           get_default_argparser_with_base_opts)
 from pbcommand.utils import setup_log
 from pbcore.io import openDataFile, openDataSet, BamReader, IndexedBamReader, ReadSet
 
@@ -106,7 +106,7 @@ def _process_subread_list(subread_list):
 
 
 def _anonymize_sequence(rec):
-    rseq_ = [random.randint(0,3) for i in range(len(rec.query_sequence))]
+    rseq_ = [random.randint(0, 3) for i in range(len(rec.query_sequence))]
     rseq = "".join(["ACTG"[i] for i in rseq_])
     rec.query_sequence = rseq
     return rec
@@ -119,13 +119,14 @@ def _create_whitelist(bam_readers, percentage=None, count=None):
         movies.update(set([rg["MovieName"] for rg in bam.readGroupTable]))
         zmws.update(set(bam.pbi.holeNumber))
     if len(movies) > 1:
-        warnings.warn("The input BAM/dataset contains multiple movies, "+
+        warnings.warn("The input BAM/dataset contains multiple movies, " +
                       "which may have overlapping ZMWs.")
     if percentage is not None:
         count = int(len(zmws) * percentage / 100.0)
     zmws = list(zmws)
     if count >= len(zmws):
-        warnings.warn("Count exceeds total number of ZMWs (%d > %d); will output all records" % (count, len(zmws)))
+        warnings.warn("Count exceeds total number of ZMWs (%d > %d); will output all records" % (
+            count, len(zmws)))
         return set(zmws)
     have_zmws = set()
     whitelist = set()
@@ -145,7 +146,7 @@ def _process_bam_whitelist(bam_in, bam_out, whitelist, blacklist,
 
     def _is_whitelisted(x):
         if ((len(whitelist) > 0 and x in whitelist) or
-            (len(blacklist) > 0 and not x in blacklist)):
+                (len(blacklist) > 0 and not x in blacklist)):
             return True
 
     def _add_read(i_rec):
@@ -200,7 +201,7 @@ def filter_reads(input_bam,
         return 1
     n_specified = 4 - [whitelist, blacklist, percentage, count].count(None)
     if n_specified != 1:
-        log.error("You must choose one and only one of the following "+
+        log.error("You must choose one and only one of the following " +
                   "options: --whitelist, --blacklist, --count, --percentage")
         return 1
     if seed is not None:
@@ -222,7 +223,8 @@ def filter_reads(input_bam,
             ("consensusalignmentset", "ccs")
         ])
         if not ds_type in ext2:
-            raise ValueError("Invalid output file extension '{t}.xml'; valid extensions are:\n{e}".format(t=ds_type, e="\n".join(["  %s.xml" % e for e in ext2.keys()])))
+            raise ValueError("Invalid output file extension '{t}.xml'; valid extensions are:\n{e}".format(
+                t=ds_type, e="\n".join(["  %s.xml" % e for e in ext2.keys()])))
         output_ds = output_bam
         base_name = ".".join(output_ds.split(".")[:-2])
         output_bam = base_name + "." + ".".join([ext2[ds_type], "bam"])
@@ -274,8 +276,8 @@ def filter_reads(input_bam,
             for ext_res in ds_in.externalResources:
                 if ext_res.scraps is not None:
                     if use_barcodes:
-                        log.warn("Scraps BAM is present but lacks "+
-                                 "barcodes - will not be propagated "+
+                        log.warn("Scraps BAM is present but lacks " +
+                                 "barcodes - will not be propagated " +
                                  "to output SubreadSet")
                     else:
                         scraps_in = IndexedBamReader(ext_res.scraps)
@@ -300,7 +302,7 @@ def filter_reads(input_bam,
                 for ext_res in ds_in.externalResources:
                     if ext_res.scraps is not None:
                         scraps_in_ = IndexedBamReader(ext_res.scraps)
-                        n_records, have_zmws_ =_process_bam_whitelist(
+                        n_records, have_zmws_ = _process_bam_whitelist(
                             scraps_in_, scraps_out, _whitelist, _blacklist,
                             use_barcodes=use_barcodes,
                             anonymize=anonymize,
@@ -311,6 +313,7 @@ def filter_reads(input_bam,
         return 1
     log.info("{n} records from {z} ZMWs written".format(
         n=n_file_reads, z=len(have_zmws)))
+
     def _run_pbindex(bam_file):
         try:
             rc = subprocess.call(["pbindex", bam_file])
@@ -354,7 +357,7 @@ def _iter_bam_files(input_file):
     def __read_bam(fn):
         if op.exists(fn + ".pbi"):
             with IndexedBamReader(fn) as bam_in:
-               return bam_in
+                return bam_in
         else:
             with BamReader(fn) as bam_in:
                 return bam_in
@@ -405,9 +408,9 @@ def run(args):
 
 def get_parser():
     p = get_default_argparser_with_base_opts(
-            version=VERSION,
-            description=__doc__,
-            default_level="WARN")
+        version=VERSION,
+        description=__doc__,
+        default_level="WARN")
     p.add_argument("input_bam",
                    help="Input BAM or DataSet from which reads will be read")
     p.add_argument("output_bam", nargs='?', default=None,
@@ -440,15 +443,15 @@ def get_parser():
     p.add_argument("--anonymize", action="store_true",
                    help="Randomize sequences for privacy")
     p.add_argument("--barcodes", action="store_true",
-                   help="Indicates that the whitelist or blacklist contains "+
+                   help="Indicates that the whitelist or blacklist contains " +
                         "barcode indices instead of ZMW numbers")
     p.add_argument("--sample-scraps", action="store_true",
-                   help="If enabled, --percentage and --count will include "+
-                        "hole numbers from scraps BAM files when picking a "+
-                        "random sample (default is to sample only ZMWs "+
+                   help="If enabled, --percentage and --count will include " +
+                        "hole numbers from scraps BAM files when picking a " +
+                        "random sample (default is to sample only ZMWs " +
                         "present in subreads BAM).")
     p.add_argument("--keep-uuid", action="store_true",
-                   help="If enabled, the UUID from the input dataset will "+
+                   help="If enabled, the UUID from the input dataset will " +
                         "be used for the output as well.")
     return p
 
@@ -460,6 +463,7 @@ def main(argv=sys.argv):
         args_runner_func=run,
         alog=log,
         setup_log_func=setup_log)
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
