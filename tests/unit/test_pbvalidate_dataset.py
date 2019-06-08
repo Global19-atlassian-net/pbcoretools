@@ -122,23 +122,3 @@ class TestCase (unittest.TestCase):
     def test_validate_transcriptset(self):
         DS = "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/unpolished.transcriptset.xml"
         self.assertEqual(subprocess.call(["pbvalidate", "--max-records", "1", DS]), 0)
-
-
-class TestToolContract(pbcommand.testkit.PbTestApp):
-    DRIVER_BASE = "python -m pbcoretools.pbvalidate.main"
-    INPUT_FILES = [pbtestdata.get_file("subreads-sequel")]
-    REQUIRES_PBCORE = True
-
-
-class TestToolContractFailing(pbcommand.testkit.PbTestApp):
-    DRIVER_BASE = "python -m pbcoretools.pbvalidate.main"
-    INPUT_FILES = [os.path.join(TESTDATA_DIR, "tst_2_subreads.xml")]
-    REQUIRES_PBCORE = True
-
-    def test_run_e2e(self):
-        self.assertRaises(AssertionError,
-                          super(TestToolContractFailing, self).test_run_e2e)
-
-
-if __name__ == "__main__":
-    unittest.main()

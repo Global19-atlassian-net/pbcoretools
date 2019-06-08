@@ -220,7 +220,9 @@ def filter_reads(input_bam,
             ("subreadset", "subreads"),
             ("alignmentset", "subreads"),
             ("consensusreadset", "ccs"),
-            ("consensusalignmentset", "ccs")
+            ("consensusalignmentset", "ccs"),
+            ("transcriptset", "transcripts"),
+            ("transcriptalignmentset", "transcripts")
         ])
         if not ds_type in ext2:
             raise ValueError("Invalid output file extension '{t}.xml'; valid extensions are:\n{e}".format(

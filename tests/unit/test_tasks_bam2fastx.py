@@ -25,7 +25,7 @@ import pbtestdata
 
 from pbcoretools import pbvalidate
 
-from base import get_temp_file
+from base import get_temp_file, IntegrationBase
 from test_file_utils import (validate_barcoded_datastore_files,
                              split_barcoded_dataset,
                              make_mock_laa_inputs,
@@ -368,52 +368,50 @@ class TestBam2FastqBarcodedNoLabels(TestBam2FastaBarcodedNoLabels):
     EXT = "fastq"
 
 
-def _setup_transcripts(hq_file, lq_file):
-    from pbcoretools.tasks.filters import split_transcripts
-    DS = "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/polished.transcriptset.xml"
-    split_transcripts(DS, hq_file, lq_file, 0.98)
-
-
 @skip_unless_bam2fastx
-class TestBam2FastaTranscripts(pbcommand.testkit.PbTestApp):
-    TASK_ID = "pbcoretools.tasks.bam2fasta_transcripts"
-    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fasta_transcripts"
+class TestBam2FastxTranscripts(IntegrationBase):
     INPUT_FILES = [
-        tempfile.NamedTemporaryFile(suffix=".transcriptset.xml").name,
-        tempfile.NamedTemporaryFile(suffix=".transcriptset.xml").name,
+        "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/polished.hq_tiny.transcriptset.xml",
+        "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/polished.lq_tiny.transcriptset.xml",
         pbtestdata.get_file("subreads-biosample-1")
     ]
-    READER_CLASS = FastaReader
 
-    @classmethod
-    def setUpClass(cls):
-        _setup_transcripts(cls.INPUT_FILES[0], cls.INPUT_FILES[1])
-        super(TestBam2FastaTranscripts, cls).setUpClass()
-
-    def run_after(self, rtc, output_dir):
+    def run_after(self, hq_out, lq_out, ReaderClass):
         def _compare_records(bam_file, fx_records, transcript_type):
             with TranscriptSet(bam_file) as bam_reader:
                 for bam_rec, fx_rec in zip(bam_reader.__iter__(), fx_records):
                     seqid = "Alice_{t}_{i}".format(t=transcript_type,
                                                    i=bam_rec.qName)
                     self.assertEqual(fx_rec.id, seqid)
-        with self.READER_CLASS(rtc.task.output_files[0]) as hq_fastx:
+        with ReaderClass(hq_out) as hq_fastx:
             records = [rec for rec in hq_fastx]
-            self.assertEqual(len(records), 11701)
-            _compare_records(rtc.task.input_files[0], records, "HQ")
-        with self.READER_CLASS(rtc.task.output_files[1]) as lq_fastx:
+            self.assertEqual(len(records), 1)
+            _compare_records(self.INPUT_FILES[0], records, "HQ")
+        with ReaderClass(lq_out) as lq_fastx:
             records = [rec for rec in lq_fastx]
-            self.assertEqual(len(records), 44)
-            _compare_records(rtc.task.input_files[1], records, "LQ")
+            self.assertEqual(len(records), 1)
+            _compare_records(self.INPUT_FILES[1], records, "LQ")
 
+    def _get_args(self, fastx):
+        return [
+            "python", "-m",
+            "pbcoretools.tasks.bam2{f}_transcripts".format(f=fastx),
+            self.INPUT_FILES[0],
+            self.INPUT_FILES[1],
+            self.INPUT_FILES[2],
+            "hq_transcripts.{f}".format(f=fastx),
+            "lq_transcripts.{f}".format(f=fastx)
+        ]
 
-@skip_unless_bam2fastx
-class TestBam2FastqTranscripts(TestBam2FastaTranscripts):
-    TASK_ID = "pbcoretools.tasks.bam2fastq_transcripts"
-    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fastq_transcripts"
-    DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fastq_transcripts --emit-tool-contract"
-    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fastq_transcripts --resolved-tool-contract"
-    READER_CLASS = FastqReader
+    def test_bam2fasta_transcripts(self):
+        args = self._get_args("fasta")
+        self._check_call(args)
+        self.run_after(args[-2], args[-1], FastaReader)
+
+    def test_bam2fastq_transcripts(self):
+        args = self._get_args("fastq")
+        self._check_call(args)
+        self.run_after(args[-2], args[-1], FastqReader)
 
 
 # Ensure that pytest ignores the base-class.
