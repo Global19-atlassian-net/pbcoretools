@@ -204,34 +204,6 @@ class TestBam2FastqArchive(TestBam2Fastq):
 
 
 @skip_unless_bam2fastx
-class TestBam2FastaCCS(_BaseTestBam2Fasta):
-    TASK_ID = "pbcoretools.tasks.bam2fasta_ccs"
-    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fasta_ccs"
-    INPUT_FILES = [
-        pbtestdata.get_file("rsii-ccs"),
-        pbtestdata.get_file("subreads-sequel") # XXX NOT BARCODED!
-    ]
-    READER_CLASS = FastaReader
-    NRECORDS_EXPECTED = None
-
-    def _get_output_file(self, rtc):
-        return _get_zipped_fastx_file(rtc.task.output_files[0])
-
-
-@skip_unless_bam2fastx
-class TestBam2FastqCCS(TestBam2FastaCCS):
-    TASK_ID = "pbcoretools.tasks.bam2fastq_ccs"
-    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fastq_ccs"
-    DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fastq_ccs --emit-tool-contract "
-    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fastq_ccs --resolved-tool-contract "
-    READER_CLASS = FastqReader
-    NRECORDS_EXPECTED = None
-
-    def _get_output_file(self, rtc):
-        return _get_zipped_fastx_file(rtc.task.output_files[0])
-
-
-@skip_unless_bam2fastx
 class TestBam2FastaBarcoded(pbcommand.testkit.PbTestApp):
     TASK_ID = "pbcoretools.tasks.bam2fasta_archive"
     DRIVER_BASE = "python -m pbcoretools.tasks.bam2fasta_archive"
@@ -268,62 +240,6 @@ class TestBam2FastaBarcoded(pbcommand.testkit.PbTestApp):
                     self.assertEqual(records[0], fastx_id)
         finally:
             os.chdir(_cwd)
-
-
-@skip_unless_bam2fastx
-class TestBam2FastaCCSBarcoded(_BaseTestBam2Fasta):
-    TASK_ID = "pbcoretools.tasks.bam2fasta_ccs"
-    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fasta_ccs"
-    INPUT_FILES = [
-        pbtestdata.get_file("ccs-barcoded"),
-        pbtestdata.get_file("barcoded-subreadset")
-    ]
-    READER_CLASS = FastaReader
-    NRECORDS_EXPECTED = 2
-    EXT = "fasta"
-
-    def _get_output_file(self, rtc):
-        return _get_zipped_fastx_file(rtc.task.output_files[0])
-
-    def _get_expected_file_names(self):
-        return [
-            "ccs.Alice.lbc1--lbc1.{e}".format(e=self.EXT),
-            "ccs.Charles.lbc3--lbc3.{e}".format(e=self.EXT)
-        ]
-
-    def run_after(self, rtc, output_dir):
-        tmp_dir = tempfile.mkdtemp()
-        _cwd = os.getcwd()
-        try:
-            os.chdir(tmp_dir)
-            ZipFile(rtc.task.output_files[0], "r").extractall()
-            file_names = sorted(os.listdir(tmp_dir))
-            self.assertEqual(file_names, self._get_expected_file_names())
-            fastx_ids = [
-                "m54008_160219_003234/46727655/ccs", # bc 0
-                "m54008_160219_003234/28901719/ccs", # bc 2
-            ]
-            for file_name, fastx_id in zip(file_names, fastx_ids):
-                with self.READER_CLASS(file_name) as f:
-                    records = [rec.id for rec in f]
-                    self.assertEqual(len(records), 1)
-                    self.assertEqual(records[0], fastx_id)
-        finally:
-            os.chdir(_cwd)
-
-
-@skip_unless_bam2fastx
-class TestBam2FastqCCSBarcoded(TestBam2FastaCCSBarcoded):
-    TASK_ID = "pbcoretools.tasks.bam2fastq_ccs"
-    DRIVER_BASE = "python -m pbcoretools.tasks.bam2fastq_ccs"
-    DRIVER_EMIT = "python -m pbcoretools.tasks.bam2fastq_ccs --emit-tool-contract "
-    DRIVER_RESOLVE = "python -m pbcoretools.tasks.bam2fastq_ccs --resolved-tool-contract "
-    READER_CLASS = FastqReader
-    NRECORDS_EXPECTED = 2
-    EXT = "fastq"
-
-    def _get_output_file(self, rtc):
-        return _get_zipped_fastx_file(rtc.task.output_files[0])
 
 
 @skip_unless_bam2fastx

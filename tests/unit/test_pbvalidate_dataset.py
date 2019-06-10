@@ -9,7 +9,6 @@ try:
 except ImportError:
     pyxb = None
 
-import pbcommand.testkit
 import pbcore.data.datasets as data
 import pbcore.io
 

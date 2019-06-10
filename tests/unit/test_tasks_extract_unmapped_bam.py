@@ -3,7 +3,6 @@ import tempfile
 import unittest
 import re
 
-import pbcommand.testkit
 from pbcommand.models.common import DataStore
 from pbcore.io import AlignmentSet, SubreadSet
 
