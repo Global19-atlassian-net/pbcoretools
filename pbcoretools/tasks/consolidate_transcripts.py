@@ -5,6 +5,7 @@ string (e.g., 'mysample_HQ_') to every transcript names.
 """
 
 import sys
+import os.path as op
 import logging
 import subprocess
 
@@ -13,7 +14,7 @@ from pbcommand.cli import pbparser_runner
 from pbcommand.models import FileTypes, get_pbparser, ResourceTypes, DataStore, DataStoreFile
 from pysam import AlignmentFile  # pylint: disable=no-member, no-name-in-module
 
-from pbcore.io import TranscriptSet, openDataSet
+from pbcore.io import ConsensusAlignmentSet, TranscriptAlignmentSet, TranscriptSet, openDataSet
 from pbcoretools.file_utils import get_prefixes
 from pbcoretools.datastore_utils import dataset_to_datastore
 
@@ -116,6 +117,14 @@ def bam_of_dataset(dataset_fn):
     return op.splitext(dataset_fn)[0] + ".bam"
 
 
+def get_reads_name(ds_in):
+    if isinstance(ds_in, TranscriptAlignmentSet):
+        return 'Aligned transcripts'
+    if isinstance(ds_in, ConsensusAlignmentSet):
+        return 'Aligned consensus reads'
+    return 'Aligned reads'
+
+
 def run_consolidate(dataset_file, output_file, datastore_file,
                     consolidate, n_files, task_id=Constants.TOOL_ID,
                     consolidate_f=lambda ds: ds.consolidate):
@@ -213,7 +222,7 @@ def main(argv=sys.argv):
     logging.basicConfig(level=logging.DEBUG)
     log = logging.getLogger()
     parser = get_consolidate_parser(Constants.TOOL_ID, Constants.INPUT_FILE_TYPE,
-                                    Constants.DRIVER, Constants.VERSION, Constants.TOOL_DESC)
+                                    Constants.DRIVER, "0.1", Constants.TOOL_DESC)
     return pbparser_runner(argv[1:],
                            parser,
                            args_runner,
