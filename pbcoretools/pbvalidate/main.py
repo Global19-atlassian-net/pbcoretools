@@ -17,7 +17,7 @@ import re
 import sys
 
 from pbcommand.cli import (pbparser_runner,
-    get_default_argparser_with_base_opts)
+                           get_default_argparser_with_base_opts)
 from pbcommand.models.parser import get_pbparser
 from pbcommand.models import FileTypes
 from pbcommand.utils import setup_log
@@ -38,15 +38,15 @@ def get_parser(parser=None):
             default_level="CRITICAL")
     parser.add_argument('file', help="BAM, FASTA, or DataSet XML file")
     parser.add_argument("--quick", dest="quick", action="store_true",
-                        help="Limits validation to the first 100 records "+
-                             "(plus file header); equivalent to "+
+                        help="Limits validation to the first 100 records " +
+                             "(plus file header); equivalent to " +
                              "--max-records=100")
     parser.add_argument("--max", dest="max_errors", action="store", type=int,
-                        help="Exit after MAX_ERRORS have been recorded "+
+                        help="Exit after MAX_ERRORS have been recorded " +
                              "(DEFAULT: check entire file)")
     parser.add_argument("--max-records", dest="max_records", action="store",
                         type=int,
-                        help="Exit after MAX_RECORDS have been inspected "+
+                        help="Exit after MAX_RECORDS have been inspected " +
                              "(DEFAULT: check entire file)")
     parser.add_argument("--type", dest="file_type", action="store",
                         choices=["BAM", "Fasta"] + dataset.DatasetTypes.ALL,
@@ -54,7 +54,7 @@ def get_parser(parser=None):
     parser.add_argument("--index", dest="validate_index", action="store_true",
                         help="Require index files (.fai or .pbi)")
     parser.add_argument("--strict", dest="strict", action="store_true",
-                        help="Turn on additional validation, primarily for "+
+                        help="Turn on additional validation, primarily for " +
                              "DataSet XML")
     parser.add_argument("-x", "--xunit-out", dest="xunit_out", action="store",
                         default=None, help="Xunit test results for Jenkins")
@@ -73,12 +73,12 @@ def get_parser_tc():
                      "python -m pbcoretools.pbvalidate.main --resolved-tool-contract",
                      is_distributed=True, nproc=1, default_level="WARN")
     p.tool_contract_parser.add_input_file_type(FileTypes.DS_SUBREADS,
-        "subreads",
-        name="SubreadSet",
-        description="PacBio Subread DataSet XML")
+                                               "subreads",
+                                               name="SubreadSet",
+                                               description="PacBio Subread DataSet XML")
     p.tool_contract_parser.add_output_file_type(FileTypes.XML, "junit_report",
-                           name="JUnit Report", description="JUnit Report",
-                           default_name="tests_junit")
+                                                name="JUnit Report", description="JUnit Report",
+                                                default_name="tests_junit")
     get_parser(p.arg_parser.parser)
     return p
 
@@ -216,6 +216,7 @@ def main(argv=sys.argv):
         contract_runner_func=run_rtc,
         alog=logging.getLogger(),
         setup_log_func=setup_log)
+
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -22,17 +22,20 @@ def is_ccs_demultiplexed(input_file):
 def run(args):
     ccs = args.ccs
     if is_ccs_demultiplexed(ccs):
-        raise ValueError("Input ConsensusReadSet {} must not be lima-demultiplexed!".format(ccs))
+        raise ValueError(
+            "Input ConsensusReadSet {} must not be lima-demultiplexed!".format(ccs))
 
 
 def get_parser():
-    p = ArgumentParser("Check input ConsensusReadSet must not be demultiplexed.")
+    p = ArgumentParser(
+        "Check input ConsensusReadSet must not be demultiplexed.")
     p.add_argument("ccs", type=str, help="Input ConsensusReadSet to check")
     return p
 
 
 def main(argv=sys.argv[1:]):
     run(get_parser().parse_args(argv))
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

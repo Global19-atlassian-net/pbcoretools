@@ -12,7 +12,8 @@ from pbcommand.cli import pbparser_runner
 from pbcommand.utils import setup_log
 
 from pbcoretools.bam2fastx import run_bam_to_fastq
-from pbcoretools.tasks.bam2fasta_archive import (get_parser_impl, run_args_impl, run_rtc_impl)
+from pbcoretools.tasks.bam2fasta_archive import (
+    get_parser_impl, run_args_impl, run_rtc_impl)
 
 log = logging.getLogger(__name__)
 
@@ -34,6 +35,7 @@ def main(argv=sys.argv):
                            functools.partial(run_rtc_impl, run_bam_to_fastq),
                            log,
                            setup_log)
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

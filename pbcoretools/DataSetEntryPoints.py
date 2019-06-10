@@ -1,4 +1,4 @@
-#/usr/bin/env python
+# /usr/bin/env python
 
 from __future__ import print_function
 
@@ -186,18 +186,19 @@ def parse_filter_list(filtStrs):
     # pad the ones that start and end with letters
     separators = pad_separators(separators)
     for filtStr in filtStrs:
-      for filt in pbcoretools.utils.split_filtStr(filtStr):
-        for sep in separators:
-            if sep in filt:
-                try:
-                    param, condition = filt.split(sep)
-                except ValueError:
-                    log.exception('{!r}.split({!r})'.format(filt, sep))
-                    raise
-                condition = (sep.strip(), condition.strip())
-                log.debug('filt={!r} param={!r} condition={!r}'.format(filt, param, condition))
-                filters[param.strip()].append(condition)
-                break
+        for filt in pbcoretools.utils.split_filtStr(filtStr):
+            for sep in separators:
+                if sep in filt:
+                    try:
+                        param, condition = filt.split(sep)
+                    except ValueError:
+                        log.exception('{!r}.split({!r})'.format(filt, sep))
+                        raise
+                    condition = (sep.strip(), condition.strip())
+                    log.debug('filt={!r} param={!r} condition={!r}'.format(
+                        filt, param, condition))
+                    filters[param.strip()].append(condition)
+                    break
     return filters
 
 

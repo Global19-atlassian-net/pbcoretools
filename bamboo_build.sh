@@ -63,6 +63,7 @@ $PIP install --user --no-compile --no-index --find-link $WHEELHOUSE -e repos/pbc
 $PIP install --user --no-compile --no-index --find-link $WHEELHOUSE -r requirements-ci.txt
 $PIP install --user --no-compile --no-index --find-link $WHEELHOUSE -r requirements-dev.txt
 #$PIP install --user --no-compile --no-index --find-link $WHEELHOUSE "pylint<2.0.0"
+$PIP install --no-compile --upgrade --user --find-link $WHEELHOUSE pytest pytest-xdist pytest-cov
 
 $PIP install --user -e ./
 

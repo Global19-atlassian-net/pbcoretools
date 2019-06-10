@@ -9,7 +9,7 @@ import os.path as op
 import sys
 
 from pbcommand.cli import (pacbio_args_runner,
-    get_default_argparser_with_base_opts)
+                           get_default_argparser_with_base_opts)
 from pbcommand.utils import setup_log
 from pbcommand.models import FileTypes
 from pbcore.io import openDataSet
@@ -46,7 +46,8 @@ def _get_parser():
         version=__version__,
         description=__doc__,
         default_level="INFO")
-    p.add_argument("reads", help="SubreadSet or ConsensusReadSet use as INPUT for lima")
+    p.add_argument(
+        "reads", help="SubreadSet or ConsensusReadSet use as INPUT for lima")
     p.add_argument("--maxChunks", default=0, type=int,
                    help="Split into at most <chunks> groups, possibly fewer")
     p.add_argument("--targetSize", default=5000, type=int,
@@ -57,7 +58,8 @@ def _get_parser():
 
 
 def run_args(args):
-    nchunks = split_reads(args.reads, args.maxChunks, args.targetSize, args.lima_peek_guess)
+    nchunks = split_reads(args.reads, args.maxChunks,
+                          args.targetSize, args.lima_peek_guess)
     return 0
 
 

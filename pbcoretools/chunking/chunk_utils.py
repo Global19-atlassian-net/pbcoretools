@@ -348,6 +348,7 @@ def _to_chunked_dataset_files(dataset_type, dataset_path, reference_path,
         c = PipelineChunk(chunk_id, **d)
         yield c
 
+
 to_chunked_subreadset_files = functools.partial(_to_chunked_dataset_files,
                                                 SubreadSet)
 to_chunked_ccsset_files = functools.partial(_to_chunked_dataset_files,
@@ -402,6 +403,7 @@ def _write_dataset_barcode_chunks_to_file(chunk_func, chunk_key, chunk_file,
     write_chunks_to_json(chunks, chunk_file)
     return 0
 
+
 write_subreadset_barcode_chunks_to_file = functools.partial(
     _write_dataset_barcode_chunks_to_file, to_barcode_chunked_subreadset_files,
     Constants.CHUNK_KEY_SUBSET)
@@ -435,6 +437,7 @@ def _to_zmw_chunked_dataset_files(dataset_type, dataset_path,
             d.update(extra_chunk_keys)
         c = PipelineChunk(chunk_id, **d)
         yield c
+
 
 TRANSCRIPTSET_EXTRA_SPLIT_ARGS = {"targetSize": 1000}
 to_zmw_chunked_subreadset_files = functools.partial(
@@ -523,6 +526,7 @@ def _to_bam_chunked_dataset_files(dataset_type, dataset_path,
             d.update(extra_chunk_keys)
         c = PipelineChunk(chunk_id, **d)
         yield c
+
 
 to_bam_chunked_subreadset_files = functools.partial(
     _to_bam_chunked_dataset_files, SubreadSet)
