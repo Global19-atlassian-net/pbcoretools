@@ -4,8 +4,6 @@ import unittest
 import os
 import sys
 
-from nose.plugins import logcapture
-
 from pbcore.io import ReaderBase
 
 from pbcoretools.pbvalidate.core import (run_validators,
