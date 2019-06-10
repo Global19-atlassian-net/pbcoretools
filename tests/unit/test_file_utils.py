@@ -17,6 +17,7 @@ import sys
 from pbcore.io import (FastaReader, FastqReader, openDataSet, HdfSubreadSet,
                        SubreadSet, ConsensusReadSet, FastqWriter, FastqRecord,
                        TranscriptSet)
+from pbcore.io.dataset.DataSetMembers import DNABarcode
 from pbcommand.models.common import DataStore, DataStoreFile, FileTypes
 from pbcommand.utils import which
 
@@ -30,6 +31,7 @@ from pbcoretools.file_utils import (
     make_barcode_sample_csv,
     make_combined_laa_zip,
     update_barcoded_sample_metadata,
+    mock_update_barcoded_sample_metadata,
     discard_bio_samples,
     add_mock_collection_metadata,
     force_set_all_well_sample_names,
@@ -103,7 +105,8 @@ def split_barcoded_dataset(file_name, ext=".subreadset.xml"):
 
 def validate_barcoded_datastore_files(self, subreads, datastore,
                                       have_collection_metadata=True,
-                                      use_barcode_uuids=True):
+                                      use_barcode_uuids=True,
+                                      number_of_expected_filters=1):
     """
     This is linked to the PacBioTestData file 'barcoded-subreadset', which
     has been manually edited in support of this test.
@@ -122,11 +125,11 @@ def validate_barcoded_datastore_files(self, subreads, datastore,
         _validate_dataset_xml(f.path)
         with SubreadSet(f.path) as ds:
             # FIXME need better testing here
-            self.assertEqual(len(ds.filters), 1)
+            self.assertEqual(len(ds.filters), number_of_expected_filters)
             self.assertEqual(ds.uuid, f.uuid)
             bc_label = op.basename(f.path).split(".")[1]
             bio_name = bio_sample_names[bc_label]
-            expected_tags = ["TotalLength", "NumRecords", "Provenance", "BioSamples"]
+            expected_tags = set(["TotalLength", "NumRecords", "Provenance", "BioSamples"])
             self.assertEqual(len(ds.metadata.bioSamples), 1)
             self.assertEqual(ds.metadata.bioSamples[0].name, bio_name)
             self.assertEqual(ds.metadata.provenance.parentDataSet.uniqueId,
@@ -138,7 +141,7 @@ def validate_barcoded_datastore_files(self, subreads, datastore,
             else:
                 self.assertNotEqual(ds.uuid, dna_bc_uuids[bc_label])
             md_tags = [r['tag'] for r in ds.metadata.record['children']]
-            self.assertEqual(md_tags[0:4], expected_tags)
+            self.assertTrue(set(md_tags).issuperset(expected_tags))
 
 
 class TestSplitLAA(unittest.TestCase):
@@ -299,6 +302,46 @@ class TestBarcodeUtils(unittest.TestCase):
                                                     barcodes)
         validate_barcoded_datastore_files(self, self.SUBREADS, datastore,
                                           have_collection_metadata=False)
+
+    def test_mock_update_barcoded_sample_metadata(self):
+        tmp_dir = tempfile.mkdtemp()
+        datastore_tmp = op.join(tmp_dir, "lima.datastore.json")
+        barcodeset = pbtestdata.get_file("barcodeset")
+        barcodes = ["lbc1--lbc1", "lbc3--lbc3"]
+        files = [
+            op.join(tmp_dir, "lima.lbc1--lbc1.subreadset.xml"),
+            op.join(tmp_dir, "lima.lbc3--lbc3.subreadset.xml")
+        ]
+        uuids = [uuid.uuid4() for fn in files]
+        # XXX these are hardcoded to match the actual barcoded test input
+        bc_uuids = [
+            "dffb30e8-9243-4743-9980-468a20952167",
+            "eef1a8ea-c6a7-4233-982a-d426e1e7d8c9"
+        ]
+        ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))
+        def _add_barcoded_sample(sn, bn, id_):
+            ds.metadata.bioSamples.addSample(sn)
+            ds.metadata.bioSamples[-1].DNABarcodes.addBarcode(bn)
+            ds.metadata.bioSamples[-1].DNABarcodes[-1].uniqueId = id_
+        _add_barcoded_sample("Alice", "lbc1--lbc1", bc_uuids[0])
+        _add_barcoded_sample("Charles", "lbc3--lbc3", bc_uuids[1])
+        tmp_ds = op.join(tmp_dir, "input.subreadset.xml")
+        ds.write(tmp_ds)
+        for fn, bc, dsid in zip(files, barcodes, uuids):
+            ds = SubreadSet(tmp_ds)
+            ds.uuid = str(dsid)
+            ds.name = ds.name + " ({b})".format(b=bc)
+            ds.write(fn)
+        ds_files = [DataStoreFile(dsid, "barcoding.tasks.lima-0", FileTypes.DS_SUBREADS.file_type_id, fn) for (dsid, fn) in zip(uuids, files)]
+        ds = DataStore(ds_files)
+        ds.write_json(datastore_tmp)
+        base_dir = tempfile.mkdtemp()
+        datastore = mock_update_barcoded_sample_metadata(base_dir,
+                                                         datastore_tmp,
+                                                         tmp_ds,
+                                                         barcodeset)
+        validate_barcoded_datastore_files(self, tmp_ds, datastore,
+            number_of_expected_filters=0)
 
     def test_add_mock_collection_metadata(self):
         bam = pbtestdata.get_file("subreads-bam")
