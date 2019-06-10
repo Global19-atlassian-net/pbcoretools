@@ -11,7 +11,7 @@ from pbcommand.cli import (pacbio_args_runner,
                            get_default_argparser_with_base_opts)
 from pbcommand.utils import setup_log
 
-from pbcoretools.tasks.filters import split_transcripts, Constants
+from pbcoretools.filters import split_transcripts, Constants
 
 log = logging.getLogger(__name__)
 __version__ = "0.1"
