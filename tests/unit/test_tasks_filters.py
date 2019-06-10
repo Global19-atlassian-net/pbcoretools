@@ -9,7 +9,7 @@ from pbcore.io import (FastaReader, FastqReader, openDataSet,
                        SubreadSet, ConsensusReadSet, TranscriptSet)
 import pbcore.data.datasets as data
 
-from pbcoretools.tasks2.dataset_filter import combine_filters, run_filter_dataset
+from pbcoretools.filters import combine_filters, run_filter_dataset, sanitize_read_length
 
 from base import get_temp_file, IntegrationBase
 

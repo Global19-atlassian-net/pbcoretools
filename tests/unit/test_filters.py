@@ -4,8 +4,8 @@ import tempfile
 import unittest
 import os.path as op
 
-from pbcoretools.tasks.filters import (run_filter_dataset,
-                                       sanitize_read_length)
+from pbcoretools.filters import (run_filter_dataset,
+                                 sanitize_read_length)
 from pbcore.io import openDataFile, openDataSet
 import pbcore.data.datasets as data
 

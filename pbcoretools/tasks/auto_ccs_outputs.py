@@ -19,7 +19,7 @@ from pbcore.io import ConsensusReadSet
 from pbcore.util.statistics import accuracy_as_phred_qv
 
 from pbcoretools.bam2fastx import run_bam_to_fastq, run_bam_to_fasta
-from pbcoretools.tasks.filters import combine_filters
+from pbcoretools.filters import combine_filters
 
 log = logging.getLogger(__name__)
 
