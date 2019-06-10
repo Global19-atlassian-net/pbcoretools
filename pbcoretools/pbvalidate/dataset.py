@@ -371,8 +371,8 @@ class ValidateFileProxy (ValidateFileObject):
     validator_class = None
 
     def __init__(self, **kwds):
-        self._validator = self.validator_class(
-            **kwds)  # pylint: disable=not-callable
+        self._validator = self.validator_class(  # pylint: disable=not-callable
+            **kwds)
         self._errors = set([])
 
     def validate(self, file_obj):

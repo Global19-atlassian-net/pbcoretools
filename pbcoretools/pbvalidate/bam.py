@@ -583,7 +583,7 @@ class ValidateReadGroupChemistry (ValidateReadGroup):
             if None in fields:
                 return [ReadGroupChemistryError.from_args(rg, rg['ID'],
                                                           tuple(fields))]
-            decoded = pbcore.chemistry.decodeTriple(
+            decoded = pbcore.chemistry.decodeTriple(  # pylint: disable=no-value-for-parameter
                 *fields)  # pylint: disable=no-value-for-parameter
             if decoded == "unknown":
                 return [ReadGroupChemistryError.from_args(rg, rg['ID'],
