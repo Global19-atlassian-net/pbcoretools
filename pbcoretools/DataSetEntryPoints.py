@@ -26,18 +26,18 @@ log = logging.getLogger(__name__)
 
 
 def show_sample_names_if_defined(ds):
-    if ds.metadata.collections:
-        bio_samples = set()
-        well_samples = set()
-        for coll in ds.metadata.collections:
-            well_samples.add(coll.wellSample.name)
-            bio_samples.update({s.name for s in coll.wellSample.bioSamples})
-        well_samples = sorted(list(well_samples))
-        bio_samples = sorted(list(bio_samples))
-        if not bio_samples:
-            bio_samples = ["unknown"]
-        print("Well sample(s)        : {s}".format(s=", ".join(well_samples)))
-        print("Biological sample(s)  : {s}".format(s=", ".join(bio_samples)))
+    bio_samples = {s.name for s in ds.metadata.bioSamples}
+    well_samples = set()
+    for coll in ds.metadata.collections:
+        well_samples.add(coll.wellSample.name)
+    well_samples = sorted(list(well_samples))
+    bio_samples = sorted(list(bio_samples))
+    if not bio_samples:
+        bio_samples = ["unknown"]
+    if not well_samples:
+        well_samples = ["unknown"]
+    print("Well sample(s)        : {s}".format(s=", ".join(well_samples)))
+    print("Biological sample(s)  : {s}".format(s=", ".join(bio_samples)))
 
 
 def summarizeXml(args):
