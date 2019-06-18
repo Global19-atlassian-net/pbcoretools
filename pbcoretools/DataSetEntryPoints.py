@@ -84,7 +84,8 @@ def createXml(args):
     if args.dsType is None:
         dset = openDataFile(*args.infile, strict=args.strict,
                             skipCounts=args.skipCounts,
-                            generateIndices=args.generateIndices)
+                            generateIndices=args.generateIndices,
+                            referenceFastaFname=args.reference_fasta_fname)
     else:
         dsTypes = DataSet.castableTypes()
         dset = dsTypes[args.dsType](
