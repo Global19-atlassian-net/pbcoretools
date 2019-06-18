@@ -483,14 +483,19 @@ class TestDataSet(unittest.TestCase):
         log.debug("Include reference fasta fname")
         outdir = tempfile.mkdtemp(suffix="dataset-unittest")
         ofn = self._get_mock_alignment_set_out(outdir)
-        cmd = ("dataset create --type AlignmentSet "
+        cmd = ("dataset create "
                "--reference-fasta-fname {r} {o} {i1} {i2}").format(
             o=ofn, i1=data.getXml(8), i2=data.getXml(11),
             r=otherdata.getFasta())
-        self._run_cmd_with_output(cmd, ofn)
-        aset = AlignmentSet(ofn, strict=True)
-        for res in aset.externalResources:
-            self.assertEqual(res.reference, otherdata.getFasta())
+        def _run_and_validate(args, file_name):
+            self._run_cmd_with_output(cmd, ofn)
+            aset = AlignmentSet(ofn, strict=True)
+            for res in aset.externalResources:
+                self.assertEqual(res.reference, otherdata.getFasta())
+        _run_and_validate(cmd, ofn)
+        cmd2 = cmd + " --type AlignmentSet"
+        os.remove(ofn)
+        _run_and_validate(cmd2, ofn)
         shutil.rmtree(outdir)
 
     @skip_if_no_constools
