@@ -25,9 +25,9 @@ from pbcore.io.align._BamSupport import IncompatibleFile
 import pbcore.io
 
 from pbcoretools.pbvalidate.core import (
-        ValidateBase, ValidateRecord, ValidatorError, RecordValidatorError, ValidateFileObject,
-        ValidateRandomAccessBase, ValidateFileObject,
-        apply_validator_with_ctx, run_validators, get_context_class,
+    ValidateBase, ValidateRecord, ValidatorError, RecordValidatorError, ValidateFileObject,
+    ValidateRandomAccessBase, ValidateFileObject,
+    apply_validator_with_ctx, run_validators, get_context_class,
 )
 #log = logging.getLogger()
 
@@ -68,7 +68,7 @@ class Constants (object):
     EXPECTED_SUFFIX = {
         "standard": "subreads",  # really SUBREAD
         "CCS": "ccs",
-        #"SUBREAD" : "subreads",
+        # "SUBREAD" : "subreads",
         "SCRAP": "scraps",
         "ZMW": "zmws",
     }
@@ -452,7 +452,7 @@ class ValidateSorting (ValidateFileName):
             for aln in file_obj:
                 if last_aln is not None:
                     if (aln.readType == Constants.READ_TYPE_SUBREAD and
-                        last_aln.readType != Constants.READ_TYPE_SUBREAD):
+                            last_aln.readType != Constants.READ_TYPE_SUBREAD):
                         return [MixedReadSortingError.from_args(
                                 file_obj, aln.readType, last_aln.readType)]
                     elif (last_aln.qName > aln.qName and not
@@ -583,7 +583,8 @@ class ValidateReadGroupChemistry (ValidateReadGroup):
             if None in fields:
                 return [ReadGroupChemistryError.from_args(rg, rg['ID'],
                                                           tuple(fields))]
-            decoded = pbcore.chemistry.decodeTriple(*fields) # pylint: disable=no-value-for-parameter
+            decoded = pbcore.chemistry.decodeTriple(  # pylint: disable=no-value-for-parameter
+                *fields)  # pylint: disable=no-value-for-parameter
             if decoded == "unknown":
                 return [ReadGroupChemistryError.from_args(rg, rg['ID'],
                                                           tuple(fields))]
@@ -810,6 +811,7 @@ class ValidateReadTags (ValidateReadBase):
     def _get_errors(self, aln):
         rg = aln.readGroupInfo
         errors = []
+
         def _get_tag_errors(tag):
             if not _has_tag(aln.peer, tag):
                 errors.append(
@@ -887,7 +889,7 @@ class ValidateReadBaseInfo (ValidateReadBase):
         if getattr(aln.bam, "pbi", None) is None:
             return None
         if ((not re.match(Constants.REGEX_BASECALLS, aln.DeletionTag())) or
-            (not re.match(Constants.REGEX_BASECALLS, aln.SubstitutionTag()))):
+                (not re.match(Constants.REGEX_BASECALLS, aln.SubstitutionTag()))):
             return False
         return True
 
@@ -1067,7 +1069,7 @@ class ValidateReadTranscript (ValidateReadBase):
         else:
             return []
 
-#-----------------------------------------------------------------------
+# -----------------------------------------------------------------------
 # runtime
 
 

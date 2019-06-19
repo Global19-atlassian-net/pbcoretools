@@ -5,176 +5,140 @@ import logging
 import uuid
 import os.path as op
 
-from pbcore.io import (FastaReader, FastqReader, openDataSet, HdfSubreadSet,
+from pbcore.io import (FastaReader, FastqReader, openDataSet,
                        SubreadSet, ConsensusReadSet, TranscriptSet)
 import pbcore.data.datasets as data
-import pbcommand.testkit
 
-from pbcoretools.tasks.filters import combine_filters, run_filter_dataset
+from pbcoretools.filters import combine_filters, run_filter_dataset, sanitize_read_length
 
-from base import get_temp_file
+from base import get_temp_file, IntegrationBase
 
 import pbtestdata
 
 log = logging.getLogger(__name__)
 
-DATA = op.join(op.dirname(__file__), "data")
-
-SIV_DATA_DIR = "/pbi/dept/secondary/siv/testdata"
-
-def _to_skip_msg(exe):
-    return "Missing {e} or {d}".format(d=SIV_DATA_DIR, e=exe)
-
-skip_if_no_testdata = unittest.skipUnless(op.exists(SIV_DATA_DIR),
-                                          "Missing testdata")
-
-class TestFilterDataSet(pbcommand.testkit.PbTestApp):
-    TASK_ID = "pbcoretools.tasks.filterdataset"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.filters emit-tool-contract {i} '.format(i=TASK_ID)
-    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.filters run-rtc '
-    TASK_OPTIONS = {"pbcoretools.task_options.other_filters": "length <= 1400"}
-    RESOLVED_TASK_OPTIONS = {
-        "pbcoretools.task_options.other_filters": "length <= 1400"}
-    INPUT_FILES = [get_temp_file(suffix=".subreadset.xml")]
-    MAX_NPROC = 24
-    RESOLVED_NPROC = 4
-    IS_DISTRIBUTED = True
-    RESOLVED_IS_DISTRIBUTED = True
+class TestFilterDataSet(IntegrationBase):
+    BASE_ARGS = [
+        "python", "-m", "pbcoretools.tasks2.dataset_filter"
+    ]
     READER_CLASS = SubreadSet
-    N_EXPECTED = 18
-    EXPECTED_FILTER_STR = "( length <= 1400 )"
 
-    @classmethod
-    def setUpClass(cls):
+    def _set_up_basic(self):
+        input_file = get_temp_file(suffix=".subreadset.xml")
         ds = SubreadSet(data.getXml(10), strict=True)
         ds.metadata.addParentDataSet(uuid.uuid4(),
                                      ds.datasetType,
                                      createdBy="AnalysisJob",
                                      timeStampedName="")
-        ds.write(cls.INPUT_FILES[0])
-        cls._n_input = len(ds)
+        ds.write(input_file)
+        return input_file, len(ds)
 
-    def _get_counts(self, rtc):
-        n_expected = self.N_EXPECTED
-        with self.READER_CLASS(rtc.task.output_files[0]) as f:
-            n_actual = len(f)
-        return n_expected, n_actual
+    def _set_up_combine_filters(self):
+        ds_in = get_temp_file(suffix=".subreadset.xml")
+        with SubreadSet(pbtestdata.get_file("subreads-xml"), strict=True) as ds:
+            assert len(ds) == 117 and len(ds.filters) == 0
+            ds.filters.addRequirement(length=[('>=', 1000)])
+            assert len(ds) == 13
+            ds.write(ds_in)
+        return ds_in, 13
 
-    def _get_filters(self, rtc):
-        with self.READER_CLASS(rtc.task.output_files[0]) as f:
+    def _get_counts(self, output_file):
+        with self.READER_CLASS(output_file) as f:
+            return len(f)
+
+    def _get_filters(self, output_file):
+        with self.READER_CLASS(output_file) as f:
             return str(f.filters)
 
-    def run_after(self, rtc, output_dir):
-        n_expected, n_actual = self._get_counts(rtc)
-        self.assertEqual(self._get_filters(rtc), self.EXPECTED_FILTER_STR)
+    def run_after(self, output_file, n_expected, expected_filter_str):
+        n_actual = self._get_counts(output_file)
+        self.assertEqual(self._get_filters(output_file), expected_filter_str)
         self.assertEqual(n_actual, n_expected)
-        ds = openDataSet(rtc.task.output_files[0])
+        ds = openDataSet(output_file)
         self.assertEqual(len(ds.metadata.provenance), 0)
         self.assertTrue(ds.name.endswith("(filtered)"))
         self.assertTrue("filtered" in ds.tags)
         return ds
 
+    def test_filter_dataset(self):
+        ds_in, n_input = self._set_up_basic()
+        ds_out = get_temp_file(suffix=".subreadset.xml")
+        args = self.BASE_ARGS + [ds_in, ds_out, "length <= 1400"]
+        self._check_call(args)
+        n_expected = 18
+        expected_filter_str = "( length <= 1400 )"
+        self.run_after(ds_out, n_expected, expected_filter_str)
 
-class TestFilterDataSetNoFilter(TestFilterDataSet):
-    TASK_OPTIONS = {"pbcoretools.task_options.other_filters": ""}
-    RESOLVED_TASK_OPTIONS = {"pbcoretools.task_options.other_filters": ""}
-    EXPECTED_FILTER_STR = ""
+    def test_filter_dataset_nofilter(self):
+        ds_in, n_input = self._set_up_basic()
+        ds_out = get_temp_file(suffix=".subreadset.xml")
+        args = self.BASE_ARGS + [ds_in, ds_out, ""]
+        self._check_call(args)
+        n_expected = n_input
+        expected_filter_str = ""
+        self.run_after(ds_out, n_expected, expected_filter_str)
 
-    def _get_counts(self, rtc):
-        _, n_actual = super(TestFilterDataSetNoFilter, self)._get_counts(rtc)
-        return self._n_input, n_actual
-
-
-class TestFilterDataSetBq(TestFilterDataSet):
-
-    TASK_OPTIONS = {"pbcoretools.task_options.other_filters": "length >= 10 AND bq >= 10"}
-    RESOLVED_TASK_OPTIONS = TASK_OPTIONS
-    N_EXPECTED = 2
-    EXPECTED_FILTER_STR = "( bq >= 10 AND length >= 10 )"
-
-    @classmethod
-    def setUpClass(cls):
+    def test_filter_dataset_bq(self):
+        ds_in = get_temp_file(suffix=".subreadset.xml")
         ds = SubreadSet(pbtestdata.get_file("barcoded-subreadset"),
                         strict=True)
         ds.filters.addRequirement(bq=[('>=', 31)])
         assert len(ds) == 1
-        ds.write(cls.INPUT_FILES[0])
+        ds.write(ds_in)
+        ds_out = get_temp_file(suffix=".subreadset.xml")
+        args = self.BASE_ARGS + [ds_in, ds_out, "length >= 10 AND bq >= 10"]
+        self._check_call(args)
+        n_expected = 2
+        expected_filter_str = "( bq >= 10 AND length >= 10 )"
+        self.run_after(ds_out, n_expected, expected_filter_str)
 
-
-class TestFilterDownsample(TestFilterDataSet):
-    TASK_OPTIONS = {"pbcoretools.task_options.downsample_factor": 2}
-    RESOLVED_TASK_OPTIONS = TASK_OPTIONS
-    N_EXPECTED = 54
-    EXPECTED_FILTER_STR = "( Uint32Cast(zm) % 2 == 0 )"
-
-    @classmethod
-    def setUpClass(cls):
+    def test_filter_dataset_downsample(self):
+        ds_in = get_temp_file(suffix=".subreadset.xml")
         with SubreadSet(pbtestdata.get_file("subreads-xml"), strict=True) as ds:
             assert len(ds) == 117 and len(ds.filters) == 0
-            ds.write(cls.INPUT_FILES[0])
-
-    def run_after(self, rtc, output_dir):
-        ds = super(TestFilterDownsample, self).run_after(rtc, output_dir)
+            ds.write(ds_in)
+        ds_out = get_temp_file(suffix=".subreadset.xml")
+        args = self.BASE_ARGS + [ds_in, ds_out, "", "--downsample", "2"]
+        self._check_call(args)
+        n_expected = 54
+        expected_filter_str = "( Uint32Cast(zm) % 2 == 0 )"
+        ds = self.run_after(ds_out, n_expected, expected_filter_str)
         self.assertTrue("downsampled" in ds.tags)
 
-
-class TestCombineFilters(TestFilterDataSet):
-    TASK_OPTIONS = {"pbcoretools.task_options.other_filters": "rq >= 0.901"}
-    RESOLVED_TASK_OPTIONS = TASK_OPTIONS
-    N_EXPECTED = 12
-    N_EXPECTED_2 = 48
-    N_EXPECTED_DOWNSAMPLED = 54 # downsampled only, no other filters
-    INPUT_FILES = [get_temp_file(suffix=".subreadset.xml")]
-    EXPECTED_FILTER_STR = "( length >= 1000 AND rq >= 0.901 )"
-
-    @classmethod
-    def setUpClass(cls):
-        with SubreadSet(pbtestdata.get_file("subreads-xml"), strict=True) as ds:
-            assert len(ds) == 117 and len(ds.filters) == 0
-            ds.filters.addRequirement(length=[('>=', 1000)])
-            assert len(ds) == 13
-            ds.write(cls.INPUT_FILES[0])
+    def test_filter_dataset_combine_filters(self):
+        ds_in, n_input = self._set_up_combine_filters()
+        ds_out = get_temp_file(suffix=".subreadset.xml")
+        args = self.BASE_ARGS + [ds_in, ds_out, "rq >= 0.901"]
+        self._check_call(args)
+        n_expected = 18
+        expected_filter_str = "( length >= 1000 AND rq >= 0.901 )"
+        self.run_after(ds_out, 12, expected_filter_str)
 
     def test_combine_filters(self):
-        with openDataSet(self.INPUT_FILES[0], strict=True) as ds:
+        ds_in, n_input = self._set_up_combine_filters()
+        with openDataSet(ds_in, strict=True) as ds:
             filters = {"rq": [(">=", 0.901)]}
             combine_filters(ds, filters)
             ds.reFilter(light=False)
-            self.assertEqual(len(ds), self.N_EXPECTED)
+            self.assertEqual(len(ds), 12)
             filters = {"rq": [(">=", 0.8)], "length": [(">=", 500)]}
             combine_filters(ds, filters)
             ds.reFilter(light=False)
-            self.assertEqual(len(ds), self.N_EXPECTED_2)
+            self.assertEqual(len(ds), 48)
             ds.filters = None
             filters = {"zm": [("==", "0", 2)]}
             combine_filters(ds, filters)
             ds.reFilter(light=False)
-            self.assertEqual(len(ds), self.N_EXPECTED_DOWNSAMPLED)
+            self.assertEqual(len(ds), 54)
 
-    def test_run_filter_dataset(self):
+    def test_combine_filters_run_filter_dataset(self):
+        ds_in, n_input = self._set_up_combine_filters()
+        ds_out = get_temp_file(suffix=".subreadset.xml")
         my_filters = "rq >= 0.901"
-        ds_ofile = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
-        run_filter_dataset(self.INPUT_FILES[0], ds_ofile, 0, my_filters)
-        with openDataSet(ds_ofile, strict=True) as ds_out:
-            self.assertEqual(len(ds_out), self.N_EXPECTED)
+        run_filter_dataset(ds_in, ds_out, 0, my_filters)
+        with openDataSet(ds_out, strict=True) as ds:
+            self.assertEqual(len(ds), 12)
         my_filters = "rq >= 0.8"
-        run_filter_dataset(self.INPUT_FILES[0], ds_ofile, 500, my_filters)
-        with openDataSet(ds_ofile, strict=True) as ds_out:
-            self.assertEqual(len(ds_out), self.N_EXPECTED_2)
-
-
-@skip_if_no_testdata
-class TestSplitTranscripts(pbcommand.testkit.PbTestApp):
-    TASK_ID = "pbcoretools.tasks.split_transcripts"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.filters emit-tool-contract {i} '.format(i=TASK_ID)
-    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.filters run-rtc '
-    TASK_OPTIONS = {"pbcoretools.task_options.hq_qv_cutoff": 0.98}
-    INPUT_FILES = [
-        "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/polished.transcriptset.xml"
-    ]
-
-    def run_after(self, rtc, output_dir):
-        with TranscriptSet(rtc.task.output_files[0], strict=True) as ds_hq:
-            self.assertEqual(len(ds_hq), 11701)
-        with TranscriptSet(rtc.task.output_files[1], strict=True) as ds_lq:
-            self.assertEqual(len(ds_lq), 44)
+        run_filter_dataset(ds_in, ds_out, 500, my_filters)
+        with openDataSet(ds_out, strict=True) as ds:
+            self.assertEqual(len(ds), 48)

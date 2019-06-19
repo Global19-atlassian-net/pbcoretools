@@ -322,7 +322,7 @@ class TestPbvalidateBam (unittest.TestCase):
     @unittest.skipUnless(op.isdir(TESTDATA), "Testdata not found")
     def test_transcript_bam(self):
         BAM = "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/unpolished.bam"
-        e, c = bam.validate_bam(BAM)
+        e, c = bam.validate_bam(BAM, max_records=10)
         self.assertEqual(len(e), 0)
 
     @unittest.skipUnless(op.isdir(TESTDATA), "Testdata not found")

@@ -23,6 +23,7 @@ def split_filtStr(filtStr):
         return [s.strip() for s in filtStr.split(' AND ')]
 
     if ',' in filtStr and '[' not in filtStr:
-        msg = "You're doing it wrong! You have ',' in the filter-string '{}', but not '['. That means you are probably trying to use a comma to separate conditions, which we do not support. Please use ' AND ' to separate conditions.".format(filtStr)
+        msg = "You're doing it wrong! You have ',' in the filter-string '{}', but not '['. That means you are probably trying to use a comma to separate conditions, which we do not support. Please use ' AND ' to separate conditions.".format(
+            filtStr)
         raise ValueError(msg)
     return [filtStr]

@@ -19,7 +19,7 @@ from pbcore.io import ConsensusReadSet
 from pbcore.util.statistics import accuracy_as_phred_qv
 
 from pbcoretools.bam2fastx import run_bam_to_fastq, run_bam_to_fasta
-from pbcoretools.tasks.filters import combine_filters
+from pbcoretools.filters import combine_filters
 
 log = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ def _get_parser():
                      __doc__,
                      Constants.DRIVER,
                      is_distributed=True)
-                     #resource_types=(ResourceTypes.TMP_DIR,))
+    # resource_types=(ResourceTypes.TMP_DIR,))
     p.add_input_file_type(FileTypes.DS_CCS, "ccs_dataset",
                           "ConsensusReadSet XML",
                           "ConsensusReadSet XML")
@@ -87,15 +87,19 @@ def run_ccs_bam_fastq_exports(ccs_dataset_file, base_dir, is_barcoded=False):
                               Constants.BAM_ID,
                               FileTypes.BAM_CCS.file_type_id,
                               op.abspath(bam_file_name),
-                              name=op.basename(bam_file_name), # XXX is this right?
+                              # XXX is this right?
+                              name=op.basename(bam_file_name),
                               description="CCS BAM file"))
-        fastq_file = op.join(base_dir, file_prefix + Constants.BASE_EXT + ".fastq")
-        fasta_file = op.join(base_dir, file_prefix + Constants.BASE_EXT + ".fasta")
+        fastq_file = op.join(base_dir, file_prefix +
+                             Constants.BASE_EXT + ".fastq")
+        fasta_file = op.join(base_dir, file_prefix +
+                             Constants.BASE_EXT + ".fasta")
         ccs_q20 = ccs_dataset_file
         is_all_q20_or_better = np.all(ccs.index.readQual >= 0.99)
         if not is_all_q20_or_better:
             ccs_hq = ccs.copy()
-            ccs_q20 = tempfile.NamedTemporaryFile(suffix=".consensusreadset.xml").name
+            ccs_q20 = tempfile.NamedTemporaryFile(
+                suffix=".consensusreadset.xml").name
             combine_filters(ccs_hq, {"rq": [('>=', 0.99)]})
             ccs_hq.write(ccs_q20)
         run_bam_to_fastq(ccs_q20, fastq_file)
@@ -121,8 +125,10 @@ def run_ccs_bam_fastq_exports(ccs_dataset_file, base_dir, is_barcoded=False):
             else:
                 min_qv = int(math.floor(accuracy_as_phred_qv(min_accuracy)))
             custom_ext = ".Q" + str(min_qv)
-            fastq2_file = op.join(base_dir, file_prefix + custom_ext + ".fastq")
-            fasta2_file = op.join(base_dir, file_prefix + custom_ext + ".fasta")
+            fastq2_file = op.join(
+                base_dir, file_prefix + custom_ext + ".fastq")
+            fasta2_file = op.join(
+                base_dir, file_prefix + custom_ext + ".fasta")
             run_bam_to_fastq(ccs_dataset_file, fastq2_file)
             run_bam_to_fasta(ccs_dataset_file, fasta2_file)
             datastore_files.extend([
@@ -165,6 +171,7 @@ def _main(argv=sys.argv):
                            _run_rtc,
                            log,
                            setup_log)
+
 
 if __name__ == "__main__":
     sys.exit(_main(sys.argv))

@@ -8,10 +8,11 @@ import argparse
 import sys
 import logging
 import os.path as op
-from pbcommand.cli import (pacbio_args_runner, get_default_argparser_with_base_opts)
+from pbcommand.cli import (
+    pacbio_args_runner, get_default_argparser_with_base_opts)
 from pbcommand.utils import setup_log
 from pbcoretools.datastore_utils import (datastore_to_datastorefile_objs,
-        dataset_to_datastore, ALLOWED_TYPES)
+                                         dataset_to_datastore, ALLOWED_TYPES)
 
 
 FORMATTER = op.basename(__name__) + ':%(levelname)s:'+'%(message)s'
@@ -42,11 +43,11 @@ def ds_to_ds(in_fn, out_fn):
 
 
 def datastore_to_dataset(in_fn, out_fn):
-    objs, dataset_type_id, readcls, ext =  datastore_to_datastorefile_objs(
-            in_fn, allowed_types=ALLOWED_TYPES)
+    objs, dataset_type_id, readcls, ext = datastore_to_datastorefile_objs(
+        in_fn, allowed_types=ALLOWED_TYPES)
     if not out_fn.endswith(ext):
         raise ValueError("Output file {} of type {} must ends with {}".format(
-                          out_fn, dataset_type_id, ext))
+            out_fn, dataset_type_id, ext))
     with readcls(*[f.path for f in objs], strict=True, skipCounts=True) as ds:
         ds.newUuid()
         ds.write(out_fn)

@@ -18,6 +18,7 @@ from pbcoretools.bam2fastx import run_bam_to_fastq
 
 log = logging.getLogger(__name__)
 
+
 class Constants(object):
     TOOL_ID = "pbcoretools.tasks.bam2fastq"
     VERSION = "0.4.1"
@@ -59,6 +60,7 @@ def main(argv=sys.argv):
                            run_rtc,
                            log,
                            setup_log)
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

@@ -7,10 +7,10 @@ import os
 import sys
 
 from pbcore.io import FastqRecord
-import pbcommand.testkit
 
 import pbtestdata
 
+from base import IntegrationBase
 from test_file_utils import (make_mock_laa_inputs,
                              make_fastq_inputs)
 
@@ -19,10 +19,7 @@ log = logging.getLogger(__name__)
 SUBREADS_IN = pbtestdata.get_file("barcoded-subreadset")
 
 
-class TestSplitLAATask(pbcommand.testkit.PbTestApp):
-    TASK_ID = "pbcoretools.tasks.split_laa_fastq"
-    DRIVER_EMIT = 'python -m pbcoretools.tasks.laa emit-tool-contract {i} '.format(i=TASK_ID)
-    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.laa run-rtc '
+class TestSplitLAATask(IntegrationBase):
     INPUT_FILES = [
         tempfile.NamedTemporaryFile(suffix=".fastq").name,
         tempfile.NamedTemporaryFile(suffix=".fastq").name,
@@ -42,17 +39,20 @@ class TestSplitLAATask(pbcommand.testkit.PbTestApp):
         ]
         make_fastq_inputs(chimera_records, cls.INPUT_FILES[1])
 
-    def run_after(self, rtc, output_dir):
-        with ZipFile(rtc.task.output_files[0], "r") as zip_out:
+    def test_split_laa_fastq(self):
+        consensus_zip = tempfile.NamedTemporaryFile(suffix=".zip").name
+        chimeras_zip = tempfile.NamedTemporaryFile(suffix=".zip").name
+        args = ["python", "-m", "pbcoretools.tasks2.split_laa_fastq",
+                self.INPUT_FILES[0], self.INPUT_FILES[1], self.INPUT_FILES[2],
+                consensus_zip, chimeras_zip]
+        self._check_call(args)
+        with ZipFile(consensus_zip, "r") as zip_out:
             files = zip_out.namelist()
             suffixes = sorted([".".join(of.split('.')[1:]) for of in files])
             self.assertEqual(suffixes, ['Alice.lbc1--lbc1.fastq', 'Charles.lbc3--lbc3.fastq'])
 
 
-class TestCombinedLAAZip(pbcommand.testkit.PbTestApp):
-    TASK_ID = "pbcoretools.tasks.make_combined_laa_zip"
-    DRIVER_EMIT = "python -m pbcoretools.tasks.laa emit-tool-contract {i} ".format(i=TASK_ID)
-    DRIVER_RESOLVE = 'python -m pbcoretools.tasks.laa run-rtc '
+class TestCombinedLAAZip(IntegrationBase):
     INPUT_FILES = [
         tempfile.NamedTemporaryFile(suffix=".fastq").name,
         tempfile.NamedTemporaryFile(suffix=".csv").name,
@@ -63,9 +63,13 @@ class TestCombinedLAAZip(pbcommand.testkit.PbTestApp):
     def setUpClass(cls):
         make_mock_laa_inputs(cls.INPUT_FILES[0], cls.INPUT_FILES[1])
 
-
-    def run_after(self, rtc, output_dir):
-        with ZipFile(rtc.task.output_files[0], "r") as zip_out:
+    def test_make_combined_laa_zip(self):
+        combined_zip = tempfile.NamedTemporaryFile(suffix=".zip").name
+        args = ["python", "-m", "pbcoretools.tasks2.make_combined_laa_zip",
+                self.INPUT_FILES[0], self.INPUT_FILES[1], self.INPUT_FILES[2],
+                combined_zip]
+        self._check_call(args)
+        with ZipFile(combined_zip, "r") as zip_out:
             files = zip_out.namelist()
             suffixes = sorted([".".join(of.split('.')[1:]) for of in files])
             self.assertEqual(suffixes, ['Alice.lbc1--lbc1.fastq', 'Charles.lbc3--lbc3.fastq', "csv", "csv"])

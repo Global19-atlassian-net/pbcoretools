@@ -1,4 +1,4 @@
-#/usr/bin/env python
+# /usr/bin/env python
 
 from __future__ import print_function
 
@@ -26,18 +26,18 @@ log = logging.getLogger(__name__)
 
 
 def show_sample_names_if_defined(ds):
-    if ds.metadata.collections:
-        bio_samples = set()
-        well_samples = set()
-        for coll in ds.metadata.collections:
-            well_samples.add(coll.wellSample.name)
-            bio_samples.update({s.name for s in coll.wellSample.bioSamples})
-        well_samples = sorted(list(well_samples))
-        bio_samples = sorted(list(bio_samples))
-        if not bio_samples:
-            bio_samples = ["unknown"]
-        print("Well sample(s)        : {s}".format(s=", ".join(well_samples)))
-        print("Biological sample(s)  : {s}".format(s=", ".join(bio_samples)))
+    bio_samples = {s.name for s in ds.metadata.bioSamples}
+    well_samples = set()
+    for coll in ds.metadata.collections:
+        well_samples.add(coll.wellSample.name)
+    well_samples = sorted(list(well_samples))
+    bio_samples = sorted(list(bio_samples))
+    if not bio_samples:
+        bio_samples = ["unknown"]
+    if not well_samples:
+        well_samples = ["unknown"]
+    print("Well sample(s)        : {s}".format(s=", ".join(well_samples)))
+    print("Biological sample(s)  : {s}".format(s=", ".join(bio_samples)))
 
 
 def summarizeXml(args):
@@ -84,7 +84,8 @@ def createXml(args):
     if args.dsType is None:
         dset = openDataFile(*args.infile, strict=args.strict,
                             skipCounts=args.skipCounts,
-                            generateIndices=args.generateIndices)
+                            generateIndices=args.generateIndices,
+                            referenceFastaFname=args.reference_fasta_fname)
     else:
         dsTypes = DataSet.castableTypes()
         dset = dsTypes[args.dsType](
@@ -110,6 +111,11 @@ def createXml(args):
         if args.bio_sample_name:
             force_set_all_bio_sample_names(dset, args.bio_sample_name)
     log.debug("Dataset created")
+    if isinstance(dset, ContigSet):
+        if args.organism:
+            dset.metadata.organism = args.organism
+        if args.ploidy:
+            dset.metadata.ploidy = args.ploidy
     dset.newUuid()
     dset.write(args.outfile, validate=args.novalidate, relPaths=args.relative)
     log.debug("Dataset written")
@@ -143,6 +149,10 @@ def create_options(parser):
     pad("--relative", action='store_true', default=False,
         help=("Make the included paths relative instead of "
               "absolute (not compatible with --novalidate)"))
+    pad("--organism", action="store", default="unknown",
+        help="Organism name (for ReferenceSet only)")
+    pad("--ploidy", action="store", default="haploid",
+        help="Genome ploidy (for ReferenceSet only)")
     pad("--well-sample-name",
         help=("Set the WellSample name for all movies (will generate new "
               "CollectionMetadata from blank template for any movies that are "
@@ -177,18 +187,19 @@ def parse_filter_list(filtStrs):
     # pad the ones that start and end with letters
     separators = pad_separators(separators)
     for filtStr in filtStrs:
-      for filt in pbcoretools.utils.split_filtStr(filtStr):
-        for sep in separators:
-            if sep in filt:
-                try:
-                    param, condition = filt.split(sep)
-                except ValueError:
-                    log.exception('{!r}.split({!r})'.format(filt, sep))
-                    raise
-                condition = (sep.strip(), condition.strip())
-                log.debug('filt={!r} param={!r} condition={!r}'.format(filt, param, condition))
-                filters[param.strip()].append(condition)
-                break
+        for filt in pbcoretools.utils.split_filtStr(filtStr):
+            for sep in separators:
+                if sep in filt:
+                    try:
+                        param, condition = filt.split(sep)
+                    except ValueError:
+                        log.exception('{!r}.split({!r})'.format(filt, sep))
+                        raise
+                    condition = (sep.strip(), condition.strip())
+                    log.debug('filt={!r} param={!r} condition={!r}'.format(
+                        filt, param, condition))
+                    filters[param.strip()].append(condition)
+                    break
     return filters
 
 

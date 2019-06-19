@@ -153,6 +153,7 @@ class ValidationStopException(BaseException):
     # Use this to exit
     pass
 
+
 # Store validate
 ValidMetric = namedtuple("ValidMetric", ["metric_type", "object_ref", ])
 

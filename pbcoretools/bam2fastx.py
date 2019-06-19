@@ -14,7 +14,7 @@ import pipes
 import os
 import sys
 
-from pbcore.io import (openDataSet, BarcodeSet,FastaReader, FastaWriter,
+from pbcore.io import (openDataSet, BarcodeSet, FastaReader, FastaWriter,
                        FastqReader, FastqWriter, SubreadSet)
 from pbcommand.engine import run_cmd
 from pbcommand.utils import walker
@@ -189,6 +189,7 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
         for fn in remove_files:
             os.remove(fn)
     return 0
+
 
 run_bam_to_fasta = functools.partial(_run_bam_to_fastx, "bam2fasta",
                                      FastaReader, FastaWriter)

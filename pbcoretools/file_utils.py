@@ -86,7 +86,8 @@ def split_laa_fastq_archived(input_file_name, output_file_name, subreads_file_na
     """
     base, ext = op.splitext(output_file_name)
     assert (ext == ".zip")
-    fastq_files = list(split_laa_fastq(input_file_name, base, subreads_file_name))
+    fastq_files = list(split_laa_fastq(
+        input_file_name, base, subreads_file_name))
     if len(fastq_files) == 0:  # workaround for empty input
         with zipfile.ZipFile(output_file_name, "w", allowZip64=True) as zip_out:
             return 0
@@ -109,7 +110,7 @@ def get_barcode_sample_mappings(ds):
     barcoded_samples = []
     for bioSample in ds.metadata.bioSamples:
         for dnaBc in bioSample.DNABarcodes:
-                barcoded_samples.append((dnaBc.name, bioSample.name))
+            barcoded_samples.append((dnaBc.name, bioSample.name))
     # recover the original barcode FASTA file so we can map the barcode
     # indices in the BAM file to the labels
     bc_sets = {extRes.barcodes for extRes in ds.externalResources
@@ -123,7 +124,7 @@ def get_barcode_sample_mappings(ds):
             labels = [rec.id for rec in bcs]
             bam_bc = set()  # barcode labels actually present in BAM files
             for rr in ds.resourceReaders():
-                mk_lbl = lambda i, j: "{}--{}".format(labels[i], labels[j])
+                def mk_lbl(i, j): return "{}--{}".format(labels[i], labels[j])
                 for fw, rev in zip(rr.pbi.bcForward, rr.pbi.bcReverse):
                     if fw == -1 or rev == -1:
                         continue
@@ -158,7 +159,8 @@ def make_barcode_sample_csv(subreads, csv_file):
         writer = csv.writer(csv_out, delimiter=',', lineterminator="\n")
         writer.writerow(headers)
         for bc_label in sorted(barcoded_samples.keys()):
-            writer.writerow([bc_label, barcoded_samples.get(bc_label, "unknown_sample")])
+            writer.writerow(
+                [bc_label, barcoded_samples.get(bc_label, "unknown_sample")])
     return barcoded_samples
 
 
@@ -265,6 +267,55 @@ def _uniqueify_collections(metadata):
         metadata.collections.pop(k)
 
 
+# XXX this is a separate function to enable mocking using non-barcoded BAMs
+def _update_barcoded_dataset(
+        dataset,
+        datastore_file,
+        barcode_pair,
+        barcode_names,
+        parent_info,
+        use_barcode_uuids,
+        bio_samples_d,
+        barcode_uuids_d,
+        output_file,
+        min_score_filter=Constants.BARCODE_QUALITY_GREATER_THAN):
+    parent_uuid, parent_type, parent_name = parent_info
+    barcode_label = None
+    bcf, bcr = barcode_pair
+    barcode_label = "{f}--{r}".format(f=barcode_names[bcf],
+                                      r=barcode_names[bcr])
+    discard_bio_samples(dataset, barcode_label)
+    sample_name = bio_samples_d.get(barcode_label, None)
+    if sample_name is not None:
+        force_set_all_bio_sample_names(dataset, sample_name)
+    assert parent_type == dataset.datasetType
+    dataset.subdatasets = []
+    dataset.metadata.addParentDataSet(parent_uuid,
+                                      parent_type,
+                                      createdBy="AnalysisJob",
+                                      timeStampedName="")
+    dataset.name = get_ds_name(dataset, parent_name, barcode_label)
+    if min_score_filter is not None:
+        dataset.filters.addRequirement(bq=[('>', min_score_filter)])
+    if use_barcode_uuids:
+        uuid = barcode_uuids_d.get(barcode_label, None)
+        if uuid is not None:
+            dataset.objMetadata["UniqueId"] = uuid
+            log.info("Set dataset UUID to %s", dataset.uuid)
+        else:
+            log.warn("No UUID defined for this barcoded dataset.")
+            dataset.newUuid()
+    else:
+        dataset.newUuid()
+    dataset.updateCounts()
+    dataset.write(output_file)
+    f_new = copy.deepcopy(datastore_file)
+    f_new.name = dataset.name
+    f_new.path = output_file
+    f_new.uuid = dataset.uuid
+    return f_new
+
+
 def _update_barcoded_sample_metadata(
         base_dir,
         ds_file,
@@ -274,11 +325,11 @@ def _update_barcoded_sample_metadata(
         use_barcode_uuids,
         bio_samples_d,
         barcode_uuids_d,
-        min_score_filter=Constants.BARCODE_QUALITY_GREATER_THAN):
+        min_score_filter=Constants.BARCODE_QUALITY_GREATER_THAN,
+        require_file_id="barcoding.tasks.lima-0"):
     # the unbarcoded BAM is also a ConsensusReadSet right now, but we
     # shouldn't rely on that
-    assert ds_file.file_id == "barcoding.tasks.lima-0"
-    parent_uuid, parent_type, parent_name = parent_info
+    assert require_file_id is None or ds_file.file_id == require_file_id
     ds_out = op.join(base_dir, op.basename(ds_file.path))
     with openDataSet(ds_file.path, strict=True) as ds:
         assert ds.datasetType in Constants.ALLOWED_BC_TYPES, ds.datasetType
@@ -289,43 +340,52 @@ def _update_barcoded_sample_metadata(
         if isoseq_mode:
             ds_barcodes = sorted(
                 list(set([tuple(sorted(bcs)) for bcs in ds_barcodes])))
-        if len(ds_barcodes) == 1:
-            bcf, bcr = ds_barcodes[0]
-            barcode_label = "{f}--{r}".format(f=barcode_names[bcf],
-                                              r=barcode_names[bcr])
-            discard_bio_samples(ds, barcode_label)
-            sample_name = bio_samples_d.get(barcode_label, None)
-            if sample_name is not None:
-                force_set_all_bio_sample_names(ds, sample_name)
-        else:
+        if len(ds_barcodes) > 1:
             raise IOError(
                 "The file {f} contains multiple barcodes: {b}".format(
                     f=ds_file.path, b="; ".join([str(bc) for bc in ds_barcodes])))
-        assert parent_type == ds.datasetType
-        ds.subdatasets = []
-        ds.metadata.addParentDataSet(parent_uuid,
-                                     parent_type,
-                                     createdBy="AnalysisJob",
-                                     timeStampedName="")
-        ds.name = get_ds_name(ds, parent_name, barcode_label)
-        ds.filters.addRequirement(bq=[('>', min_score_filter)])
-        if use_barcode_uuids:
-            uuid = barcode_uuids_d.get(barcode_label, None)
-            if uuid is not None:
-                ds.objMetadata["UniqueId"] = uuid
-                log.info("Set dataset UUID to %s", ds.uuid)
-            else:
-                log.warn("No UUID defined for this barcoded dataset.")
-                ds.newUuid()
-        else:
-            ds.newUuid()
-        ds.updateCounts()
-        ds.write(ds_out)
-        f_new = copy.deepcopy(ds_file)
-        f_new.name = ds.name
-        f_new.path = ds_out
-        f_new.uuid = ds.uuid
-        return f_new
+        return _update_barcoded_dataset(ds, ds_file, ds_barcodes[0], barcode_names, parent_info, use_barcode_uuids, bio_samples_d, barcode_uuids_d, ds_out, min_score_filter)
+
+
+def _mock_update_barcoded_sample_metadata(
+        base_dir,
+        ds_file,
+        barcode_names,
+        parent_info,
+        use_barcode_uuids,
+        barcode_pair,
+        bio_samples_d,
+        barcode_uuids_d,
+        min_score_filter=None):
+    ds_out = op.join(base_dir, op.basename(ds_file.path))
+    with openDataSet(ds_file.path, skipCounts=True) as ds:
+        assert ds.datasetType in Constants.ALLOWED_BC_TYPES, ds.datasetType
+        _uniqueify_collections(ds.metadata)
+        return _update_barcoded_dataset(ds, ds_file, barcode_pair, barcode_names, parent_info, use_barcode_uuids, bio_samples_d, barcode_uuids_d, ds_out, min_score_filter=None)
+
+
+def _load_files_for_update(
+        input_reads,
+        barcode_set,
+        datastore_file,
+        require_file_id="barcoding.tasks.lima-0"):
+    barcode_names = []
+    with BarcodeSet(barcode_set) as bc_in:
+        for rec in bc_in:
+            barcode_names.append(rec.id)
+    parent_ds = openDataSet(input_reads)
+    parent_info = (parent_ds.uuid, parent_ds.datasetType, parent_ds.name)
+    update_files = []
+    for f in iterate_datastore_read_set_files(datastore_file):
+        if require_file_id is None or f.file_id == require_file_id:
+            update_files.append(f)
+    bio_samples_d = {}
+    barcode_uuids_d = {}
+    for bio_sample in parent_ds.metadata.bioSamples:
+        for dnabc in bio_sample.DNABarcodes:
+            bio_samples_d[dnabc.name] = bio_sample.name
+            barcode_uuids_d[dnabc.name] = dnabc.uniqueId
+    return barcode_names, bio_samples_d, barcode_uuids_d, update_files, parent_info
 
 
 def update_barcoded_sample_metadata(
@@ -344,22 +404,8 @@ def update_barcoded_sample_metadata(
     2. Add the BioSample name to the dataset name
     3. Add a ParentDataSet record in the Provenance section.
     """
-    barcode_names = []
-    with BarcodeSet(barcode_set) as bc_in:
-        for rec in bc_in:
-            barcode_names.append(rec.id)
-    parent_ds = openDataSet(input_reads)
-    parent_info = (parent_ds.uuid, parent_ds.datasetType, parent_ds.name)
-    update_files = []
-    for f in iterate_datastore_read_set_files(datastore_file):
-        if f.file_id == "barcoding.tasks.lima-0":
-            update_files.append(f)
-    bio_samples_d = {}
-    barcode_uuids_d = {}
-    for bio_sample in parent_ds.metadata.bioSamples:
-        for dnabc in bio_sample.DNABarcodes:
-            bio_samples_d[dnabc.name] = bio_sample.name
-            barcode_uuids_d[dnabc.name] = dnabc.uniqueId
+    barcode_names, bio_samples_d, barcode_uuids_d, update_files, parent_info = _load_files_for_update(
+        input_reads, barcode_set, datastore_file)
     pool = multiprocessing.Pool(nproc)
     _results = []
     for ds_file in update_files:
@@ -384,6 +430,45 @@ def update_barcoded_sample_metadata(
         if f.file_id != "barcoding.tasks.lima-0":
             datastore_files.append(f)
     return DataStore(datastore_files)
+
+
+def mock_update_barcoded_sample_metadata(
+        base_dir,
+        datastore_file,
+        input_reads,
+        barcode_set,
+        use_barcode_uuids=True):
+    """
+    Function to mimic the actual update function, without actually reading
+    any barcoding information from the datasets.  Instead, the barcodes
+    defined in the input dataset will be applied sequentially.
+    """
+    barcode_names, bio_samples_d, barcode_uuids_d, update_files, parent_info = _load_files_for_update(
+        input_reads, barcode_set, datastore_file, None)
+    barcode_ids = {name: i for i, name in enumerate(barcode_names)}
+    bc_pairs = []
+    ds_files = {}
+    for bc_label in barcode_uuids_d.keys():
+        bc_fw_label, bc_rev_label = bc_label.split("--")
+        bc_pairs.append((barcode_ids[bc_fw_label], barcode_ids[bc_rev_label]))
+        suffix = ".{l}.subreadset.xml".format(l=bc_label)
+        for ds_file in update_files:
+            if ds_file.path.endswith(suffix):
+                ds_files[bc_pairs[-1]] = ds_file
+    new_files = []
+    assert len(bc_pairs) >= len(update_files)
+    for bc_pair in bc_pairs:
+        ds_file = ds_files[bc_pair]
+        new_files.append(_mock_update_barcoded_sample_metadata(
+            base_dir,
+            ds_file,
+            barcode_names,
+            parent_info,
+            use_barcode_uuids,
+            bc_pair,
+            bio_samples_d,
+            barcode_uuids_d))
+    return DataStore(new_files)
 
 
 def add_mock_collection_metadata(ds):
@@ -444,6 +529,7 @@ def force_set_all_bio_sample_names(ds, sample_name):
 SAMPLE_CHARSET_RE_STR = '[a-zA-Z0-9\-\_]'
 SAMPLE_CHARSET_RE = re.compile(r"{}".format(SAMPLE_CHARSET_RE_STR))
 
+
 def sanitize_sample(sample):
     """Simple method to sanitize sample to match sample pattern
     ...doctest:
@@ -461,7 +547,7 @@ def sanitize_sample(sample):
     for c in sample:
         if not SAMPLE_CHARSET_RE.search(c):
             c = '_'
-        sanitized_sample +=  c
+        sanitized_sample += c
     return sanitized_sample
 
 
@@ -469,18 +555,21 @@ def get_sanitized_bio_sample_name(ds):
     """Return sanitized biosample name"""
     sample = get_bio_sample_name(ds)
     ssample = sanitize_sample(sample)
-    log.warning("Sanitize biosample name from {!r} to {!r}".format(sample, ssample))
+    log.warning(
+        "Sanitize biosample name from {!r} to {!r}".format(sample, ssample))
     return ssample
 
 
 def get_prefixes(ds_file):
     if not ds_file.endswith('.subreadset.xml') and not ds_file.endswith('.consensusreadset.xml'):
         raise ValueError("Unsupported readtype {}, must either be SubreadSet or ConsensusReadSet!".
-                format(ds_file))
-    cls = SubreadSet if ds_file.endswith('subreadset.xml') else ConsensusReadSet
+                         format(ds_file))
+    cls = SubreadSet if ds_file.endswith(
+        'subreadset.xml') else ConsensusReadSet
     with cls(ds_file) as ds:
-       seqid_prefix = get_sanitized_bio_sample_name(ds)
-       return ("{}_HQ_".format(seqid_prefix), "{}_LQ_".format(seqid_prefix))
+        seqid_prefix = get_sanitized_bio_sample_name(ds)
+        return ("{}_HQ_".format(seqid_prefix), "{}_LQ_".format(seqid_prefix))
+
 
 def sanitize_dataset_tags(dset, remove_hidden=False):
     tags = {t.strip() for t in dset.tags.split(",")}

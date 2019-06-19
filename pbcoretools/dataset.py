@@ -11,6 +11,7 @@ from pbcoretools import __VERSION__
 
 log = logging.getLogger(__name__)
 
+
 def get_subparsers():
     sps = [('create', EntryPoints.create_options),
            ('filter', EntryPoints.filter_options),
@@ -25,8 +26,9 @@ def get_subparsers():
            ('copyto', EntryPoints.copyTo_options),
            ('absolutize', EntryPoints.absolutize_options),
            ('relativize', EntryPoints.relativize_options),
-          ]
+           ]
     return sps
+
 
 def add_subparsers(parser, sps):
     subparsers = parser.add_subparsers(
@@ -38,6 +40,7 @@ def add_subparsers(parser, sps):
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         subparser = func(subparser)
     return parser
+
 
 def get_parser():
     description = 'Run dataset.py by specifying a command.'
@@ -53,10 +56,12 @@ def get_parser():
     parser = add_subparsers(parser, subparser_list)
     return parser
 
+
 def run(args):
     log.info("Starting {f} version {v} dataset manipulator".format(
         f=__file__, v=__VERSION__))
     return args.func(args)
+
 
 def main(argv=sys.argv):
     """Main point of Entry"""
@@ -66,6 +71,7 @@ def main(argv=sys.argv):
         args_runner_func=run,
         alog=log,
         setup_log_func=setup_log)
+
 
 if __name__ == '__main__':
     sys.exit(main())

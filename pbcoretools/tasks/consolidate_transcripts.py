@@ -5,17 +5,16 @@ string (e.g., 'mysample_HQ_') to every transcript names.
 """
 
 import sys
+import os.path as op
 import logging
 import subprocess
 
 from pbcommand.utils import setup_log
 from pbcommand.cli import pbparser_runner
-from pbcommand.models import FileTypes, get_pbparser, ResourceTypes
+from pbcommand.models import FileTypes, get_pbparser, ResourceTypes, DataStore, DataStoreFile
 from pysam import AlignmentFile  # pylint: disable=no-member, no-name-in-module
 
-from pbcore.io import TranscriptSet
-from pbcoretools.tasks.consolidate_alignments import Constants as BaseConstants
-from pbcoretools.tasks.consolidate_alignments import run_consolidate, bam_of_dataset
+from pbcore.io import ConsensusAlignmentSet, TranscriptAlignmentSet, TranscriptSet, openDataSet
 from pbcoretools.file_utils import get_prefixes
 from pbcoretools.datastore_utils import dataset_to_datastore
 
@@ -55,31 +54,39 @@ def get_consolidate_parser(tool_id, file_type, driver_exe, version, description)
     p.add_output_file_type(file_type,
                            "hq_ds_out",
                            "Output High Quality ",
-                           description="Output {t} of consolidated bam files".format(t=ds_type),
+                           description="Output {t} of consolidated bam files".format(
+                               t=ds_type),
                            default_name="combined.hq")
     p.add_output_file_type(file_type,
                            "lq_ds_out",
                            "Output Low Quality ",
-                           description="Output {t} of consolidated bam files".format(t=ds_type),
+                           description="Output {t} of consolidated bam files".format(
+                               t=ds_type),
                            default_name="combined.lq")
     p.add_output_file_type(FileTypes.JSON,
                            "hq_datastore",
                            "JSON Datastore",
-                           description="Datastore containing High Quality {t}".format(t=ds_type),
+                           description="Datastore containing High Quality {t}".format(
+                               t=ds_type),
                            default_name="resources.hq")
     p.add_output_file_type(FileTypes.JSON,
                            "lq_datastore",
                            "JSON Datastore",
-                           description="Datastore containing Low Quality {t}".format(t=ds_type),
+                           description="Datastore containing Low Quality {t}".format(
+                               t=ds_type),
                            default_name="resources.lq")
     return p
 
 
-class Constants(BaseConstants):
+class Constants(object):
     TOOL_ID = "pbcoretools.tasks.consolidate_transcripts"
     INPUT_FILE_TYPE = FileTypes.DS_TRANSCRIPT
     TOOL_DESC = __doc__
     DRIVER = "python -m {} --resolved-tool-contract ".format(TOOL_ID)
+    BAI_FILE_TYPES = {
+        FileTypes.BAMBAI.file_type_id,
+        FileTypes.I_BAI.file_type_id
+    }
 
 
 def consolidate_transcripts(ds_in, prefix):
@@ -91,7 +98,8 @@ def consolidate_transcripts(ds_in, prefix):
     def _consolidate_transcripts_f(new_resource_file, numFiles, useTmp,
                                    perfix=prefix, ds_in=ds_in):
         external_files = ds_in.toExternalFiles()
-        assert len(external_files) >= 1, "{!r} must contain one or more bam files".format(ds_in)
+        assert len(
+            external_files) >= 1, "{!r} must contain one or more bam files".format(ds_in)
         header = AlignmentFile(external_files[0], 'rb', check_sq=False).header
         with AlignmentFile(new_resource_file, 'wb', header=header) as writer:
             for external_file in external_files:
@@ -103,6 +111,65 @@ def consolidate_transcripts(ds_in, prefix):
         subprocess.check_call(["pbindex", new_resource_file])
         ds_in = TranscriptSet(new_resource_file)  # override ds_in
     return _consolidate_transcripts_f
+
+
+def bam_of_dataset(dataset_fn):
+    return op.splitext(dataset_fn)[0] + ".bam"
+
+
+def get_reads_name(ds_in):
+    if isinstance(ds_in, TranscriptAlignmentSet):
+        return 'Aligned transcripts'
+    if isinstance(ds_in, ConsensusAlignmentSet):
+        return 'Aligned consensus reads'
+    return 'Aligned reads'
+
+
+def run_consolidate(dataset_file, output_file, datastore_file,
+                    consolidate, n_files, task_id=Constants.TOOL_ID,
+                    consolidate_f=lambda ds: ds.consolidate):
+    datastore_files = []
+    with openDataSet(dataset_file) as ds_in:
+        if consolidate:
+            if len(ds_in.toExternalFiles()) <= 0:
+                raise ValueError("DataSet {} must contain one or more files!".format(dataset_file))
+            new_resource_file = bam_of_dataset(output_file)
+            consolidate_f(ds_in)(new_resource_file, numFiles=n_files, useTmp=False)
+            # always display the BAM/BAI if consolidation is enabled
+            # XXX there is no uniqueness constraint on the sourceId, but this
+            # seems sloppy nonetheless - unfortunately I don't know how else to
+            # make view rule whitelisting work
+            reads_name = get_reads_name(ds_in)
+            for ext_res in ds_in.externalResources:
+                if ext_res.resourceId.endswith(".bam"):
+                    ds_file = DataStoreFile(
+                        ext_res.uniqueId,
+                        task_id + "-out-2",
+                        ext_res.metaType,
+                        ext_res.bam,
+                        name=reads_name,
+                        description=reads_name)
+                    datastore_files.append(ds_file)
+                    # Prevent duplicated index files being added to datastore, since consolidated
+                    # dataset may contain multiple indices pointing to the same physical file
+                    added_resources = set()
+                    for index in ext_res.indices:
+                        if (index.metaType in Constants.BAI_FILE_TYPES and
+                            index.resourceId not in added_resources):
+                            added_resources.add(index.resourceId)
+                            ds_file = DataStoreFile(
+                                index.uniqueId,
+                                task_id + "-out-3",
+                                index.metaType,
+                                index.resourceId,
+                                name="Index of {}".format(reads_name.lower()),
+                                description="Index of {}".format(reads_name.lower()))
+                            datastore_files.append(ds_file)
+        ds_in.newUuid()
+        ds_in.write(output_file)
+    datastore = DataStore(datastore_files)
+    datastore.write_json(datastore_file)
+    return 0
 
 
 def __runner(ds_items):
@@ -143,8 +210,10 @@ def args_runner(args):
 def rtc_runner(rtc):
     hq_prefix, lq_prefix = get_prefixes(rtc.task.input_files[0])
     ds_items = [
-        (rtc.task.input_files[1], rtc.task.output_files[0], rtc.task.output_files[2], hq_prefix),
-        (rtc.task.input_files[2], rtc.task.output_files[1], rtc.task.output_files[3], lq_prefix)
+        (rtc.task.input_files[1], rtc.task.output_files[0],
+         rtc.task.output_files[2], hq_prefix),
+        (rtc.task.input_files[2], rtc.task.output_files[1],
+         rtc.task.output_files[3], lq_prefix)
     ]
     return __runner(ds_items)
 
@@ -153,7 +222,7 @@ def main(argv=sys.argv):
     logging.basicConfig(level=logging.DEBUG)
     log = logging.getLogger()
     parser = get_consolidate_parser(Constants.TOOL_ID, Constants.INPUT_FILE_TYPE,
-                                    Constants.DRIVER, Constants.VERSION, Constants.TOOL_DESC)
+                                    Constants.DRIVER, "0.1", Constants.TOOL_DESC)
     return pbparser_runner(argv[1:],
                            parser,
                            args_runner,
