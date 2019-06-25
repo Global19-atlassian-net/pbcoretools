@@ -25,6 +25,10 @@ def _merge_chunks(file_names, datastore_file):
     if len(file_names) > 1:
         bam_file = ".".join(output_file.split(".")[:-2] + ["bam"])
         ds.consolidate(bam_file, useTmp=False)
+        bc_file = ds.subdatasets[0].externalResources[0].barcodes
+        if bc_file is not None:
+            bc_file = op.realpath(bc_file)
+            ds.externalResources[0].barcodes = bc_file
     ds.write(output_file, relPaths=False)
     log.info("Wrote %s", output_file)
     return DataStoreFile(ds.uuid,
