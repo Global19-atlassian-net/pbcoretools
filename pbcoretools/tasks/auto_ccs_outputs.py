@@ -115,10 +115,11 @@ def to_fastx_files(file_type, ds, ccs_dataset_file, file_ids, base_dir, file_pre
 def get_prefix_and_bam_file_name(ds, is_barcoded=False):
     bam_file_name = file_prefix = None
     if is_barcoded:
-        barcodes = list(set(zip(ds.index.bcForward, ds.index.bcReverse)))
-        assert len(barcodes) == 1, "Multiple barcodes found: {b}".format(
-            b=", ".join([str(b) for b in barcodes]))
         assert len(ds.externalResources) == 1
+        bam = ds.resourceReaders()[0]
+        barcodes = list(set(zip(bam.pbi.bcForward, bam.pbi.bcReverse)))
+        assert len(barcodes) == 1, "Multiple barcodes found in {f}: {b}".format(
+            f=ds.fileNames[0], b=", ".join([str(b) for b in barcodes]))
         bam_file_name = ds.externalResources[0].bam
         log.info("Found a single barcoded BAM %s", bam_file_name)
         file_prefix = re.sub(".ccs.bam$", "", op.basename(bam_file_name))
