@@ -595,6 +595,7 @@ def reparent_dataset(input_file, dataset_name, output_file):
             ds_in.metadata.provenance = None
         ds_in.name = dataset_name
         ds_in.newUuid(random=True)
+        sanitize_dataset_tags(ds_in, remove_hidden=True)
         ds_in.write(output_file)
     return 0
 
