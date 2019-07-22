@@ -424,6 +424,8 @@ def copyTo_options(parser):
 
 def newUuidXml(args):
     dss = openDataSet(args.infile, strict=args.strict)
+    if args.updateCounts:
+        dss.updateCounts()
     dss.newUuid(random=args.random)
     dss.write(args.infile, validate=False)
     return 0
@@ -435,6 +437,8 @@ def newUniqueId_options(parser):
                         help="The XML file to refresh")
     parser.add_argument("--random", action='store_true', default=False,
                         help=("Generate a random UUID, instead of a hash"))
+    parser.add_argument("--updateCounts", action="store_true", default=False,
+                        help="Update NumRecords and TotalLength in metadata")
     parser.set_defaults(func=newUuidXml)
 
 
