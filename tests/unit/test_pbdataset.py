@@ -143,6 +143,10 @@ class TestDataSet(unittest.TestCase):
         self._run_cmd_with_output(cmd, fn)
         post_uuid = AlignmentSet(fn).uuid
         self.assertNotEqual(pre_uuid, post_uuid)
+        cmd = "dataset newuuid --updateCounts {d}".format(d=fn)
+        self._run_cmd_with_output(cmd, fn)
+        post_uuid = AlignmentSet(fn).uuid
+        self.assertNotEqual(pre_uuid, post_uuid)
 
     def test_newUuid_clone_cli(self):
         fn_orig = data.getXml(8)
