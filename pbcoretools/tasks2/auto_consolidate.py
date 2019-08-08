@@ -53,7 +53,7 @@ def run_args(args):
             log.warn("--force was used, so BAM consolidation will be run anyway")
     args.dataset.consolidate(args.output_bam,
                              numFiles=1,
-                             useTmp=args.noTmp)
+                             useTmp=not args.noTmp)
     args.dataset.write(xml_out)
     return 0
     
