@@ -259,7 +259,7 @@ def splitXml(args):
     log.debug("Splitting into {i} chunks".format(i=len(dss)))
     infix = 'chunk{i}'
     chNums = range(len(dss))
-    if args.barcodes:
+    if args.barcodes and not args.simple_chunk_ids:
         infix = '{i}'
         chNums = ['_'.join(ds.barcodes).replace(
             '[', '').replace(']', '').replace(', ', '-') for ds in dss]
@@ -324,6 +324,8 @@ def split_options(parser):
         help="Specify an output directory")
     pad("--prefix", default=None, action="store",
         help="Optional output file prefix")
+    pad("--simple-chunk-ids", default=False, action="store_true",
+        help="Don't include barcode IDs in output file names (only applies if --barcodes was used)")
     pad("outfiles", nargs=argparse.REMAINDER, type=str,
         help="The resulting XML files (optional)")
     parser.set_defaults(func=splitXml)
