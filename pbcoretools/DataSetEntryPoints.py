@@ -335,6 +335,8 @@ def mergeXml(args):
     dss = [openDataSet(infn, strict=args.strict) for infn in args.infiles]
     allds = reduce(lambda ds1, ds2: ds1 + ds2, dss)
     if not allds is None:
+        if args.remove_parentage:
+            allds.metadata.provenance = None
         allds.updateCounts()
         allds.write(args.outfile)
     else:
@@ -351,6 +353,9 @@ def merge_options(parser):
     # parser.add_argument("infiles", type=validate_file, nargs='+',
     parser.add_argument("infiles", type=str, nargs='+',
                         help="The XML files to merge")
+    parser.add_argument("--remove-parentage", action="store_true",
+                        default=False,
+                        help="Remove references to parent dataset(s)")
     parser.set_defaults(func=mergeXml)
 
 
