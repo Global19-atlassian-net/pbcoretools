@@ -337,6 +337,8 @@ def mergeXml(args):
     if not allds is None:
         if args.remove_parentage:
             allds.metadata.provenance = None
+        if args.name:
+            allds.name = args.name
         allds.updateCounts()
         allds.write(args.outfile)
     else:
@@ -356,6 +358,8 @@ def merge_options(parser):
     parser.add_argument("--remove-parentage", action="store_true",
                         default=False,
                         help="Remove references to parent dataset(s)")
+    parser.add_argument("--name", action="store", default=None,
+                        help="Specify explicit name for the new dataset")
     parser.set_defaults(func=mergeXml)
 
 
