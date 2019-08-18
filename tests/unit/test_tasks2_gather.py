@@ -217,3 +217,19 @@ class TestGatherToolZip(IntegrationBase):
                 d = json.loads(gathered.open(member).read())
                 uuids.add(d["uuid"])
         self.assertEqual(len(uuids), 4)
+
+
+def test_gather_datastore_json():
+    import subprocess
+    from pbcommand.models import DataStore
+    d = '/pbi/dept/secondary/siv/testdata/pbsvtools-unittest/data/test_scatter_align_datastore/'
+    if1 = op.join(d, '1.aln.datastore.json')
+    if2 = op.join(d, '2.aln.datastore.json')
+    of = tempfile.NamedTemporaryFile(suffix=".datastore.json").name
+    args = ['python', '-m', 'pbcoretools.tasks2.gather', of, if1, if2]
+    subprocess.check_call(args)
+    out_fns = DataStore.load_from_json(of).to_dict()['files']
+    expected_bam_1 = op.join(d, '1.bam')
+    expected_bam_2 = op.join(d, '2.bam')
+    assert out_fns[0]['path'] == expected_bam_1
+    assert out_fns[1]['path'] == expected_bam_2

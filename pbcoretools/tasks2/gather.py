@@ -21,13 +21,19 @@ from pbcoretools.chunking.gather import (
     gather_json,
     gather_vcf,
     gather_zip,
-    gather_fofn)
+    gather_fofn,
+    gather_datastore)
 
 log = logging.getLogger(__name__)
 __version__ = "0.1"
 
 
 def run_args(args):
+    if args.output_file.endswith('.datastore.json'):
+        gather_datastore(args.chunked_files, args.output_file)
+        log.info("Wrote %s", args.output_file)
+        return 0
+
     fasta_gather = gather_fasta_contigset if args.join_contigs else gather_fasta
     fastq_gather = gather_fastq_contigset if args.join_contigs else gather_fastq
     MODES = {
