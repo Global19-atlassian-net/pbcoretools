@@ -160,7 +160,7 @@ def make_barcode_sample_csv(subreads, csv_file):
         writer.writerow(headers)
         for bc_label in sorted(barcoded_samples.keys()):
             writer.writerow(
-                [bc_label, barcoded_samples.get(bc_label, "unknown_sample")])
+                [bc_label, barcoded_samples.get(bc_label, "UnnamedSample")])
     return barcoded_samples
 
 
@@ -222,7 +222,7 @@ def get_bio_sample_name(ds):
     bio_samples = {s.name for s in ds.metadata.bioSamples}
     if len(bio_samples) == 0:
         log.warn("No BioSample records present")
-        return "unknown_sample"
+        return "UnnamedSample"
     elif len(bio_samples) > 1:
         log.warn("Multiple unique BioSample records present")
         return "multiple_samples"
