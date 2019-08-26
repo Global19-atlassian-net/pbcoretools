@@ -588,7 +588,7 @@ def sanitize_dataset_tags(dset, remove_hidden=False):
 
 
 def reparent_dataset(input_file, dataset_name, output_file):
-    with openDataSet(input_file, strict=True, skipCounts=True) as ds_in:
+    with openDataSet(input_file, strict=True) as ds_in:
         if len(ds_in.metadata.provenance) > 0:
             log.warn("Removing existing provenance record: %s",
                      ds_in.metadata.provenance)
@@ -602,7 +602,7 @@ def reparent_dataset(input_file, dataset_name, output_file):
 
 def update_consensus_reads(ccs_in, subreads_in, ccs_out, use_run_design_uuid=False):
     ds_subreads = SubreadSet(subreads_in, skipCounts=True)
-    with ConsensusReadSet(ccs_in, skipCounts=True) as ds:
+    with ConsensusReadSet(ccs_in) as ds:
         ds.name = ds_subreads.name + " (CCS)"
         run_design_uuid = None
         if use_run_design_uuid:
