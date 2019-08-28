@@ -19,6 +19,7 @@ from pbcommand.common_options import add_debug_option
 from pbcommand.cli.utils import main_runner_default, subparser_builder
 from pbcommand.cli import get_default_argparser
 from pbcommand.models.report import Report
+from pbcommand.models import DataStore
 
 from pbcore.io import (SubreadSet, ContigSet, AlignmentSet, ConsensusReadSet,
                        ConsensusAlignmentSet, TranscriptSet, TranscriptAlignmentSet)
@@ -195,6 +196,14 @@ def gather_fofn(input_files, output_file, skip_empty=True):
     return output_file
 
 
+def gather_datastore(input_files, output_file, skip_empty=True):
+    ds = DataStore([])
+    for i_fn in input_files:
+        for uuid, f in DataStore.load_from_json(i_fn).files.iteritems():
+            ds.add(f)
+    ds.write_json(output_file)
+
+
 def __gather_contigset(resource_file_extension, input_files, output_file,
                        new_resource_file=None,
                        skip_empty=True):
@@ -288,71 +297,6 @@ gather_transcripts = P(__gather_readset, TranscriptSet)
 gather_transcript_alignmentset = P(__gather_readset, TranscriptAlignmentSet)
 
 
-# FIXME we should kill this
-def gather_bigwig(input_files, output_file):
-    import pyBigWig
-    chr_lengths = {}
-    FileInfo = namedtuple("FileInfo", ("file_name", "file_id", "seqids"))
-    files_info = []
-    for i, file_name in enumerate(input_files):
-        log.info("Reading header info from {f}...".format(f=file_name))
-        if op.getsize(file_name) == 0:
-            continue
-        try:
-            file_id = int(op.dirname(file_name).split("-")[-1])
-        except ValueError:
-            file_id = i
-        bw_chunk = pyBigWig.open(file_name)
-        seqids = []
-        for (seqid, length) in bw_chunk.chroms().iteritems():
-            chr_lengths.setdefault(seqid, 0)
-            chr_lengths[seqid] = max(length, chr_lengths[seqid])
-            seqids.append(seqid)
-        files_info.append(FileInfo(file_name, file_id, seqids))
-        bw_chunk.close()
-    if len(files_info) == 0:
-        with open(output_file, "wb") as f:
-            return output_file
-    bw = pyBigWig.open(output_file, "w")
-    files_info.sort(lambda a, b: cmp(a.file_id, b.file_id))
-    regions = OrderedDict()
-    seqid_files = defaultdict(list)
-    for f in files_info:
-        for seqid in f.seqids:
-            log.debug("{f} ({i}): {s} {l}".format(f=f.file_name,
-                                                  i=f.file_id, s=seqid, l=chr_lengths[seqid]))
-            regions[seqid] = chr_lengths[seqid]
-            seqid_files[seqid].append(f)
-    bw.addHeader([(k, v) for k, v in regions.iteritems()])
-    seq_chunk = namedtuple("SeqChunk", ("starts", "ends", "values"))
-    for (seqid, length) in regions.iteritems():
-        log.info("Collecting values for {i}...".format(i=seqid))
-        chunks = []
-        k = 0
-        for file_info in seqid_files[seqid]:
-            log.info("Reading values from {f}".format(f=file_info.file_name))
-            bw_chunk = pyBigWig.open(file_info.file_name)
-            starts, ends, values = [], [], []
-            chr_max = bw_chunk.chroms()[seqid]
-            for i, val in enumerate(bw_chunk.values(seqid, 0, chr_max)):
-                if not math.isnan(val):
-                    starts.append(i)
-                    ends.append(i + 1)
-                    values.append(val)
-                    k += 1
-            chunks.append(seq_chunk(starts, ends, values))
-            bw_chunk.close()
-        chunks.sort(lambda a, b: cmp(a.starts[0], b.starts[0]))
-        starts = list(itertools.chain(*[x.starts for x in chunks]))
-        ends = list(itertools.chain(*[x.ends for x in chunks]))
-        values = list(itertools.chain(*[x.values for x in chunks]))
-        seqids = [seqid] * len(starts)
-        log.info("Adding {i}:{s}-{e}".format(i=seqid, s=starts[0], e=ends[-1]))
-        bw.addEntries(seqids, starts, ends=ends, values=values)
-    bw.close()
-    return output_file
-
-
 def gather_tgz(input_files, output_file):
     """
     Deprecated, use ZIP files instead where possible.
@@ -418,7 +362,6 @@ add_chunk_key_transcripts = __add_chunk_key_option('$chunk.transcriptset_id')
 # TODO: change this to contigset_id once quiver emits contigsets
 add_chunk_key_contigset = __add_chunk_key_option('$chunk.fasta_id')
 add_chunk_key_report = __add_chunk_key_option('$chunk.json_id')
-add_chunk_key_bigwig = __add_chunk_key_option('$chunk.bw_id')
 add_chunk_key_tgz = __add_chunk_key_option('$chunk.tgz_id')
 
 
@@ -475,8 +418,6 @@ _gather_transcripts_options = __add_gather_options("Output TranscriptSet XML fil
 _gather_contigset_options = __add_gather_options("Output ContigSet XML file",
                                                  "Chunk input JSON file",
                                                  add_chunk_key_contigset)
-_gather_bigwig_options = __add_gather_options(
-    "Output BigWig file", "input BigWig file", add_chunk_key_bigwig)
 _gather_tgz_options = __add_gather_options(
     "Output TGZ file", "input TGZ file", add_chunk_key_tgz)
 
@@ -503,6 +444,7 @@ def __rtc_gather_runner(func, rtc):
 def __args_gather_runner(func, args):
     return __gather_runner(func, args.chunk_json, args.output, args.chunk_key)
 
+
 # These make assumptions about the CLI argparser args labels (e.g.,
 # args.chunk_key)
 _args_runner_gather_fasta = P(__args_gather_runner, gather_fasta)
@@ -522,7 +464,6 @@ _args_runner_gather_transcripts = P(__args_gather_runner, gather_transcripts)
 _args_runner_gather_csv = P(__args_gather_runner, gather_csv)
 _args_runner_gather_txt = P(__args_gather_runner, gather_txt)
 _args_runner_gather_report = P(__args_gather_runner, gather_report)
-_args_runner_gather_bigwig = P(__args_gather_runner, gather_bigwig)
 _args_runner_gather_tgz = P(__args_gather_runner, gather_tgz)
 
 # (chunk.json, output_file, chunk_key)
@@ -542,6 +483,6 @@ run_main_gather_ccs_alignmentset = P(__gather_runner, gather_ccs_alignmentset)
 run_main_gather_transcripts = P(__gather_runner, gather_transcripts)
 run_main_gather_transcript_alignmentset = P(
     __gather_runner, gather_transcript_alignmentset)
-run_main_gather_bigwig = P(__gather_runner, gather_bigwig)
 run_main_gather_tgz = P(__gather_runner, gather_tgz)
 run_main_gather_zip = P(__gather_runner, gather_zip)
+run_main_gather_fofn = P(__gather_runner, gather_fofn)

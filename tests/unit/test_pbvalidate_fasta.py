@@ -1,5 +1,6 @@
 
 import subprocess
+import tempfile
 import unittest
 import os.path as op
 import os
@@ -137,13 +138,17 @@ def validate_file(file_name, strict=False, validate_index=False):
 
 class TestCase (unittest.TestCase):
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
+        cls._cwd = os.getcwd()
+        tmp_dir = tempfile.mkdtemp()
+        os.chdir(tmp_dir)
         for i, seq in enumerate(test_sequences, start=1):
             open("test_%d.fa" % i, "w").write(seq)
 
-    def tearDown(self):
-        for i, seq in enumerate(test_sequences, start=1):
-            os.remove("test_%d.fa" % i)
+    @classmethod
+    def tearDownClass(cls):
+        os.chdir(cls._cwd)
 
     def test_allowed(self):
         e, c = validate_file("test_1.fa")

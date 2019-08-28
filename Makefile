@@ -34,7 +34,16 @@ doc-clean:
 doctest:
 	cd doc && make doctest
 
+DOCTEST_MODULES= pbcoretools/utils.py #pbcoretools/file_utils.py #etc.
+
+quick-test:
+	py.test -v --doctest-modules ${DOCTEST_MODULES} #--ignore=.
+
 unit-test:
+	py.test -n auto -v --durations=10 --junitxml=nosetests.xml --cov=./pbcoretools --cov-report=xml:coverage.xml tests/unit/test_*.py
+	sed -i -e 's@filename="@filename="./@g' coverage.xml
+
+unit-test-old:
 	nosetests --with-xunit tests/unit/test_*.py -v --with-coverage --cover-xml-file=coverage.xml --cover-package=pbcoretools --cover-xml --nocapture --nologcapture --verbose 
 	sed -i -e 's@filename="@filename="./@g' coverage.xml
 test: doctest unit-test

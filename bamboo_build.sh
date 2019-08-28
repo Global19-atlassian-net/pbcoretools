@@ -42,6 +42,7 @@ fi
 set +ve
 type module >& /dev/null || . /mnt/software/Modules/current/init/bash
 module load python/2
+module load htslib  # since pysam was built against this
 set -ve
 
 if [[ -z ${bamboo_repository_branch_name+x} ]]; then
@@ -56,13 +57,14 @@ fi
 
 PIP="pip --cache-dir=${bamboo_build_working_directory:-$PWD}/.pip"
 
-#$PIP install --user --no-compile --no-index --find-link $WHEELHOUSE -e repos/PacBioTestData
-#$PIP install --user --no-compile --no-index --find-link $WHEELHOUSE -e repos/pbcommand
-#$PIP install --user --no-compile --no-index --find-link $WHEELHOUSE -e repos/pbcore
+$PIP install --user --no-compile --no-index --find-link $WHEELHOUSE h5py #pbtestdata pbcommand pbcore h5py
+$PIP install --user --no-compile --no-index --find-link $WHEELHOUSE -e repos/PacBioTestData
+$PIP install --user --no-compile --no-index --find-link $WHEELHOUSE -e repos/pbcommand
+$PIP install --user --no-compile --no-index --find-link $WHEELHOUSE -e repos/pbcore
 $PIP install --user --no-compile --no-index --find-link $WHEELHOUSE -r requirements-ci.txt
 $PIP install --user --no-compile --no-index --find-link $WHEELHOUSE -r requirements-dev.txt
 #$PIP install --user --no-compile --no-index --find-link $WHEELHOUSE "pylint<2.0.0"
-$PIP install --user --no-compile --no-index --find-link $WHEELHOUSE pbtestdata pbcommand pbcore h5py
+$PIP install --no-compile --upgrade --user --find-link $WHEELHOUSE pytest pytest-xdist pytest-cov
 
 $PIP install --user -e ./
 

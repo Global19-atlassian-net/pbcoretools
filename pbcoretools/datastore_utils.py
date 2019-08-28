@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from pbcore.io import SubreadSet, ConsensusReadSet, TranscriptSet, AlignmentSet, \
-        ConsensusAlignmentSet, TranscriptAlignmentSet
+    ConsensusAlignmentSet, TranscriptAlignmentSet
 from pbcommand.utils import get_dataset_metadata
 from pbcommand.models import FileTypes, DataStoreFile, DataStore
 
@@ -14,6 +14,7 @@ ALLOWED_TYPES = [
     FileTypes.DS_ALIGN_CCS,
     FileTypes.DS_ALIGN_TRANSCRIPT,
 ]
+
 
 def datastore_to_datastorefile_objs(in_datastore_json, allowed_types=ALLOWED_TYPES):
     """Return (datastorefile_objs, type_id, cls, ext)
@@ -30,7 +31,8 @@ def datastore_to_datastorefile_objs(in_datastore_json, allowed_types=ALLOWED_TYP
                          .format(in_datastore_json))
 
     # Do all files share the same type?
-    observed_type_ids = list(set([f.file_type_id for f in datastore.files.values()]))
+    observed_type_ids = list(
+        set([f.file_type_id for f in datastore.files.values()]))
     if len(observed_type_ids) != 1:
         raise ValueError("Could not handle datastore of mixed types: {}!".format(
                          observed_type_ids))
@@ -52,8 +54,8 @@ def _type_id_to_ext(type_id):
     e.g., subreadset.xml
     """
     type_id_to_ext = {dataset_type.file_type_id: dataset_type.ext
-            for dataset_type in ALLOWED_TYPES
-    }
+                      for dataset_type in ALLOWED_TYPES
+                      }
     return type_id_to_ext[type_id]
 
 
@@ -75,7 +77,7 @@ def _type_id_to_cls(type_id):
 
 def dataset_to_datastore(dataset_file, datastore_file, source_id="dataset_to_datastore"):
     """Copied from pbcoretools.tasks.barcoding"""
-    #FIXME: replace barcoding
+    # FIXME: replace barcoding
     dsmd = get_dataset_metadata(dataset_file)
     ds_file = DataStoreFile(dsmd.uuid, source_id, dsmd.metatype, dataset_file)
     ds_out = DataStore([ds_file])

@@ -122,7 +122,8 @@ class TestBamSieve(unittest.TestCase):
             wl_out.write("\n".join([str(x) for x in list(BLACKLIST)]))
         _run_with_blacklist(tmp_wl)
 
-        # now with a BAM file as blacklist
+        # now with the BAM file we just made as blacklist
+        EXPECTED_OUT = BLACKLIST
         rc = bamsieve.filter_reads(
             input_bam=SUBREADS3,
             output_bam=ofn2,
@@ -134,7 +135,27 @@ class TestBamSieve(unittest.TestCase):
         with BamReader(ofn2) as bam_out:
             subreads2 = set([x.qName for x in bam_out])
         self.assertEqual(subreads & subreads2, set())
-        self.assertEqual(subreads2, BLACKLIST)
+        self.assertEqual(subreads2, EXPECTED_OUT)
+
+        # now an integration test, because this is used in Cromwell workflow
+        ofn3 = tempfile.NamedTemporaryFile(suffix=".subreads.bam").name
+        args = ["bamsieve", "--subreads", "--blacklist", ofn, SUBREADS3, ofn3]
+        rc = subprocess.check_call(args)
+        with BamReader(ofn3) as bam_out:
+            subreads3 = set([x.qName for x in bam_out])
+            self.assertEqual(subreads & subreads3, set())
+            self.assertEqual(subreads3, EXPECTED_OUT)
+        # and again, with a dataset as input
+        ds_tmp = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
+        with SubreadSet(ofn) as ds:
+            ds.write(ds_tmp)
+        ofn4 = tempfile.NamedTemporaryFile(suffix=".subreads.bam").name
+        args = ["bamsieve", "--subreads", "--blacklist", ds_tmp, SUBREADS3, ofn4]
+        rc = subprocess.check_call(args)
+        with BamReader(ofn4) as bam_out:
+            subreads4 = set([x.qName for x in bam_out])
+            self.assertEqual(subreads & subreads4, set())
+            self.assertEqual(subreads4, EXPECTED_OUT)
 
     def test_dataset_io(self):
         ofn = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
@@ -368,7 +389,3 @@ class TestBamSieve(unittest.TestCase):
         with BamReader(ofn) as bam_out:
             have_zmws = set([rec.HoleNumber for rec in bam_out])
             self.assertEqual(have_zmws, set([8]))
-
-
-if __name__ == "__main__":
-    unittest.main()

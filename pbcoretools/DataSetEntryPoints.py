@@ -1,4 +1,4 @@
-#/usr/bin/env python
+# /usr/bin/env python
 
 from __future__ import print_function
 
@@ -20,23 +20,24 @@ from pbcommand.validators import validate_output_dir
 from pbcoretools.file_utils import (add_mock_collection_metadata,
                                     force_set_all_well_sample_names,
                                     force_set_all_bio_sample_names)
+import pbcoretools.utils
 
 log = logging.getLogger(__name__)
 
 
 def show_sample_names_if_defined(ds):
-    if ds.metadata.collections:
-        bio_samples = set()
-        well_samples = set()
-        for coll in ds.metadata.collections:
-            well_samples.add(coll.wellSample.name)
-            bio_samples.update({s.name for s in coll.wellSample.bioSamples})
-        well_samples = sorted(list(well_samples))
-        bio_samples = sorted(list(bio_samples))
-        if not bio_samples:
-            bio_samples = ["unknown"]
-        print("Well sample(s)        : {s}".format(s=", ".join(well_samples)))
-        print("Biological sample(s)  : {s}".format(s=", ".join(bio_samples)))
+    bio_samples = {s.name for s in ds.metadata.bioSamples}
+    well_samples = set()
+    for coll in ds.metadata.collections:
+        well_samples.add(coll.wellSample.name)
+    well_samples = sorted(list(well_samples))
+    bio_samples = sorted(list(bio_samples))
+    if not bio_samples:
+        bio_samples = ["unknown"]
+    if not well_samples:
+        well_samples = ["unknown"]
+    print("Well sample(s)        : {s}".format(s=", ".join(well_samples)))
+    print("Biological sample(s)  : {s}".format(s=", ".join(bio_samples)))
 
 
 def summarizeXml(args):
@@ -83,7 +84,8 @@ def createXml(args):
     if args.dsType is None:
         dset = openDataFile(*args.infile, strict=args.strict,
                             skipCounts=args.skipCounts,
-                            generateIndices=args.generateIndices)
+                            generateIndices=args.generateIndices,
+                            referenceFastaFname=args.reference_fasta_fname)
     else:
         dsTypes = DataSet.castableTypes()
         dset = dsTypes[args.dsType](
@@ -109,6 +111,11 @@ def createXml(args):
         if args.bio_sample_name:
             force_set_all_bio_sample_names(dset, args.bio_sample_name)
     log.debug("Dataset created")
+    if isinstance(dset, ContigSet):
+        if args.organism:
+            dset.metadata.organism = args.organism
+        if args.ploidy:
+            dset.metadata.ploidy = args.ploidy
     dset.newUuid()
     dset.write(args.outfile, validate=args.novalidate, relPaths=args.relative)
     log.debug("Dataset written")
@@ -142,6 +149,10 @@ def create_options(parser):
     pad("--relative", action='store_true', default=False,
         help=("Make the included paths relative instead of "
               "absolute (not compatible with --novalidate)"))
+    pad("--organism", action="store", default="unknown",
+        help="Organism name (for ReferenceSet only)")
+    pad("--ploidy", action="store", default="haploid",
+        help="Genome ploidy (for ReferenceSet only)")
     pad("--well-sample-name",
         help=("Set the WellSample name for all movies (will generate new "
               "CollectionMetadata from blank template for any movies that are "
@@ -175,13 +186,20 @@ def parse_filter_list(filtStrs):
     separators = OPMAP.keys()
     # pad the ones that start and end with letters
     separators = pad_separators(separators)
-    for filt in filtStrs:
-        for sep in separators:
-            if sep in filt:
-                param, condition = filt.split(sep)
-                condition = (sep.strip(), condition.strip())
-                filters[param.strip()].append(condition)
-                break
+    for filtStr in filtStrs:
+        for filt in pbcoretools.utils.split_filtStr(filtStr):
+            for sep in separators:
+                if sep in filt:
+                    try:
+                        param, condition = filt.split(sep)
+                    except ValueError:
+                        log.exception('{!r}.split({!r})'.format(filt, sep))
+                        raise
+                    condition = (sep.strip(), condition.strip())
+                    log.debug('filt={!r} param={!r} condition={!r}'.format(
+                        filt, param, condition))
+                    filters[param.strip()].append(condition)
+                    break
     return filters
 
 
@@ -241,11 +259,11 @@ def splitXml(args):
     log.debug("Splitting into {i} chunks".format(i=len(dss)))
     infix = 'chunk{i}'
     chNums = range(len(dss))
-    if args.barcodes:
+    if args.barcodes and not args.simple_chunk_ids:
         infix = '{i}'
         chNums = ['_'.join(ds.barcodes).replace(
             '[', '').replace(']', '').replace(', ', '-') for ds in dss]
-    nSuf = -2 if re.search(r".+\.\w+set\.xml", args.infile) else -1
+    nSuf = -2 if re.search(r".+\.\w+set\.xml", args.infile.lower()) else -1
     default_prefix = '.'.join(args.infile.split('.')[:nSuf])
     ext = '.'.join(args.infile.split('.')[nSuf:])
     prefix = args.prefix if args.prefix is not None else default_prefix
@@ -306,6 +324,8 @@ def split_options(parser):
         help="Specify an output directory")
     pad("--prefix", default=None, action="store",
         help="Optional output file prefix")
+    pad("--simple-chunk-ids", default=False, action="store_true",
+        help="Don't include barcode IDs in output file names (only applies if --barcodes was used)")
     pad("outfiles", nargs=argparse.REMAINDER, type=str,
         help="The resulting XML files (optional)")
     parser.set_defaults(func=splitXml)
@@ -315,6 +335,10 @@ def mergeXml(args):
     dss = [openDataSet(infn, strict=args.strict) for infn in args.infiles]
     allds = reduce(lambda ds1, ds2: ds1 + ds2, dss)
     if not allds is None:
+        if args.remove_parentage:
+            allds.metadata.provenance = None
+        if args.name:
+            allds.name = args.name
         allds.updateCounts()
         allds.write(args.outfile)
     else:
@@ -331,6 +355,11 @@ def merge_options(parser):
     # parser.add_argument("infiles", type=validate_file, nargs='+',
     parser.add_argument("infiles", type=str, nargs='+',
                         help="The XML files to merge")
+    parser.add_argument("--remove-parentage", action="store_true",
+                        default=False,
+                        help="Remove references to parent dataset(s)")
+    parser.add_argument("--name", action="store", default=None,
+                        help="Specify explicit name for the new dataset")
     parser.set_defaults(func=mergeXml)
 
 
@@ -352,7 +381,9 @@ def relativize_options(parser):
 def absolutizeXml(args):
     dss = openDataSet(args.infile, strict=args.strict)
     outfn = args.infile
-    if args.outdir:
+    if args.output_xml:
+        outfn = args.output_xml
+    elif args.outdir:
         if os.path.isdir(args.outdir):
             outfn = _swapPath(args.outdir, args.infile)
         else:
@@ -371,6 +402,8 @@ def absolutize_options(parser):
                         help="The XML file to absolutize")
     parser.add_argument("--outdir", default=None, type=str,
                         help="Specify an optional output directory")
+    parser.add_argument("--output-xml", default=None, type=str,
+                        help="Specify an optional output file")
     parser.add_argument("--update", default=False, action="store_true",
                         dest="updateCounts",
                         help="Update dataset metadata")
@@ -402,6 +435,8 @@ def copyTo_options(parser):
 
 def newUuidXml(args):
     dss = openDataSet(args.infile, strict=args.strict)
+    if args.updateCounts:
+        dss.updateCounts()
     dss.newUuid(random=args.random)
     dss.write(args.infile, validate=False)
     return 0
@@ -413,6 +448,8 @@ def newUniqueId_options(parser):
                         help="The XML file to refresh")
     parser.add_argument("--random", action='store_true', default=False,
                         help=("Generate a random UUID, instead of a hash"))
+    parser.add_argument("--updateCounts", action="store_true", default=False,
+                        help="Update NumRecords and TotalLength in metadata")
     parser.set_defaults(func=newUuidXml)
 
 

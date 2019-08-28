@@ -6,7 +6,7 @@ import functools
 import csv
 
 from pbcore.io import (FastaWriter, FastaReader, FastqReader, FastqWriter,
-                       AlignmentSet, HdfSubreadSet, SubreadSet, ReferenceSet,
+                       AlignmentSet, SubreadSet, ReferenceSet,
                        ConsensusReadSet, ContigSet, FastaRecord, TranscriptSet)
 from pbcommand.pb_io.common import write_pipeline_chunks
 from pbcommand.pb_io.report import fofn_to_report
@@ -18,7 +18,6 @@ log = logging.getLogger(__name__)
 
 
 class Constants(object):
-    CHUNK_KEY_HDFSET = "$chunk.hdf5subreadset_id"
     CHUNK_KEY_SUBSET = "$chunk.subreadset_id"
     CHUNK_KEY_CCSSET = "$chunk.ccsset_id"
     CHUNK_KEY_ALNSET = "$chunk.alignmentset_id"
@@ -349,6 +348,7 @@ def _to_chunked_dataset_files(dataset_type, dataset_path, reference_path,
         c = PipelineChunk(chunk_id, **d)
         yield c
 
+
 to_chunked_subreadset_files = functools.partial(_to_chunked_dataset_files,
                                                 SubreadSet)
 to_chunked_ccsset_files = functools.partial(_to_chunked_dataset_files,
@@ -403,6 +403,7 @@ def _write_dataset_barcode_chunks_to_file(chunk_func, chunk_key, chunk_file,
     write_chunks_to_json(chunks, chunk_file)
     return 0
 
+
 write_subreadset_barcode_chunks_to_file = functools.partial(
     _write_dataset_barcode_chunks_to_file, to_barcode_chunked_subreadset_files,
     Constants.CHUNK_KEY_SUBSET)
@@ -436,6 +437,7 @@ def _to_zmw_chunked_dataset_files(dataset_type, dataset_path,
             d.update(extra_chunk_keys)
         c = PipelineChunk(chunk_id, **d)
         yield c
+
 
 TRANSCRIPTSET_EXTRA_SPLIT_ARGS = {"targetSize": 1000}
 to_zmw_chunked_subreadset_files = functools.partial(
@@ -525,6 +527,7 @@ def _to_bam_chunked_dataset_files(dataset_type, dataset_path,
         c = PipelineChunk(chunk_id, **d)
         yield c
 
+
 to_bam_chunked_subreadset_files = functools.partial(
     _to_bam_chunked_dataset_files, SubreadSet)
 
@@ -561,34 +564,6 @@ write_subreadset_bam_chunks_to_file = functools.partial(
 write_transcriptset_zmw_chunks_to_file = functools.partial(
     _write_dataset_chunks_to_file, to_zmw_chunked_transcriptset_files,
     Constants.CHUNK_KEY_TRANSCRIPT)
-
-
-def write_hdfsubreadset_chunks_to_file(chunk_file, hdfsubreadset_path,
-                                       max_total_chunks, dir_name,
-                                       chunk_base_name, chunk_ext):
-    chunks = list(to_chunked_hdfsubreadset_files(hdfsubreadset_path,
-                                                 max_total_chunks,
-                                                 Constants.CHUNK_KEY_HDFSET,
-                                                 dir_name, chunk_base_name,
-                                                 chunk_ext))
-    write_chunks_to_json(chunks, chunk_file)
-    return 0
-
-
-def to_chunked_hdfsubreadset_files(hdfsubreadset_path, max_total_nchunks,
-                                   chunk_key, dir_name, base_name, ext):
-    dset = HdfSubreadSet(hdfsubreadset_path, strict=True)
-    dset_chunks = dset.split(chunks=max_total_nchunks, ignoreSubDatasets=True)
-    d = {}
-    for i, dset in enumerate(dset_chunks):
-        chunk_id = '_'.join([base_name, str(i)])
-        chunk_name = '.'.join([chunk_id, ext])
-        chunk_path = os.path.join(dir_name, chunk_name)
-        _add_chunked_tag_if_missing(dset)
-        dset.write(chunk_path)
-        d[chunk_key] = os.path.abspath(chunk_path)
-        c = PipelineChunk(chunk_id, **d)
-        yield c
 
 
 def write_fofn(paths, fofn_path):

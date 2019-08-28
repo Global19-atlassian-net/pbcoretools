@@ -1,17 +1,14 @@
 
-# FIXME too much copy-paste from test_tasks_scatter_gather.py
-
 from zipfile import ZipFile
-import subprocess
 import tempfile
-import unittest
+import textwrap
 import json
 import os.path as op
 
 from pbcore.io import FastaReader, FastaWriter, FastqReader, FastqWriter
 
-from test_tasks_scatter_gather import MOCK_GFF_RECORDS, MOCK_VCF_RECORDS, MOCK_VCF_HEADER
 from test_chunking_gather import create_zip
+from base import IntegrationBase
 
 
 class GatherTextRecordsBase(object):
@@ -51,11 +48,33 @@ class GatherTextRecordsBase(object):
     def test_run_tool_and_validate(self):
         tmp_out = tempfile.NamedTemporaryFile().name + self.EXTENSION
         args = ["pbtools-gather", tmp_out] + self.INPUT_FILES
-        subprocess.check_call(args)
+        self._check_call(args)
         self._validate_result(tmp_out)
 
 
-class TestGatherToolGff(GatherTextRecordsBase, unittest.TestCase):
+class TestGatherToolCsv(GatherTextRecordsBase, IntegrationBase):
+    RECORDS = [
+        "contig1,3000000,170",
+        "contig2,90000,180",
+        "contig3,58000,159",
+        "contig4,20000,160",
+    ]
+    RECORD_HEADER = "contig_id,length,coverage\n"
+    EXTENSION = ".csv"
+
+    def _get_lines(self, lines):
+        return [l.strip() for l in lines[1:]]
+
+
+MOCK_GFF_RECORDS = [
+    "contig1\tkinModCall\tmodified_base\t1\t1\t31\t+\t.\tcoverage=169",
+    "contig1\tkinModCall\tmodified_base\t2\t2\t41\t-\t.\tcoverage=170",
+    "contig1\tkinModCall\tmodified_base\t3\t3\t51\t+\t.\tcoverage=168",
+    "contig1\tkinModCall\tmodified_base\t4\t4\t60\t-\t.\tcoverage=173",
+]
+
+
+class TestGatherToolGff(GatherTextRecordsBase, IntegrationBase):
     RECORDS = MOCK_GFF_RECORDS
     RECORD_HEADER = "##gff-version 3\n##source-id ipdSummary\n"
     EXTENSION = ".gff"
@@ -73,7 +92,21 @@ class TestGatherToolGff(GatherTextRecordsBase, unittest.TestCase):
         self.assertEqual(lines[1].strip(), "##source-id ipdSummary")
 
 
-class TestGatherToolVcf(GatherTextRecordsBase, unittest.TestCase):
+MOCK_VCF_RECORDS = textwrap.dedent('''\
+    ecoliK12_pbi_March2013 84 . TG T 48 PASS DP=53
+    ecoliK12_pbi_March2013 218 . GA G 47 PASS DP=58
+    ecoliK12_pbi_March2013 1536 . G GC 47 PASS DP=91
+    ''').rstrip().replace(' ', '\t').split('\n')
+MOCK_VCF_HEADER = textwrap.dedent('''\
+    ##fileformat=VCFv4.3
+    ##fileDate=20170328
+    ##source=GenomicConsensusV2.2.0
+    ##reference=ecoliK12_pbi_March2013.fasta
+    ##contig=<ID=ecoliK12_pbi_March2013,length=4642522>
+    #CHROM POS ID REF ALT QUAL FILTER INFO
+    ''')
+
+class TestGatherToolVcf(GatherTextRecordsBase, IntegrationBase):
     RECORDS = MOCK_VCF_RECORDS
     RECORD_HEADER = MOCK_VCF_HEADER
     EXTENSION = ".vcf"
@@ -91,7 +124,7 @@ class TestGatherToolVcf(GatherTextRecordsBase, unittest.TestCase):
         self.assertEqual(lines[3].strip(), "##reference=ecoliK12_pbi_March2013.fasta")
 
 
-class TestGatherToolFasta(unittest.TestCase):
+class TestGatherToolFasta(IntegrationBase):
     CHUNK_CONTIGS = [
         ("lambda_NEB3011_0_30", "GGGCGGCGACCTCGCGGGTTTTCGCTATTT"),
         ("lambda_NEB3011_60_90", "CACTGAATCATGGCTTTATGACGTAACATC"),
@@ -118,7 +151,7 @@ class TestGatherToolFasta(unittest.TestCase):
     def test_run_tool_and_validate(self):
         tmp_out = tempfile.NamedTemporaryFile().name + self.EXTENSION
         args = ["pbtools-gather", tmp_out] + self.INPUT_FILES + self.EXTRA_ARGS
-        subprocess.check_call(args)
+        self._check_call(args)
         self._validate_result(tmp_out)
 
     def _validate_result(self, gathered_file):
@@ -167,7 +200,7 @@ class TestGatherToolFastqJoinContigs(TestGatherToolFastaJoinContigs):
         return fn
 
 
-class TestGatherToolZip(unittest.TestCase):
+class TestGatherToolZip(IntegrationBase):
 
     def test_run_tool_and_validate(self):
         inputs = []
@@ -177,10 +210,26 @@ class TestGatherToolZip(unittest.TestCase):
             inputs.append(fn)
         tmp_out = tempfile.NamedTemporaryFile(suffix=".zip").name
         args = ["pbtools-gather", tmp_out] + inputs
-        subprocess.check_call(args)
+        self._check_call(args)
         uuids = set()
         with ZipFile(tmp_out, "r") as gathered:
             for member in gathered.namelist():
                 d = json.loads(gathered.open(member).read())
                 uuids.add(d["uuid"])
         self.assertEqual(len(uuids), 4)
+
+
+def test_gather_datastore_json():
+    import subprocess
+    from pbcommand.models import DataStore
+    d = '/pbi/dept/secondary/siv/testdata/pbsvtools-unittest/data/test_scatter_align_datastore/'
+    if1 = op.join(d, '1.aln.datastore.json')
+    if2 = op.join(d, '2.aln.datastore.json')
+    of = tempfile.NamedTemporaryFile(suffix=".datastore.json").name
+    args = ['python', '-m', 'pbcoretools.tasks2.gather', of, if1, if2]
+    subprocess.check_call(args)
+    out_fns = DataStore.load_from_json(of).to_dict()['files']
+    expected_bam_1 = op.join(d, '1.bam')
+    expected_bam_2 = op.join(d, '2.bam')
+    assert out_fns[0]['path'] == expected_bam_1
+    assert out_fns[1]['path'] == expected_bam_2
