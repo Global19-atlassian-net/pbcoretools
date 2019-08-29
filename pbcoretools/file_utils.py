@@ -256,7 +256,7 @@ def _get_uuid(ds, barcode_label):
                 return dna_bc.uniqueId
 
 
-def _uniqueify_collections(metadata):
+def uniqueify_collections(metadata):
     uuids = set()
     deletions = []
     for k, collection in enumerate(metadata.collections):
@@ -333,7 +333,7 @@ def _update_barcoded_sample_metadata(
     ds_out = op.join(base_dir, op.basename(ds_file.path))
     with openDataSet(ds_file.path, strict=True) as ds:
         assert ds.datasetType in Constants.ALLOWED_BC_TYPES, ds.datasetType
-        _uniqueify_collections(ds.metadata)
+        uniqueify_collections(ds.metadata)
         barcode_label = None
         ds_barcodes = sorted(
             list(set(zip(ds.index.bcForward, ds.index.bcReverse))))
@@ -360,7 +360,7 @@ def _mock_update_barcoded_sample_metadata(
     ds_out = op.join(base_dir, op.basename(ds_file.path))
     with openDataSet(ds_file.path, skipCounts=True) as ds:
         assert ds.datasetType in Constants.ALLOWED_BC_TYPES, ds.datasetType
-        _uniqueify_collections(ds.metadata)
+        uniqueify_collections(ds.metadata)
         return _update_barcoded_dataset(ds, ds_file, barcode_pair, barcode_names, parent_info, use_barcode_uuids, bio_samples_d, barcode_uuids_d, ds_out, min_score_filter=None)
 
 
