@@ -30,14 +30,14 @@ def _to_datastore(bam_file, bam_bai_file, datastore_json):
             uuid.uuid4(),
             "mapped_bam",
             FileTypes.BAM.file_type_id,
-            bam_file,
+            os.abspath(bam_file),
             name="Mapped BAM",
             description="Mapped reads in BAM format"),
         DataStoreFile(
             uuid.uuid4(),
             "mapped_bam_bai",
             FileTypes.BAMBAI.file_type_id,
-            bam_bai_file,
+            os.abspath(bam_bai_file),
             name="Mapped BAM Index",
             description="samtools index of mapped reads BAM")
     ]
