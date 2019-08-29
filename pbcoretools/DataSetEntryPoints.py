@@ -117,6 +117,8 @@ def createXml(args):
         if args.ploidy:
             dset.metadata.ploidy = args.ploidy
     dset.newUuid()
+    if args.no_sub_datasets:
+        dset.subdatasets = []
     dset.write(args.outfile, validate=args.novalidate, relPaths=args.relative)
     log.debug("Dataset written")
     return 0
@@ -163,6 +165,8 @@ def create_options(parser):
               "not already represented)."))
     pad("--reference-fasta-fname",
         help=("A path to a reference fasta file for the new AlignmentSet"))
+    pad("--no-sub-datasets", action="store_true", default=False,
+        help="Don't nest sub-datasets in output XML")
     parser.set_defaults(func=createXml)
 
 
@@ -340,6 +344,8 @@ def mergeXml(args):
         if args.name:
             allds.name = args.name
         allds.updateCounts()
+        if args.no_sub_datasets:
+            allds.subdatasets = []
         allds.write(args.outfile)
     else:
         raise InvalidDataSetIOError("Merge failed, likely due to "
@@ -360,6 +366,8 @@ def merge_options(parser):
                         help="Remove references to parent dataset(s)")
     parser.add_argument("--name", action="store", default=None,
                         help="Specify explicit name for the new dataset")
+    parser.add_argument("--no-sub-datasets", action="store_true", default=False,
+                        help="Don't nest sub-datasets in output XML")
     parser.set_defaults(func=mergeXml)
 
 
