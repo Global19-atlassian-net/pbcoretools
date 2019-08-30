@@ -121,7 +121,7 @@ def createXml(args):
     if args.no_sub_datasets:
         dset.subdatasets = []
     if args.unique_collections:
-        uniqueify_collections(dset)
+        uniqueify_collections(dset.metadata)
     dset.write(args.outfile, validate=args.novalidate, relPaths=args.relative)
     log.debug("Dataset written")
     return 0
