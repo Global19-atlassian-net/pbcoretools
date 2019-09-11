@@ -19,7 +19,8 @@ from pbcommand.validators import validate_output_dir
 
 from pbcoretools.file_utils import (add_mock_collection_metadata,
                                     force_set_all_well_sample_names,
-                                    force_set_all_bio_sample_names)
+                                    force_set_all_bio_sample_names,
+                                    uniqueify_collections)
 import pbcoretools.utils
 
 log = logging.getLogger(__name__)
@@ -117,6 +118,10 @@ def createXml(args):
         if args.ploidy:
             dset.metadata.ploidy = args.ploidy
     dset.newUuid()
+    if args.no_sub_datasets:
+        dset.subdatasets = []
+    if args.unique_collections:
+        uniqueify_collections(dset.metadata)
     dset.write(args.outfile, validate=args.novalidate, relPaths=args.relative)
     log.debug("Dataset written")
     return 0
@@ -163,6 +168,11 @@ def create_options(parser):
               "not already represented)."))
     pad("--reference-fasta-fname",
         help=("A path to a reference fasta file for the new AlignmentSet"))
+    pad("--no-sub-datasets", action="store_true", default=False,
+        help="Don't nest sub-datasets in output XML")
+    pad("--unique-collections", action="store_true",
+        default=False,
+        help="Make sure CollectionMetadata records are unique")
     parser.set_defaults(func=createXml)
 
 
@@ -340,6 +350,10 @@ def mergeXml(args):
         if args.name:
             allds.name = args.name
         allds.updateCounts()
+        if args.no_sub_datasets:
+            allds.subdatasets = []
+        if args.unique_collections:
+            uniqueify_collections(allds.metadata)
         allds.write(args.outfile)
     else:
         raise InvalidDataSetIOError("Merge failed, likely due to "
@@ -360,6 +374,11 @@ def merge_options(parser):
                         help="Remove references to parent dataset(s)")
     parser.add_argument("--name", action="store", default=None,
                         help="Specify explicit name for the new dataset")
+    parser.add_argument("--no-sub-datasets", action="store_true", default=False,
+                        help="Don't nest sub-datasets in output XML")
+    parser.add_argument("--unique-collections", action="store_true",
+                        default=False,
+                        help="Make sure CollectionMetadata records are unique")
     parser.set_defaults(func=mergeXml)
 
 

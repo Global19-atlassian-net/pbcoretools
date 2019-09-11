@@ -2,7 +2,9 @@
 import unittest
 import tempfile
 import logging
+import json
 import os.path as op
+import os
 import sys
 
 from pbcore.io import FastaReader
@@ -35,6 +37,16 @@ class TestAutoCCSOutputs(IntegrationBase):
         sys.stderr = sys.__stderr__
         IntegrationBase.setUp(self)
 
+    def _check_datastore_files_exist(self, file_name):
+        file_name = op.abspath(file_name)
+        # guard against relative paths
+        tmp_dir = tempfile.mkdtemp()
+        os.chdir(tmp_dir)
+        with open(file_name, "r") as json_in:
+            d = json.loads(json_in.read())
+            files = d["files"]
+            self.assertTrue(all([op.isfile(f["path"]) for f in files]))
+
     def _check_datastore_files(self, files, expected_files):
         file_names = sorted([op.basename(f.path) for f in files])
         self.assertEqual(file_names, expected_files)
@@ -55,6 +67,7 @@ class TestAutoCCSOutputs(IntegrationBase):
         self._check_call(args)
         ds = DataStore.load_from_json("output.datastore.json")
         self._check_all_datastore_files(ds.files.values())
+        self._check_datastore_files_exist("output.datastore.json")
 
     def test_run_ccs_bam_fastq_exports(self):
         tmp_dir = tempfile.mkdtemp()
@@ -90,7 +103,9 @@ class TestAutoCCSOutputs(IntegrationBase):
         ]
         self._check_call(args)
         ds = DataStore.load_from_json("output.datastore.json")
-        self.assertEqual(len(ds.files), 2)
+        # 1 FASTQ, 1 FASTA, 2 ZIP
+        self.assertEqual(len(ds.files), 4)
+        self._check_datastore_files_exist("output.datastore.json")
 
     def _to_args_tasks2(self, input_file, mode):
         return [
@@ -108,3 +123,4 @@ class TestAutoCCSOutputs(IntegrationBase):
             self._check_call(args)
             ds = DataStore.load_from_json("output.datastore.json")
             self._check_datastore_files(ds.files.values(), [output_file])
+            self._check_datastore_files_exist("output.datastore.json")
