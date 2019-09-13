@@ -122,7 +122,9 @@ def get_prefix_and_bam_file_name(ds, is_barcoded=False):
             f=ds.fileNames[0], b=", ".join([str(b) for b in barcodes]))
         bam_file_name = ds.externalResources[0].bam
         log.info("Found a single barcoded BAM %s", bam_file_name)
-        file_prefix = re.sub(".ccs.bam$", "", op.basename(bam_file_name))
+        # we need to handle both '.bam' and '.ccs.bam'
+        file_prefix = re.sub(".bam$", "",
+                             re.sub(".ccs.bam$", "", op.basename(bam_file_name)))
     else:
         movies = sorted(list({rg.MovieName for rg in ds.readGroupTable}))
         file_prefix = "_".join(movies)

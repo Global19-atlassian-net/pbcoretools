@@ -19,6 +19,7 @@ from pbcommand.common_options import add_debug_option
 from pbcommand.cli.utils import main_runner_default, subparser_builder
 from pbcommand.cli import get_default_argparser
 from pbcommand.models.report import Report
+from pbcommand.models import DataStore
 
 from pbcore.io import (SubreadSet, ContigSet, AlignmentSet, ConsensusReadSet,
                        ConsensusAlignmentSet, TranscriptSet, TranscriptAlignmentSet)
@@ -193,6 +194,14 @@ def gather_fofn(input_files, output_file, skip_empty=True):
         f.write("\n".join(all_files))
 
     return output_file
+
+
+def gather_datastore(input_files, output_file, skip_empty=True):
+    ds = DataStore([])
+    for i_fn in input_files:
+        for uuid, f in DataStore.load_from_json(i_fn).files.iteritems():
+            ds.add(f)
+    ds.write_json(output_file)
 
 
 def __gather_contigset(resource_file_extension, input_files, output_file,

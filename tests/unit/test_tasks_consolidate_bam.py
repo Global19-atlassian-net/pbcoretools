@@ -77,17 +77,26 @@ class TestConsolidateBam(unittest.TestCase):
         base_args = ["auto_consolidate.py"]
         return auto_consolidate.main(base_args + args)
 
+    def _check_datastore(self, file_name):
+        ds = DataStore.load_from_json(file_name)
+        files = sorted([f.source_id for f in ds.files.values()])
+        self.assertEqual(files, ["mapped_bam", "mapped_bam_bai"])
+
     def test_auto_consolidate_split(self):
         args = [self.SPLIT_SUBREADS, self.output_bam]
         self._run_auto(args)
         xml_file = op.splitext(self.output_bam)[0] + ".alignmentset.xml"
         self._check_outputs(xml_file)
+        datastore_file = op.splitext(self.output_bam)[0] + ".datastore.json"
+        self._check_datastore(datastore_file)
 
     def test_auto_consolidate_ccs(self):
         args = [pbtestdata.get_file("rsii-ccs-aligned"), self.output_bam]
         self._run_auto(args)
         xml_file = op.splitext(self.output_bam)[0] + ".consensusalignmentset.xml"
         self._check_outputs(xml_file)
+        datastore_file = op.splitext(self.output_bam)[0] + ".datastore.json"
+        self._check_datastore(datastore_file)
 
     def test_auto_consolidate_exceeds_cutoff(self):
         args = [self.SPLIT_SUBREADS, self.output_bam, "--max-size", "0"]
@@ -95,8 +104,11 @@ class TestConsolidateBam(unittest.TestCase):
         # this should not have written any files
         self.assertFalse(op.isfile(self.output_bam))
         self.assertFalse(op.isfile(self.output_bam + ".bai"))
+        datastore_file = op.splitext(self.output_bam)[0] + ".datastore.json"
+        self.assertFalse(op.isfile(datastore_file))
         # now force it
         args = [self.SPLIT_SUBREADS, self.output_bam, "--max-size", "0", "--force"]
         self._run_auto(args)
         xml_file = op.splitext(self.output_bam)[0] + ".alignmentset.xml"
         self._check_outputs(xml_file)
+        self._check_datastore(datastore_file)

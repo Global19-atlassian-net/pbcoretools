@@ -160,7 +160,7 @@ def make_barcode_sample_csv(subreads, csv_file):
         writer.writerow(headers)
         for bc_label in sorted(barcoded_samples.keys()):
             writer.writerow(
-                [bc_label, barcoded_samples.get(bc_label, "unknown_sample")])
+                [bc_label, barcoded_samples.get(bc_label, "UnnamedSample")])
     return barcoded_samples
 
 
@@ -222,7 +222,7 @@ def get_bio_sample_name(ds):
     bio_samples = {s.name for s in ds.metadata.bioSamples}
     if len(bio_samples) == 0:
         log.warn("No BioSample records present")
-        return "unknown_sample"
+        return "UnnamedSample"
     elif len(bio_samples) > 1:
         log.warn("Multiple unique BioSample records present")
         return "multiple_samples"
@@ -256,7 +256,7 @@ def _get_uuid(ds, barcode_label):
                 return dna_bc.uniqueId
 
 
-def _uniqueify_collections(metadata):
+def uniqueify_collections(metadata):
     uuids = set()
     deletions = []
     for k, collection in enumerate(metadata.collections):
@@ -333,7 +333,7 @@ def _update_barcoded_sample_metadata(
     ds_out = op.join(base_dir, op.basename(ds_file.path))
     with openDataSet(ds_file.path, strict=True) as ds:
         assert ds.datasetType in Constants.ALLOWED_BC_TYPES, ds.datasetType
-        _uniqueify_collections(ds.metadata)
+        uniqueify_collections(ds.metadata)
         barcode_label = None
         ds_barcodes = sorted(
             list(set(zip(ds.index.bcForward, ds.index.bcReverse))))
@@ -360,7 +360,7 @@ def _mock_update_barcoded_sample_metadata(
     ds_out = op.join(base_dir, op.basename(ds_file.path))
     with openDataSet(ds_file.path, skipCounts=True) as ds:
         assert ds.datasetType in Constants.ALLOWED_BC_TYPES, ds.datasetType
-        _uniqueify_collections(ds.metadata)
+        uniqueify_collections(ds.metadata)
         return _update_barcoded_dataset(ds, ds_file, barcode_pair, barcode_names, parent_info, use_barcode_uuids, bio_samples_d, barcode_uuids_d, ds_out, min_score_filter=None)
 
 
@@ -588,7 +588,7 @@ def sanitize_dataset_tags(dset, remove_hidden=False):
 
 
 def reparent_dataset(input_file, dataset_name, output_file):
-    with openDataSet(input_file, strict=True, skipCounts=True) as ds_in:
+    with openDataSet(input_file, strict=True) as ds_in:
         if len(ds_in.metadata.provenance) > 0:
             log.warn("Removing existing provenance record: %s",
                      ds_in.metadata.provenance)
@@ -602,7 +602,7 @@ def reparent_dataset(input_file, dataset_name, output_file):
 
 def update_consensus_reads(ccs_in, subreads_in, ccs_out, use_run_design_uuid=False):
     ds_subreads = SubreadSet(subreads_in, skipCounts=True)
-    with ConsensusReadSet(ccs_in, skipCounts=True) as ds:
+    with ConsensusReadSet(ccs_in) as ds:
         ds.name = ds_subreads.name + " (CCS)"
         run_design_uuid = None
         if use_run_design_uuid:
