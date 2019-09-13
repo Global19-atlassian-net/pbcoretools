@@ -2,6 +2,7 @@
 import subprocess
 import tempfile
 import unittest
+import shutil
 import os.path as op
 import os
 
@@ -248,6 +249,11 @@ class TestCase (unittest.TestCase):
                             "tst_dos.fasta")
         e, m = validate_file(file_name)
         self.assertEqual(len(e), 0)
+
+    def test_fsa_extension(self):
+        shutil.copyfile("test_1.fa", "test_1.fsa")
+        rc = subprocess.call(["pbvalidate", "test_1.fsa"])
+        self.assertEqual(rc, 0)
 
 
 if __name__ == "__main__":
