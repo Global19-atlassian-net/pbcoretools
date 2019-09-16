@@ -27,7 +27,9 @@ from . import fasta
 from . import dataset
 from . import utils
 
-__version__ = "0.5"
+__version__ = "0.6"
+
+FASTA_EXTENSIONS = {".fasta", ".fa", ".fna", ".fsa"}
 
 
 def get_parser(parser=None):
@@ -100,7 +102,7 @@ class run_validator (object):
             out = StringIO()
         self.t_start = time.time()
         if (args.file_type == "Fasta" or
-                (args.file_type is None and ext in [".fasta", ".fa", ".fna"])):
+                (args.file_type is None and ext in FASTA_EXTENSIONS)):
             self.errors, self.metrics = fasta.validate_fasta(
                 file_name=args.file,
                 strict=args.strict,
