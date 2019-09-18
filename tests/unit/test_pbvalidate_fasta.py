@@ -180,9 +180,9 @@ class TestCase (unittest.TestCase):
         e, c = validate_file("test_5.fa")
         self.assertEqual(len(e), 1)
         self.assertIsInstance(e[0], SeqWrappingError)
-        e, c = validate_file("test_6.fa")
-        self.assertEqual(len(e), 1)
-        self.assertIsInstance(e[0], GlobalWrappingError)
+        #e, c = validate_file("test_6.fa")
+        #self.assertEqual(len(e), 1)
+        #self.assertIsInstance(e[0], GlobalWrappingError)
         e, c = validate_file("test_7.fa")
         self.assertEqual(len(e), 0)
 
