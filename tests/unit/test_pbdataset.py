@@ -26,6 +26,7 @@ import pbcore.data.datasets as data
 import pbcore.data as otherdata
 
 import pbtestdata
+from utils import skip_if_no_internal_data
 
 log = logging.getLogger(__name__)
 
@@ -243,6 +244,7 @@ class TestDataSet(unittest.TestCase):
         self.assertTrue(_is_relative(fn))
         self.assertFalse(_is_relative(outfn))
 
+    @skip_if_no_internal_data
     def test_loadmetadata_cli(self):
         fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
         log.debug(fn)
@@ -266,6 +268,7 @@ class TestDataSet(unittest.TestCase):
         aln = AlignmentSet(fn)
         self.assertTrue(aln.metadata.collections)
 
+    @skip_if_no_internal_data
     def test_loadmetadata_from_dataset_cli(self):
         fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
         log.debug(fn)
@@ -289,6 +292,7 @@ class TestDataSet(unittest.TestCase):
         aln = AlignmentSet(fn)
         self.assertTrue(aln.metadata.collections)
 
+    @skip_if_no_internal_data
     def test_loadmetadata_from_dataset_create_cli(self):
         fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
         fn2 = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name

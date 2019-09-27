@@ -9,6 +9,7 @@ from pbcore.io import FastaReader, FastaWriter, FastqReader, FastqWriter
 
 from test_chunking_gather import create_zip
 from base import IntegrationBase
+from utils import skip_if_no_internal_data
 
 
 class GatherTextRecordsBase(object):
@@ -219,6 +220,7 @@ class TestGatherToolZip(IntegrationBase):
         self.assertEqual(len(uuids), 4)
 
 
+@skip_if_no_internal_data
 def test_gather_datastore_json():
     import subprocess
     from pbcommand.models import DataStore
