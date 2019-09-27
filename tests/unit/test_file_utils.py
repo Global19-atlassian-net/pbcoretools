@@ -14,7 +14,7 @@ import os.path as op
 import os
 import sys
 
-from pbcore.io import (FastaReader, FastqReader, openDataSet, HdfSubreadSet,
+from pbcore.io import (FastaReader, FastqReader, openDataSet,
                        SubreadSet, ConsensusReadSet, FastqWriter, FastqRecord,
                        TranscriptSet)
 from pbcore.io.dataset.DataSetMembers import DNABarcode

@@ -25,7 +25,7 @@ class TestFilterDataSet(IntegrationBase):
 
     def _set_up_basic(self):
         input_file = get_temp_file(suffix=".subreadset.xml")
-        ds = SubreadSet(data.getXml(10), strict=True)
+        ds = SubreadSet(data.getXml(9), strict=True)
         ds.metadata.addParentDataSet(uuid.uuid4(),
                                      ds.datasetType,
                                      createdBy="AnalysisJob",

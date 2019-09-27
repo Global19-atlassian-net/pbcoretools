@@ -24,7 +24,7 @@ Output of ``pbvalidate --help``::
                     [--log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL} | --debug | --quiet | -v]
                     [-c] [--quick] [--max MAX_ERRORS]
                     [--max-records MAX_RECORDS]
-                    [--type {BAM,Fasta,AlignmentSet,ConsensusSet,ConsensusAlignmentSet,SubreadSet,BarcodeSet,ContigSet,ReferenceSet,GmapReferenceSet,HdfSubreadSet}]
+                    [--type {BAM,Fasta,AlignmentSet,ConsensusSet,ConsensusAlignmentSet,SubreadSet,BarcodeSet,ContigSet,ReferenceSet,GmapReferenceSet}]
                     [--index] [--strict] [-x XUNIT_OUT] [--unaligned]
                     [--unmapped] [--aligned] [--mapped]
                     [--contents {SUBREAD,CCS}] [--reference REFERENCE]
@@ -57,7 +57,7 @@ Output of ``pbvalidate --help``::
     --max-records MAX_RECORDS
                           Exit after MAX_RECORDS have been inspected (DEFAULT:
                           check entire file) (default: None)
-    --type {BAM,Fasta,AlignmentSet,ConsensusSet,ConsensusAlignmentSet,SubreadSet,BarcodeSet,ContigSet,ReferenceSet,GmapReferenceSet,HdfSubreadSet}
+    --type {BAM,Fasta,AlignmentSet,ConsensusSet,ConsensusAlignmentSet,SubreadSet,BarcodeSet,ContigSet,ReferenceSet,GmapReferenceSet}
                           Use the specified file type instead of guessing
                           (default: None)
     --index               Require index files (.fai or .pbi) (default: False)
