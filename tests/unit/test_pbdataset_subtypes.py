@@ -12,7 +12,7 @@ from pbcore.io.dataset.utils import _infixFname
 from pbcore.io import (DataSet, SubreadSet, ConsensusReadSet,
                        ReferenceSet, ContigSet, AlignmentSet,
                        FastaReader, FastaWriter, IndexedFastaReader,
-                       HdfSubreadSet, ConsensusAlignmentSet,
+                       ConsensusAlignmentSet,
                        openDataFile, FastaWriter)
 from utils import _check_constools, _internal_data
 import pbcore.data.datasets as data
@@ -75,7 +75,7 @@ class TestDataSet(unittest.TestCase):
         log.debug("Test with not refname filter")
         # This isn't trivial with bamtools
         """
-        aln = AlignmentSet(data.getXml(12))
+        aln = AlignmentSet(data.getXml(11))
         self.assertEqual(len(list(aln)), 177)
         aln.filters.addRequirement(rname=[('!=', 'B.vulgatus.5')])
         self.assertEqual(len(list(aln)), 7)
@@ -85,7 +85,7 @@ class TestDataSet(unittest.TestCase):
         aln.consolidate(outfn)
         self.assertTrue(os.path.exists(outfn))
         self.assertEqual(len(aln.toExternalFiles()), 1)
-        nonCons = AlignmentSet(data.getXml(12))
+        nonCons = AlignmentSet(data.getXml(11))
         nonCons.filters.addRequirement(rname=[('!=', 'B.vulgatus.5')])
         self.assertEqual(len(nonCons.toExternalFiles()), 2)
         for read1, read2 in zip(sorted(list(aln)), sorted(list(nonCons))):
@@ -94,7 +94,7 @@ class TestDataSet(unittest.TestCase):
         """
 
         log.debug("Test with expensive filter")
-        aln = AlignmentSet(data.getXml(12))
+        aln = AlignmentSet(data.getXml(11))
         self.assertEqual(len(list(aln)), 177)
         aln.filters.addRequirement(accuracy=[('>', '.85')])
         self.assertEqual(len(list(aln)), 174)
@@ -104,7 +104,7 @@ class TestDataSet(unittest.TestCase):
         aln.consolidate(outfn)
         self.assertTrue(os.path.exists(outfn))
         self.assertEqual(len(aln.toExternalFiles()), 1)
-        nonCons = AlignmentSet(data.getXml(12))
+        nonCons = AlignmentSet(data.getXml(11))
         nonCons.filters.addRequirement(accuracy=[('>', '.85')])
         self.assertEqual(len(nonCons.toExternalFiles()), 2)
         for read1, read2 in zip(sorted(list(aln)), sorted(list(nonCons))):
@@ -115,7 +115,7 @@ class TestDataSet(unittest.TestCase):
         outdir = tempfile.mkdtemp(suffix="dataset-unittest")
         datafile = os.path.join(outdir, "merged.bam")
         xmlfile = os.path.join(outdir, "merged.xml")
-        cmd = "dataset consolidate {i} {d} {x}".format(i=data.getXml(12),
+        cmd = "dataset consolidate {i} {d} {x}".format(i=data.getXml(11),
                                                           d=datafile,
                                                           x=xmlfile)
         log.debug(cmd)

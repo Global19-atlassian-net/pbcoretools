@@ -51,8 +51,7 @@ class DatasetTypes(object):
                    "SubreadSet", "TranscriptSet"]
     FASTA_DATASET = ["BarcodeSet", "ContigSet", "ReferenceSet",
                      "GmapReferenceSet"]
-    HDF5_DATASET = ["HdfSubreadSet"]
-    ALL = BAM_DATASET + FASTA_DATASET + HDF5_DATASET
+    ALL = BAM_DATASET + FASTA_DATASET
 
 
 def _validate_read_groups(ctx, validators, reader):
@@ -177,8 +176,6 @@ class ValidateRootTag(ValidateXML):
         xml_rt = xmlRootType(path)
         ds_name = _dsIdToName(ds_id)
         if ds_name != xml_rt:
-            if ds_name == "SubreadSet" and xml_rt == "HdfSubreadSet":
-                return []
             return [RootTagError.from_args(path, xml_rt, _dsIdToName(ds_id))]
         return []
 
@@ -303,11 +300,6 @@ class ValidateDatasetType (ValidateResources):
         if self.dataset_type is None or self.dataset_type == "any":
             return []
         elif self.dataset_type != ds_type:
-            # XXX see pbcore.io.dataset.DataSetIO:HdfSubreadSet - not sure
-            # I understand what's going on here but I think it is a patch for
-            # bug 27976
-            if self.dataset_type == "HdfSubreadSet" and ds_type == "SubreadSet":
-                return []
             return [DatasetTypeError.from_args(
                 DatasetReader.get_dataset_object(file_obj),
                 self.dataset_type, ds_type)]
@@ -561,14 +553,11 @@ def validate_dataset(
         ValidateMetadata(),
         ValidateNamespace(),
         ValidateRandomAccess(),
+        ValidateResourcesOpen(),
+        ValidateNumRecords(),
     ]
-    if not actual_dataset_type in DatasetTypes.HDF5_DATASET:
-        validators.extend([
-            ValidateResourcesOpen(),
-            ValidateNumRecords(),
-        ])
-        if validate_index:
-            validators.append(ValidateIndex())
+    if validate_index:
+        validators.append(ValidateIndex())
     if strict:
         validators.extend([
             ValidateXML(),

@@ -13,7 +13,7 @@ from pbcoretools import bamsieve
 class TestFilterDataSet(unittest.TestCase):
 
     def test_dataset_io_sanitizing(self):
-        ssfn = data.getXml(8)
+        ssfn = data.getXml(7)
         ofn = tempfile.NamedTemporaryFile(suffix=".xml").name
 
         # some smoke tests:
@@ -109,7 +109,7 @@ class TestFilterDataSet(unittest.TestCase):
             sanitize_read_length("1.1None")
 
     def test_filter_application(self):
-        ssfn = data.getXml(8)
+        ssfn = data.getXml(7)
         ofn = tempfile.NamedTemporaryFile(suffix=".xml").name
 
         # some smoke tests:
@@ -156,12 +156,12 @@ class TestFilterDataSet(unittest.TestCase):
 
     def test_filter_comma_raises(self):
         with self.assertRaises(ValueError):
-            ssfn = data.getXml(8)
+            ssfn = data.getXml(7)
             ofn = tempfile.NamedTemporaryFile(suffix=".xml").name
             run_filter_dataset(ssfn, ofn, "100", "rq > .7, length < 5000")
 
     def test_filter_more(self):
-        ssfn = data.getXml(8)
+        ssfn = data.getXml(7)
         ofn = tempfile.NamedTemporaryFile(suffix=".xml").name
 
         # zm=[3,4,5] condition
@@ -189,7 +189,7 @@ class TestFilterDataSet(unittest.TestCase):
             '( zm = [3,4,5] )')
 
     def test_datset_name(self):
-        ssfn = data.getXml(8)
+        ssfn = data.getXml(7)
         ofn = tempfile.NamedTemporaryFile(suffix=".xml").name
         run_filter_dataset(ssfn, ofn, "0", "None")
         ds = openDataSet(ofn)
