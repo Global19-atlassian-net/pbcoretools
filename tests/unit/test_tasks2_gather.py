@@ -6,9 +6,9 @@ import json
 import os.path as op
 
 from pbcore.io import FastaReader, FastaWriter, FastqReader, FastqWriter
+from pbcommand.testkit import PbIntegrationBase
 
 from test_chunking_gather import create_zip
-from base import IntegrationBase
 from utils import skip_if_no_internal_data
 
 
@@ -53,7 +53,7 @@ class GatherTextRecordsBase(object):
         self._validate_result(tmp_out)
 
 
-class TestGatherToolCsv(GatherTextRecordsBase, IntegrationBase):
+class TestGatherToolCsv(GatherTextRecordsBase, PbIntegrationBase):
     RECORDS = [
         "contig1,3000000,170",
         "contig2,90000,180",
@@ -75,7 +75,7 @@ MOCK_GFF_RECORDS = [
 ]
 
 
-class TestGatherToolGff(GatherTextRecordsBase, IntegrationBase):
+class TestGatherToolGff(GatherTextRecordsBase, PbIntegrationBase):
     RECORDS = MOCK_GFF_RECORDS
     RECORD_HEADER = "##gff-version 3\n##source-id ipdSummary\n"
     EXTENSION = ".gff"
@@ -107,7 +107,7 @@ MOCK_VCF_HEADER = textwrap.dedent('''\
     #CHROM POS ID REF ALT QUAL FILTER INFO
     ''')
 
-class TestGatherToolVcf(GatherTextRecordsBase, IntegrationBase):
+class TestGatherToolVcf(GatherTextRecordsBase, PbIntegrationBase):
     RECORDS = MOCK_VCF_RECORDS
     RECORD_HEADER = MOCK_VCF_HEADER
     EXTENSION = ".vcf"
@@ -125,7 +125,7 @@ class TestGatherToolVcf(GatherTextRecordsBase, IntegrationBase):
         self.assertEqual(lines[3].strip(), "##reference=ecoliK12_pbi_March2013.fasta")
 
 
-class TestGatherToolFasta(IntegrationBase):
+class TestGatherToolFasta(PbIntegrationBase):
     CHUNK_CONTIGS = [
         ("lambda_NEB3011_0_30", "GGGCGGCGACCTCGCGGGTTTTCGCTATTT"),
         ("lambda_NEB3011_60_90", "CACTGAATCATGGCTTTATGACGTAACATC"),
@@ -201,7 +201,7 @@ class TestGatherToolFastqJoinContigs(TestGatherToolFastaJoinContigs):
         return fn
 
 
-class TestGatherToolZip(IntegrationBase):
+class TestGatherToolZip(PbIntegrationBase):
 
     def test_run_tool_and_validate(self):
         inputs = []

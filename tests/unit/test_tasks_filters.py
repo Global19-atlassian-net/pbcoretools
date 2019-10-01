@@ -8,16 +8,17 @@ import os.path as op
 from pbcore.io import (FastaReader, FastqReader, openDataSet,
                        SubreadSet, ConsensusReadSet, TranscriptSet)
 import pbcore.data.datasets as data
+from pbcommand.testkit import PbIntegrationBase
 
 from pbcoretools.filters import combine_filters, run_filter_dataset, sanitize_read_length
 
-from base import get_temp_file, IntegrationBase
+from base import get_temp_file
 
 import pbtestdata
 
 log = logging.getLogger(__name__)
 
-class TestFilterDataSet(IntegrationBase):
+class TestFilterDataSet(PbIntegrationBase):
     BASE_ARGS = [
         "python", "-m", "pbcoretools.tasks2.dataset_filter"
     ]

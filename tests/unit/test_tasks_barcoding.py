@@ -14,10 +14,11 @@ import sys
 
 from pbcore.io import openDataSet
 from pbcommand.models.common import DataStore
+from pbcommand.testkit import PbIntegrationBase
 
 import pbtestdata
 
-from base import get_temp_file, IntegrationBase
+from base import get_temp_file
 from test_file_utils import (validate_barcoded_datastore_files,
                              split_barcoded_dataset,
                              make_mock_laa_inputs,
@@ -26,7 +27,7 @@ from test_file_utils import (validate_barcoded_datastore_files,
 log = logging.getLogger(__name__)
 
 
-class TestUpdateBarcodedSampleMetadata(IntegrationBase):
+class TestUpdateBarcodedSampleMetadata(PbIntegrationBase):
 
     def _to_args(self, ds_in, extension=".subreadset.xml", use_barcode_uuids=True):
         barcodes = pbtestdata.get_file("barcodeset")
@@ -64,7 +65,7 @@ class TestUpdateBarcodedSampleMetadata(IntegrationBase):
         subprocess.check_call(args)
 
 
-class TestReparent(IntegrationBase):
+class TestReparent(PbIntegrationBase):
     DATASET_NAME = "My Data {u}".format(u=uuid.uuid4())
 
     def _run_and_check_output(self, args):

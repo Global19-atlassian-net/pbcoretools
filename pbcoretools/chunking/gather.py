@@ -436,11 +436,6 @@ def __gather_runner(func, chunk_input_json, output_file, chunk_key, **kwargs):
     return 0
 
 
-def __rtc_gather_runner(func, rtc):
-    # Gather Resolved ToolContracts will have a chunk
-    return func(rtc.task.input_files[0], rtc.task.output_files[0], rtc.task.chunk_key)
-
-
 def __args_gather_runner(func, args):
     return __gather_runner(func, args.chunk_json, args.output, args.chunk_key)
 
