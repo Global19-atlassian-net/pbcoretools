@@ -12,39 +12,27 @@ import sys
 import os.path as op
 import re
 
-from pbcommand.models import FileTypes, ResourceTypes, get_pbparser, DataStoreFile, DataStore
-from pbcommand.cli import pbparser_runner
+from pbcommand.models import FileTypes, DataStoreFile, DataStore
+from pbcommand.cli import pacbio_args_runner
 from pbcommand.utils import setup_log, pool_map
 
 from pbcoretools.tasks.auto_ccs_outputs import run_ccs_bam_fastq_exports
+from pbcoretools.utils import get_base_parser
 
 log = logging.getLogger(__name__)
 
 
 class Constants(object):
-    TOOL_ID = "pbcoretools.tasks.auto_ccs_outputs_barcoded"
-    VERSION = "0.2.0"
-    DRIVER = "python -m pbcoretools.tasks.auto_ccs_outputs_barcoded --resolved-tool-contract"
     MAX_NPROC = 8  # just a guess
 
 
 def _get_parser():
-    p = get_pbparser(Constants.TOOL_ID,
-                     Constants.VERSION,
-                     "Generate primary demultiplexed CCS outputs",
-                     __doc__,
-                     Constants.DRIVER,
-                     is_distributed=True,
-                     nproc=Constants.MAX_NPROC)
-    # resource_types=(ResourceTypes.TMP_DIR,))
-    p.add_input_file_type(FileTypes.DATASTORE, "datastore_in",
-                          "DataStore JSON",
-                          "DataStore JSON of ConsensusReadSet files")
-    p.add_output_file_type(FileTypes.DATASTORE,
-                           "datastore_out",
-                           "DataStore JSON",
-                           description="DataStore JSON of FASTQ files",
-                           default_name="ccs_outputs")
+    p = get_base_parser(__doc__)
+    p.add_argument("datastore_in",
+                   help="DataStore JSON of ConsensusReadSet files")
+    p.add_argument("datastore_out", help="DataStore JSON of FASTQ files")
+    p.add_argument("--nproc", type=int, default=1,
+                   help="Number of processors to use")
     return p
 
 
@@ -97,22 +85,17 @@ def _run_auto_ccs_outputs_barcoded(datastore_in, datastore_out, nproc=Constants.
 
 
 def _run_args(args):
-    return _run_auto_ccs_outputs_barcoded(args.datastore_in, args.datastore_out)
-
-
-def _run_rtc(rtc):
-    return _run_auto_ccs_outputs_barcoded(rtc.task.input_files[0],
-                                          rtc.task.output_files[0],
-                                          nproc=rtc.task.nproc)
+    return _run_auto_ccs_outputs_barcoded(args.datastore_in,
+                                          args.datastore_out,
+                                          nproc=args.nproc)
 
 
 def _main(argv=sys.argv):
-    return pbparser_runner(argv[1:],
-                           _get_parser(),
-                           _run_args,
-                           _run_rtc,
-                           log,
-                           setup_log)
+    return pacbio_args_runner(argv[1:],
+                              _get_parser(),
+                              _run_args,
+                              log,
+                              setup_log)
 
 
 if __name__ == "__main__":

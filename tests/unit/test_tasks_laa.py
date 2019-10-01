@@ -7,10 +7,10 @@ import os
 import sys
 
 from pbcore.io import FastqRecord
+from pbcommand.testkit import PbIntegrationBase
 
 import pbtestdata
 
-from base import IntegrationBase
 from test_file_utils import (make_mock_laa_inputs,
                              make_fastq_inputs)
 
@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 SUBREADS_IN = pbtestdata.get_file("barcoded-subreadset")
 
 
-class TestSplitLAATask(IntegrationBase):
+class TestSplitLAATask(PbIntegrationBase):
     INPUT_FILES = [
         tempfile.NamedTemporaryFile(suffix=".fastq").name,
         tempfile.NamedTemporaryFile(suffix=".fastq").name,
@@ -52,7 +52,7 @@ class TestSplitLAATask(IntegrationBase):
             self.assertEqual(suffixes, ['Alice.lbc1--lbc1.fastq', 'Charles.lbc3--lbc3.fastq'])
 
 
-class TestCombinedLAAZip(IntegrationBase):
+class TestCombinedLAAZip(PbIntegrationBase):
     INPUT_FILES = [
         tempfile.NamedTemporaryFile(suffix=".fastq").name,
         tempfile.NamedTemporaryFile(suffix=".csv").name,

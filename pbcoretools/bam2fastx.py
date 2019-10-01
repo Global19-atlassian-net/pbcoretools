@@ -112,8 +112,8 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                     bio_samples_to_bc = get_barcode_sample_mappings(subread_ds)
     base_ext = re.sub("bam2", ".", program_name)
     suffix = "{f}.gz".format(f=base_ext)
-    tmp_out_prefix = tempfile.NamedTemporaryFile(dir=tmp_dir).name
-    tmp_out_dir = op.dirname(tmp_out_prefix)
+    tmp_out_dir = tempfile.mkdtemp(dir=tmp_dir)
+    tmp_out_prefix = op.join(tmp_out_dir, "tmp_fastx")
     args = [
         program_name,
         "-o", tmp_out_prefix,

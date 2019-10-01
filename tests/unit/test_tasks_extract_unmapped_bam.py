@@ -4,13 +4,13 @@ import unittest
 import re
 
 from pbcommand.models.common import DataStore
+from pbcommand.testkit import PbIntegrationBase
 from pbcore.io import AlignmentSet, SubreadSet
 
 from pbcoretools import bamsieve
 
 import pbtestdata
 
-from base import IntegrationBase
 
 def assert_no_reads_in_common(self, alignment_file, output_file):
     with AlignmentSet(alignment_file) as mapped:
@@ -30,7 +30,7 @@ def _make_filtered(ds_file):
     return tmp_file
 
 
-class TestExtractUnmappedBam(IntegrationBase):
+class TestExtractUnmappedBam(PbIntegrationBase):
 
     def test_run_bamsieve_extract_unmapped(self):
         mapped = _make_filtered(pbtestdata.get_file("aligned-xml"))

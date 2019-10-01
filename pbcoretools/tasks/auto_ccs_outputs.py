@@ -12,22 +12,20 @@ import re
 
 import numpy as np
 
-from pbcommand.models import FileTypes, ResourceTypes, get_pbparser, DataStoreFile, DataStore
-from pbcommand.cli import pbparser_runner
+from pbcommand.models import FileTypes, DataStoreFile, DataStore
+from pbcommand.cli import pacbio_args_runner
 from pbcommand.utils import setup_log
 from pbcore.io import ConsensusReadSet
 from pbcore.util.statistics import accuracy_as_phred_qv
 
 from pbcoretools.bam2fastx import run_bam_to_fastq, run_bam_to_fasta
 from pbcoretools.filters import combine_filters
+from pbcoretools.utils import get_base_parser
 
 log = logging.getLogger(__name__)
 
 
 class Constants(object):
-    TOOL_ID = "pbcoretools.tasks.auto_ccs_outputs"
-    VERSION = "0.2.0"
-    DRIVER = "python -m pbcoretools.tasks.auto_ccs_outputs --resolved-tool-contract"
     BASE_EXT = ".Q20"
     BAM_EXT = ".ccs.bam"
     BAM_ID = "ccs_bam_out"
@@ -38,21 +36,9 @@ class Constants(object):
 
 
 def _get_parser():
-    p = get_pbparser(Constants.TOOL_ID,
-                     Constants.VERSION,
-                     "Generate primary CCS outputs",
-                     __doc__,
-                     Constants.DRIVER,
-                     is_distributed=True)
-    # resource_types=(ResourceTypes.TMP_DIR,))
-    p.add_input_file_type(FileTypes.DS_CCS, "ccs_dataset",
-                          "ConsensusReadSet XML",
-                          "ConsensusReadSet XML")
-    p.add_output_file_type(FileTypes.DATASTORE,
-                           "datastore_out",
-                           "DataStore JSON",
-                           description="DataStore JSON",
-                           default_name="ccs_outputs")
+    p = get_base_parser(__doc__)
+    p.add_argument("ccs_dataset", help="ConsensusReadSet XML")
+    p.add_argument("datastore_out", help="DataStore JSON output file")
     return p
 
 
@@ -165,18 +151,12 @@ def _run_args(args):
     return _run_auto_ccs_outputs(args.ccs_dataset, args.datastore_out)
 
 
-def _run_rtc(rtc):
-    return _run_auto_ccs_outputs(rtc.task.input_files[0],
-                                 rtc.task.output_files[0])
-
-
 def _main(argv=sys.argv):
-    return pbparser_runner(argv[1:],
-                           _get_parser(),
-                           _run_args,
-                           _run_rtc,
-                           log,
-                           setup_log)
+    return pacbio_args_runner(argv[1:],
+                              _get_parser(),
+                              _run_args,
+                              log,
+                              setup_log)
 
 
 if __name__ == "__main__":

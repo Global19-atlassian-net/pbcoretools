@@ -1,8 +1,9 @@
+
+from pbcommand.testkit import PbIntegrationBase
+
 from utils import skip_if_no_internal_data
 
-from base import IntegrationBase
-
-class TestPbi2Csv(IntegrationBase):
+class TestPbi2Csv(PbIntegrationBase):
 
     ALIGNMENTS = "/pbi/dept/secondary/siv/testdata/PacBioTestData/pbtestdata/data/AlignmentSet/m54075_160703_015941.alignmentset.xml"
 

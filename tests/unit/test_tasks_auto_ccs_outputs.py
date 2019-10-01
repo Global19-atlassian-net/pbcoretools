@@ -10,11 +10,12 @@ import sys
 from pbcore.io import FastaReader
 from pbcommand.models import DataStore
 from pbcommand.utils import which
+from pbcommand.testkit import PbIntegrationBase
 
 from pbcoretools.tasks.auto_ccs_outputs import run_ccs_bam_fastq_exports
 
 import pbtestdata
-from base import TESTDATA, skip_if_no_testdata, IntegrationBase
+from base import TESTDATA, skip_if_no_testdata
 
 HAVE_PBMERGE = which("pbmerge")
 skip_unless_pbmerge = unittest.skipUnless(HAVE_PBMERGE, "Missing pbmerge")
@@ -23,7 +24,7 @@ log = logging.getLogger(__name__)
 
 @skip_unless_pbmerge
 @skip_if_no_testdata
-class TestAutoCCSOutputs(IntegrationBase):
+class TestAutoCCSOutputs(PbIntegrationBase):
     INPUT_FILE = op.join(TESTDATA, "auto_ccs_outputs/m54006_180707_211919.consensusreadset.xml")
     OUTPUT_FILES = [
         "m54006_180707_211919.Q20.fasta",
@@ -35,7 +36,7 @@ class TestAutoCCSOutputs(IntegrationBase):
         # FIXME workaround for 'nose' conflict with how we run external cmds
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
-        IntegrationBase.setUp(self)
+        PbIntegrationBase.setUp(self)
 
     def _check_datastore_files_exist(self, file_name):
         file_name = op.abspath(file_name)
