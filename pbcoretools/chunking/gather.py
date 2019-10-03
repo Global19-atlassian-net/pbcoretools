@@ -60,6 +60,22 @@ gather_gff = merge_gffs_sorted
 gather_vcf = merge_vcfs_sorted
 
 
+def cat_txt_with_header(input_files, output_file):
+    """ Concatenate input files i_fns, to output file.
+    Only copy header lines from the very first input file, and skip others.
+    """
+    with open(output_file, 'w') as writer:
+        for i, input_file in enumerate(input_files):
+            with open(input_file, 'r') as reader:
+                for l in reader:
+                    if len(l.strip()) == 0:
+                        continue
+                    if (i == 0 or not l.startswith('#')):
+                        writer.write(l.strip()+"\n")
+
+gather_bed = cat_txt_with_header
+
+
 def _read_header(csv_file):
     with open(csv_file, 'r') as f:
         header = f.readline()
