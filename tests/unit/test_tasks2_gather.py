@@ -235,3 +235,27 @@ def test_gather_datastore_json():
     expected_bam_2 = op.join(d, '2.bam')
     assert out_fns[0]['path'] == expected_bam_1
     assert out_fns[1]['path'] == expected_bam_2
+
+
+class TestGatherToolBed(PbIntegrationBase):
+    def test_gather_bed(self):
+        if1 = "test_gather_bed_1.bed"
+        with open(if1, 'w') as writer:
+            writer.write("#chr\tstart\tend\n")
+            writer.write("1\t2\t3\n")
+            writer.write("2\t3\t4\n")
+            writer.write("")
+        if2 = "test_gather_bed_2.bed"
+        with open(if2, 'w') as writer:
+            writer.write("#chr\tstart\tend\n")
+            writer.write("1\t2\t3\n")
+            writer.write("")
+        of = "test_gather_bed_out.bed"
+        args = [
+            "python", "-m", "pbcoretools.tasks2.gather",
+            of, if1, if2
+        ]
+        self._check_call(args)
+        out = open(of, 'r').readlines()
+        expected = ['#chr\tstart\tend\n', '1\t2\t3\n', '2\t3\t4\n', '1\t2\t3\n']
+        self.assertEqual(out, expected)
