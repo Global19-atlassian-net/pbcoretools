@@ -1,6 +1,7 @@
 
 import tempfile
 import unittest
+import sys
 
 from pbcore.io.FastaIO import FastaRecord, FastaWriter
 from pbcore.io import FastqWriter, ContigSet
@@ -8,7 +9,8 @@ from pbcore.io import FastqWriter, ContigSet
 from pbcoretools.chunking.chunk_utils import (write_pbcore_records,
                                               write_contigset_records,
                                               to_chunked_fasta_files,
-                                              to_chunked_fastq_files)
+                                              to_chunked_fastq_files,
+                                              guess_optimal_max_nchunks_for_consensus)
 
 import mock
 
@@ -45,3 +47,11 @@ class TestChunkUtils(unittest.TestCase):
         tmp_dir = tempfile.mkdtemp()
         chunks = list(to_chunked_fastq_files(tmp_fastq, 5, tmp_dir, "fastq_chunk", ".fastq"))
         self.assertEqual(len(chunks), 5)
+
+    def test_guess_optimal_max_nchunks_for_consensus(self):
+        self.assertEqual(guess_optimal_max_nchunks_for_consensus(400000), 12)
+        self.assertEqual(guess_optimal_max_nchunks_for_consensus(4000000), 19)
+        self.assertEqual(guess_optimal_max_nchunks_for_consensus(40000000), 51)
+        self.assertEqual(guess_optimal_max_nchunks_for_consensus(400000000), 83)
+        self.assertEqual(guess_optimal_max_nchunks_for_consensus(sys.maxint), 96)
+        self.assertEqual(guess_optimal_max_nchunks_for_consensus(400000000, 24), 24)
