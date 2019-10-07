@@ -32,6 +32,22 @@ class Constants(object):
     CHUNK_KEY_CSV = "$chunk.csv_id"
     CHUNK_KEY_DATASTORE_JSON = "$chunk.datastore_id"
 
+    LIMIT_NCHUNKS_MIN = 12
+    LIMIT_NCHUNKS_MAX = 96
+
+
+def guess_optimal_max_nchunks_for_consensus(genome_size, max_nchunks=96):
+    """
+    Given a genome size (and optionally, the user-configured max_nchunks for
+    the entire SMRT Link install), guess an appropriate number of chunks to
+    use for consensus calculation.
+    """
+    absolute_max_nchunks = min(max_nchunks, Constants.LIMIT_NCHUNKS_MAX)
+    absolute_min_nchunks = min(max_nchunks, Constants.LIMIT_NCHUNKS_MIN)
+    genome_scale = math.log(genome_size) / math.log(10)
+    nchunks = int(math.floor(Constants.LIMIT_NCHUNKS_MAX * (genome_scale - 6) / 3))
+    return min(max(nchunks, absolute_min_nchunks), absolute_max_nchunks)
+
 
 def write_chunks_to_json(chunks, chunk_file):
     log.debug("Wrote {n} chunks to {f}.".format(n=len(chunks), f=chunk_file))
