@@ -283,8 +283,9 @@ class ValidateFastaRaw (ValidateFile):
                     MissingSequenceError.from_args(path, prev_header))
         check_current_sequence_lines(current_seq_line_lengths,
                                      label=prev_header)
-        if len(all_seq_line_lengths) > 1:
-            self._errors.append(GlobalWrappingError.from_args(path))
+        # XXX disabled as this is no longer relevant
+        #if len(all_seq_line_lengths) > 1:
+        #    self._errors.append(GlobalWrappingError.from_args(path))
         if is_dos and is_unix:
             self._errors.append(LineEndingsError.from_args(path))
         return len(self._errors) == 0

@@ -15,7 +15,7 @@ import numpy as np
 from pbcore.io import PacBioBamIndex, IndexedBamReader
 from pbcore.io import openIndexedAlignmentFile
 from pbcore.io import (DataSet, SubreadSet, ReferenceSet, AlignmentSet,
-                       openDataSet, DataSetMetaTypes, HdfSubreadSet,
+                       openDataSet, DataSetMetaTypes,
                        ConsensusReadSet, ConsensusAlignmentSet)
 from pbcore.io.dataset.DataSetIO import dsIdToSuffix
 from pbcore.io.dataset.DataSetMembers import ExternalResource, Filters
@@ -26,6 +26,7 @@ import pbcore.data.datasets as data
 import pbcore.data as otherdata
 
 import pbtestdata
+from utils import skip_if_no_internal_data
 
 log = logging.getLogger(__name__)
 
@@ -78,7 +79,7 @@ class TestDataSet(unittest.TestCase):
         outdir = tempfile.mkdtemp(suffix="dataset-unittest")
         cmd = "dataset split --outdir {o} --contigs --chunks 2 {d}".format(
             o=outdir,
-            d=data.getXml(8))
+            d=data.getXml(7))
         self._check_cmd(cmd)
         self.assertTrue(os.path.exists(
             os.path.join(outdir, 'pbalchemysim0.chunk0.alignmentset.xml')))
@@ -89,7 +90,7 @@ class TestDataSet(unittest.TestCase):
         outdir = tempfile.mkdtemp(suffix="dataset-unittest")
         cmd = "dataset split --outdir {o} --zmws --targetSize 2 {d}".format(
             o=outdir,
-            d=data.getXml(8))
+            d=data.getXml(7))
         self._check_cmd(cmd)
         for i in range(5):
             self.assertTrue(os.path.exists(
@@ -101,7 +102,7 @@ class TestDataSet(unittest.TestCase):
         # To a fname:
         # absolute:
         fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
-        cmd = "dataset copyto {i} {o}".format(i=data.getXml(8), o=fn)
+        cmd = "dataset copyto {i} {o}".format(i=data.getXml(7), o=fn)
         self._run_cmd_with_output(cmd, fn)
         sset = AlignmentSet(fn, strict=True)
         self.assertFalse(_is_relative(fn))
@@ -109,7 +110,7 @@ class TestDataSet(unittest.TestCase):
     def test_copyTo_cli_relative(self):
         # relative:
         fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
-        cmd = "dataset copyto --relative {i} {o}".format(i=data.getXml(8), o=fn)
+        cmd = "dataset copyto --relative {i} {o}".format(i=data.getXml(7), o=fn)
         self._run_cmd_with_output(cmd, fn)
         sset = AlignmentSet(fn, strict=True)
         self.assertTrue(_is_relative(fn))
@@ -118,8 +119,8 @@ class TestDataSet(unittest.TestCase):
         # to a directory:
         # absolute:
         outdir = tempfile.mkdtemp(suffix="dataset-unittest")
-        fn = os.path.join(outdir, os.path.split(data.getXml(8))[1])
-        cmd = "dataset copyto {i} {o}".format(i=data.getXml(8), o=outdir)
+        fn = os.path.join(outdir, os.path.split(data.getXml(7))[1])
+        cmd = "dataset copyto {i} {o}".format(i=data.getXml(7), o=outdir)
         self._run_cmd_with_output(cmd, fn)
         sset = AlignmentSet(fn, strict=True)
         self.assertFalse(_is_relative(fn))
@@ -127,8 +128,8 @@ class TestDataSet(unittest.TestCase):
     def test_copyTo_cli_relative_dir(self):
         # relative:
         outdir = tempfile.mkdtemp(suffix="dataset-unittest")
-        fn = os.path.join(outdir, os.path.split(data.getXml(8))[1])
-        cmd = "dataset copyto --relative {i} {o}".format(i=data.getXml(8),
+        fn = os.path.join(outdir, os.path.split(data.getXml(7))[1])
+        cmd = "dataset copyto --relative {i} {o}".format(i=data.getXml(7),
                                                          o=outdir)
         self._run_cmd_with_output(cmd, fn)
         sset = AlignmentSet(fn, strict=True)
@@ -136,7 +137,7 @@ class TestDataSet(unittest.TestCase):
 
     def test_newUuid_cli(self):
         fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
-        aln = AlignmentSet(data.getXml(8))
+        aln = AlignmentSet(data.getXml(7))
         aln.copyTo(fn)
         pre_uuid = AlignmentSet(fn).uuid
         cmd = "dataset newuuid {d}".format(d=fn)
@@ -149,7 +150,7 @@ class TestDataSet(unittest.TestCase):
         self.assertNotEqual(pre_uuid, post_uuid)
 
     def test_newUuid_clone_cli(self):
-        fn_orig = data.getXml(8)
+        fn_orig = data.getXml(7)
         outdir = tempfile.mkdtemp(suffix="dataset-unittest")
         fn = os.path.join(outdir, 'fn.alignmentset.xml')
         fn2 = os.path.join(outdir, 'fn2.alignmentset.xml')
@@ -175,7 +176,7 @@ class TestDataSet(unittest.TestCase):
         self.assertEqual(post_uuid, post_uuid2)
 
     def test_newUuid_random_cli(self):
-        fn_orig = data.getXml(8)
+        fn_orig = data.getXml(7)
         outdir = tempfile.mkdtemp(suffix="dataset-unittest")
         fn = os.path.join(outdir, 'fn.alignmentset.xml')
         fn2 = os.path.join(outdir, 'fn2.alignmentset.xml')
@@ -202,7 +203,7 @@ class TestDataSet(unittest.TestCase):
 
     def test_relativize_cli(self):
         fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
-        aln = AlignmentSet(data.getXml(8))
+        aln = AlignmentSet(data.getXml(7))
         aln.copyTo(fn)
         self.assertFalse(_is_relative(fn))
         cmd = "dataset relativize {d}".format(d=fn)
@@ -211,7 +212,7 @@ class TestDataSet(unittest.TestCase):
 
     def test_absolutize_cli(self):
         fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
-        aln = AlignmentSet(data.getXml(8))
+        aln = AlignmentSet(data.getXml(7))
         aln.copyTo(fn, relative=True)
         self.assertTrue(_is_relative(fn))
         cmd = "dataset absolutize {d}".format(d=fn)
@@ -221,7 +222,7 @@ class TestDataSet(unittest.TestCase):
     def test_absolutize_cli_2(self):
         fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
         outfn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
-        aln = AlignmentSet(data.getXml(8))
+        aln = AlignmentSet(data.getXml(7))
         aln.copyTo(fn, relative=True)
         self.assertTrue(_is_relative(fn))
         cmd = "dataset absolutize {d} --outdir {o}".format(d=fn, o=outfn)
@@ -234,7 +235,7 @@ class TestDataSet(unittest.TestCase):
         fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
         outdir = tempfile.mkdtemp(suffix="dataset-unittest")
         outfn = os.path.join(outdir, os.path.split(fn)[1])
-        aln = AlignmentSet(data.getXml(8))
+        aln = AlignmentSet(data.getXml(7))
         aln.copyTo(fn, relative=True)
         self.assertTrue(_is_relative(fn))
         cmd = "dataset absolutize {d} --outdir {o}".format(d=fn, o=outdir)
@@ -243,11 +244,12 @@ class TestDataSet(unittest.TestCase):
         self.assertTrue(_is_relative(fn))
         self.assertFalse(_is_relative(outfn))
 
+    @skip_if_no_internal_data
     def test_loadmetadata_cli(self):
         fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
         log.debug(fn)
 
-        aln = AlignmentSet(data.getXml(8))
+        aln = AlignmentSet(data.getXml(7))
         aln.metadata.collections = None
         aln.copyTo(fn)
         aln.close()
@@ -266,11 +268,12 @@ class TestDataSet(unittest.TestCase):
         aln = AlignmentSet(fn)
         self.assertTrue(aln.metadata.collections)
 
+    @skip_if_no_internal_data
     def test_loadmetadata_from_dataset_cli(self):
         fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
         log.debug(fn)
 
-        aln = AlignmentSet(data.getXml(8))
+        aln = AlignmentSet(data.getXml(7))
         aln.metadata.collections = None
         aln.copyTo(fn)
         aln.close()
@@ -289,12 +292,13 @@ class TestDataSet(unittest.TestCase):
         aln = AlignmentSet(fn)
         self.assertTrue(aln.metadata.collections)
 
+    @skip_if_no_internal_data
     def test_loadmetadata_from_dataset_create_cli(self):
         fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
         fn2 = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
         log.debug(fn)
 
-        aln = AlignmentSet(data.getXml(8))
+        aln = AlignmentSet(data.getXml(7))
         aln.metadata.collections = None
         aln.copyTo(fn)
         aln.close()
@@ -318,7 +322,7 @@ class TestDataSet(unittest.TestCase):
         outdir = tempfile.mkdtemp(suffix="dataset-unittest")
         cmd = "dataset split --outdir {o} --chunks 2 {d}".format(
             o=outdir,
-            d=data.getXml(9))
+            d=data.getXml(8))
         self._check_cmd(cmd)
         self.assertTrue(os.path.exists(
             os.path.join(outdir,
@@ -332,11 +336,11 @@ class TestDataSet(unittest.TestCase):
         outfn = os.path.join(outdir, "filtered8.xml")
         log.debug(outfn)
         cmd = "dataset filter {i} {o} {f}".format(
-            i=data.getXml(8),
+            i=data.getXml(7),
             o=outfn,
             f="rname=E.faecalis.1")
         self._run_cmd_with_output(cmd, outfn)
-        aln = AlignmentSet(data.getXml(8))
+        aln = AlignmentSet(data.getXml(7))
         aln.filters.addRequirement(rname=[('=', 'E.faecalis.1')])
         aln.updateCounts()
         dset = AlignmentSet(outfn)
@@ -345,17 +349,17 @@ class TestDataSet(unittest.TestCase):
         self.assertEqual(aln.numRecords, dset.numRecords)
 
     def _get_mock_alignment_set_out(self, outdir):
-        return os.path.join(outdir, os.path.basename(data.getXml(12)))
+        return os.path.join(outdir, os.path.basename(data.getXml(11)))
 
     def test_create_cli(self):
         log.debug("Absolute")
         outdir = tempfile.mkdtemp(suffix="dataset-unittest")
         cmd = "dataset create --type AlignmentSet {o} {i1} {i2}".format(
             o=os.path.join(outdir, 'pbalchemysim.alignmentset.xml'),
-            i1=data.getXml(8), i2=data.getXml(11))
+            i1=data.getXml(7), i2=data.getXml(10))
         self._check_cmd(cmd)
         self.assertTrue(os.path.exists(
-            os.path.join(outdir, os.path.basename(data.getXml(12)))))
+            os.path.join(outdir, os.path.basename(data.getXml(11)))))
 
     def test_create_cli_relative(self):
         log.debug("Relative")
@@ -364,8 +368,8 @@ class TestDataSet(unittest.TestCase):
         cmd = ("dataset create --relative --type AlignmentSet "
                "{o} {i1} {i2}".format(
                    o=ofn,
-                   i1=data.getXml(8),
-                   i2=data.getXml(11)))
+                   i1=data.getXml(7),
+                   i2=data.getXml(10)))
         self._check_cmd(cmd)
         self.assertTrue(os.path.exists(ofn))
 
@@ -382,8 +386,8 @@ class TestDataSet(unittest.TestCase):
         cmd = ("dataset create --relative --type AlignmentSet "
                "{o} {i1} {i2}".format(
                    o=os.path.join(outdir, 'pbalchemysim.alignmentset.xml'),
-                   i1=data.getXml(8),
-                   i2=data.getXml(11)))
+                   i1=data.getXml(7),
+                   i2=data.getXml(10)))
         log.debug(cmd)
         o, r, m = backticks(cmd)
         self.assertNotEqual(r, 0)
@@ -403,8 +407,8 @@ class TestDataSet(unittest.TestCase):
         cmd = ("dataset create --force --relative --type AlignmentSet "
                "{o} {i1} {i2}".format(
                    o=os.path.join(outdir, 'pbalchemysim.alignmentset.xml'),
-                   i1=data.getXml(8),
-                   i2=data.getXml(11)))
+                   i1=data.getXml(7),
+                   i2=data.getXml(10)))
         self._run_cmd_with_output(cmd, ofn)
         self.assertNotEqual(mtime, os.path.getmtime(ofn))
 
@@ -413,7 +417,7 @@ class TestDataSet(unittest.TestCase):
         outdir = tempfile.mkdtemp(suffix="dataset-unittest")
         ofn = self._get_mock_alignment_set_out(outdir)
         cmd = "dataset create {o} {i1} {i2}".format(
-            o=ofn, i1=data.getXml(8), i2=data.getXml(11))
+            o=ofn, i1=data.getXml(7), i2=data.getXml(10))
         self._run_cmd_with_output(cmd, ofn)
         aset = AlignmentSet(ofn)
         shutil.rmtree(outdir)
@@ -425,7 +429,7 @@ class TestDataSet(unittest.TestCase):
         ofn = self._get_mock_alignment_set_out(outdir)
         cmd = ("dataset create --type AlignmentSet "
                "--generateIndices {o} {i1} {i2}").format(
-            o=ofn, i1=data.getXml(8), i2=data.getXml(11))
+            o=ofn, i1=data.getXml(7), i2=data.getXml(10))
         self._run_cmd_with_output(cmd, ofn)
         aset = AlignmentSet(ofn, strict=True)
         shutil.rmtree(outdir)
@@ -437,7 +441,7 @@ class TestDataSet(unittest.TestCase):
         ofn = self._get_mock_alignment_set_out(outdir)
         cmd = ("dataset create "
                "--generateIndices {o} {i1} {i2}").format(
-            o=ofn, i1=data.getXml(8), i2=data.getXml(11))
+            o=ofn, i1=data.getXml(7), i2=data.getXml(10))
         self._run_cmd_with_output(cmd, ofn)
         aset = AlignmentSet(ofn, strict=True)
         shutil.rmtree(outdir)
@@ -450,7 +454,7 @@ class TestDataSet(unittest.TestCase):
                                           dir=outdir).name
         log.info(ifn)
         # copy the resources and xml
-        aset = AlignmentSet(data.getXml(12))
+        aset = AlignmentSet(data.getXml(11))
         aset.copyTo(ifn)
         aset = AlignmentSet(ifn)
         # get the key resource filename
@@ -471,7 +475,7 @@ class TestDataSet(unittest.TestCase):
                                           dir=outdir).name
         log.info(ifn)
         # copy the resources and xml
-        aset = AlignmentSet(data.getXml(12))
+        aset = AlignmentSet(data.getXml(11))
         aset.copyTo(ifn)
         aset = AlignmentSet(ifn)
         # get the key resource filename
@@ -489,7 +493,7 @@ class TestDataSet(unittest.TestCase):
         ofn = self._get_mock_alignment_set_out(outdir)
         cmd = ("dataset create "
                "--reference-fasta-fname {r} {o} {i1} {i2}").format(
-            o=ofn, i1=data.getXml(8), i2=data.getXml(11),
+            o=ofn, i1=data.getXml(7), i2=data.getXml(10),
             r=otherdata.getFasta())
         def _run_and_validate(args, file_name):
             self._run_cmd_with_output(cmd, ofn)
@@ -520,7 +524,7 @@ class TestDataSet(unittest.TestCase):
             tempfile.mkdtemp(suffix="dataset-unittest"),
             'withStats.alignmentset.xml')
         cmd = "dataset loadstats {d} {s} --outfile {o}".format(
-            o=outfile, d=data.getXml(8), s=data.getStats())
+            o=outfile, d=data.getXml(7), s=data.getStats())
         self._run_cmd_with_output(cmd, outfile)
         aln = AlignmentSet(outfile)
         self.assertTrue(aln.metadata.summaryStats)

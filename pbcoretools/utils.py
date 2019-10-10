@@ -27,3 +27,12 @@ def split_filtStr(filtStr):
             filtStr)
         raise ValueError(msg)
     return [filtStr]
+
+
+def get_base_parser(description, log_level="INFO"):
+    from pbcommand.cli import get_default_argparser_with_base_opts
+    from pbcoretools import __VERSION__
+    return get_default_argparser_with_base_opts(
+        version=__VERSION__,
+        description=description,
+        default_level=log_level)

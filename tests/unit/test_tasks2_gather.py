@@ -6,9 +6,10 @@ import json
 import os.path as op
 
 from pbcore.io import FastaReader, FastaWriter, FastqReader, FastqWriter
+from pbcommand.testkit import PbIntegrationBase
 
 from test_chunking_gather import create_zip
-from base import IntegrationBase
+from utils import skip_if_no_internal_data
 
 
 class GatherTextRecordsBase(object):
@@ -52,7 +53,7 @@ class GatherTextRecordsBase(object):
         self._validate_result(tmp_out)
 
 
-class TestGatherToolCsv(GatherTextRecordsBase, IntegrationBase):
+class TestGatherToolCsv(GatherTextRecordsBase, PbIntegrationBase):
     RECORDS = [
         "contig1,3000000,170",
         "contig2,90000,180",
@@ -74,7 +75,7 @@ MOCK_GFF_RECORDS = [
 ]
 
 
-class TestGatherToolGff(GatherTextRecordsBase, IntegrationBase):
+class TestGatherToolGff(GatherTextRecordsBase, PbIntegrationBase):
     RECORDS = MOCK_GFF_RECORDS
     RECORD_HEADER = "##gff-version 3\n##source-id ipdSummary\n"
     EXTENSION = ".gff"
@@ -106,7 +107,7 @@ MOCK_VCF_HEADER = textwrap.dedent('''\
     #CHROM POS ID REF ALT QUAL FILTER INFO
     ''')
 
-class TestGatherToolVcf(GatherTextRecordsBase, IntegrationBase):
+class TestGatherToolVcf(GatherTextRecordsBase, PbIntegrationBase):
     RECORDS = MOCK_VCF_RECORDS
     RECORD_HEADER = MOCK_VCF_HEADER
     EXTENSION = ".vcf"
@@ -124,7 +125,7 @@ class TestGatherToolVcf(GatherTextRecordsBase, IntegrationBase):
         self.assertEqual(lines[3].strip(), "##reference=ecoliK12_pbi_March2013.fasta")
 
 
-class TestGatherToolFasta(IntegrationBase):
+class TestGatherToolFasta(PbIntegrationBase):
     CHUNK_CONTIGS = [
         ("lambda_NEB3011_0_30", "GGGCGGCGACCTCGCGGGTTTTCGCTATTT"),
         ("lambda_NEB3011_60_90", "CACTGAATCATGGCTTTATGACGTAACATC"),
@@ -200,7 +201,7 @@ class TestGatherToolFastqJoinContigs(TestGatherToolFastaJoinContigs):
         return fn
 
 
-class TestGatherToolZip(IntegrationBase):
+class TestGatherToolZip(PbIntegrationBase):
 
     def test_run_tool_and_validate(self):
         inputs = []
@@ -219,6 +220,7 @@ class TestGatherToolZip(IntegrationBase):
         self.assertEqual(len(uuids), 4)
 
 
+@skip_if_no_internal_data
 def test_gather_datastore_json():
     import subprocess
     from pbcommand.models import DataStore
@@ -233,3 +235,27 @@ def test_gather_datastore_json():
     expected_bam_2 = op.join(d, '2.bam')
     assert out_fns[0]['path'] == expected_bam_1
     assert out_fns[1]['path'] == expected_bam_2
+
+
+class TestGatherToolBed(PbIntegrationBase):
+    def test_gather_bed(self):
+        if1 = "test_gather_bed_1.bed"
+        with open(if1, 'w') as writer:
+            writer.write("#chr\tstart\tend\n")
+            writer.write("1\t2\t3\n")
+            writer.write("2\t3\t4\n")
+            writer.write("")
+        if2 = "test_gather_bed_2.bed"
+        with open(if2, 'w') as writer:
+            writer.write("#chr\tstart\tend\n")
+            writer.write("1\t2\t3\n")
+            writer.write("")
+        of = "test_gather_bed_out.bed"
+        args = [
+            "python", "-m", "pbcoretools.tasks2.gather",
+            of, if1, if2
+        ]
+        self._check_call(args)
+        out = open(of, 'r').readlines()
+        expected = ['#chr\tstart\tend\n', '1\t2\t3\n', '2\t3\t4\n', '1\t2\t3\n']
+        self.assertEqual(out, expected)
