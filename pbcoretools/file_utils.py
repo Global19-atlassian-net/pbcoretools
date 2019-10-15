@@ -164,6 +164,22 @@ def make_barcode_sample_csv(subreads, csv_file):
     return barcoded_samples
 
 
+def parse_biosamples_csv(csv_file):
+    records = []
+    with open(csv_file, "r") as csv_in:
+        reader = csv.reader(csv_in, delimiter=',')
+        for k, row in enumerate(reader):
+            if len(row) != 2:
+                raise ValueError("Expected two fields, got %s" % row)
+            try:
+                x = str(row)
+            except UnicodeDecodeError as e:
+                raise ValueError("Non-ASCII characters are not allowed in BioSamples CSV.  Please make sure you use a plain-text editor to generate the CSV file.")
+            if k > 0:
+                records.append(tuple(row))
+    return records
+
+
 def make_combined_laa_zip(fastq_file, summary_csv, input_subreads, output_file_name):
     tmp_dir = tempfile.mkdtemp()
     summary_csv_tmp = op.join(tmp_dir, "consensus_sequence_statistics.csv")
@@ -216,6 +232,15 @@ def discard_bio_samples(subreads, barcode_label):
         log.warn("Will create new BioSample and DNABarcode records")
         subreads.metadata.bioSamples.addSample(barcode_label)
         subreads.metadata.bioSamples[0].DNABarcodes.addBarcode(barcode_label)
+
+
+def set_bio_samples(ds, barcodes_and_samples):
+    while len(ds.metadata.bioSamples) > 0:
+        ds.metadata.bioSamples.pop(0)
+    for dna_bc, biosample in barcodes_and_samples:
+        ds.metadata.bioSamples.addSample(biosample)
+        ds.metadata.bioSamples[-1].DNABarcodes.addBarcode(dna_bc)
+    return ds
 
 
 def get_bio_sample_name(ds):
@@ -587,7 +612,10 @@ def sanitize_dataset_tags(dset, remove_hidden=False):
     dset.name = " ".join(name_fields)
 
 
-def reparent_dataset(input_file, dataset_name, output_file):
+def reparent_dataset(input_file,
+                     dataset_name,
+                     output_file,
+                     biosamples_csv=None):
     with openDataSet(input_file, strict=True) as ds_in:
         if len(ds_in.metadata.provenance) > 0:
             log.warn("Removing existing provenance record: %s",
@@ -596,6 +624,9 @@ def reparent_dataset(input_file, dataset_name, output_file):
         ds_in.name = dataset_name
         ds_in.newUuid(random=True)
         sanitize_dataset_tags(ds_in, remove_hidden=True)
+        if (biosamples_csv is not None):
+            sample_records = parse_biosamples_csv(biosamples_csv)
+            set_bio_samples(ds_in, sample_records)
         ds_in.write(output_file)
     return 0
 

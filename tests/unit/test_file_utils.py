@@ -33,6 +33,8 @@ from pbcoretools.file_utils import (
     update_barcoded_sample_metadata,
     mock_update_barcoded_sample_metadata,
     discard_bio_samples,
+    set_bio_samples,
+    parse_biosamples_csv,
     add_mock_collection_metadata,
     force_set_all_well_sample_names,
     force_set_all_bio_sample_names,
@@ -377,3 +379,19 @@ class TestBarcodeUtils(unittest.TestCase):
         ds.tags = ", hidden, ccs"
         sanitize_dataset_tags(ds, remove_hidden=True)
         self.assertEqual(ds.tags, "ccs")
+
+    def test_parse_biosamples_csv(self):
+        csv = "Barcode,BioSample Name\nlbc1--lbc1,Alice\nlbc2--lbc2,Bob"
+        csv_tmp = tempfile.NamedTemporaryFile(suffix=".csv").name
+        with open(csv_tmp, "w") as csv_out:
+            csv_out.write(csv)
+        records = parse_biosamples_csv(csv_tmp)
+        self.assertEqual(records, [("lbc1--lbc1", "Alice"),
+                                   ("lbc2--lbc2", "Bob")])
+
+    def test_set_bio_samples(self):
+        ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))
+        samples = [("lbc1--lbc1", "Alice"), ("lbc2--lbc2", "Bob")]
+        set_bio_samples(ds, samples)
+        samples_out = {s.DNABarcodes[0].name:s.name for s in ds.metadata.bioSamples}
+        self.assertEqual(samples_out, dict(samples))

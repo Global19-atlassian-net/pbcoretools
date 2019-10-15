@@ -3,7 +3,6 @@
 Tests for barcoding-related tasks used in SMRT Link applications.
 """
 
-import subprocess
 import tempfile
 import unittest
 import logging
@@ -48,7 +47,7 @@ class TestUpdateBarcodedSampleMetadata(PbIntegrationBase):
     def _run_update_barcoded_sample_metadata(self, use_barcode_uuids):
         ds_in = pbtestdata.get_file("barcoded-subreadset")
         args = self._to_args(ds_in, use_barcode_uuids=use_barcode_uuids)
-        subprocess.check_call(args)
+        self._check_call(args)
         datastore = DataStore.load_from_json("output.datastore.json")
         validate_barcoded_datastore_files(self, ds_in, datastore,
                                           use_barcode_uuids=use_barcode_uuids)
@@ -62,18 +61,21 @@ class TestUpdateBarcodedSampleMetadata(PbIntegrationBase):
     def test_update_barcoded_sample_metadata_ccs(self):
         args = self._to_args(pbtestdata.get_file("ccs-barcoded"),
                              ".consensusreadset.xml")
-        subprocess.check_call(args)
+        self._check_call(args)
 
 
 class TestReparent(PbIntegrationBase):
     DATASET_NAME = "My Data {u}".format(u=uuid.uuid4())
 
-    def _run_and_check_output(self, args):
-        subprocess.check_call(args)
-        with openDataSet(args[-1], strict=True) as ds_out:
+    def _validate_files(self, input_file, output_file):
+        with openDataSet(output_file, strict=True) as ds_out:
             self.assertEqual(ds_out.name, self.DATASET_NAME)
-            with openDataSet(args[-3], strict=True) as ds_in:
+            with openDataSet(input_file, strict=True) as ds_in:
                 self.assertNotEqual(ds_out.uuid, ds_in.uuid)
+
+    def _run_and_check_output(self, args):
+        self._check_call(args)
+        self._validate_files(args[-3], args[-1])
 
     def _to_args(self, file_name, output_file_name):
         return [
@@ -92,3 +94,20 @@ class TestReparent(PbIntegrationBase):
         args = self._to_args(pbtestdata.get_file("ccs-barcoded"),
                              "new_parent.consensusreadset.xml")
         self._run_and_check_output(args)
+
+    def test_reparent_with_biosamples(self):
+        args = self._to_args(pbtestdata.get_file("subreads-sequel"),
+                             "new_parent_with_samples.subreadset.xml")
+        input_file = args[-3]
+        output_file = args[-1]
+        csv = "Barcode,BioSample Name\nlbc1--lbc1,Alice\nlbc2--lbc2,Bob"
+        csv_tmp = tempfile.NamedTemporaryFile(suffix=".csv").name
+        with open(csv_tmp, "w") as csv_out:
+            csv_out.write(csv)
+        args.extend(["--biosamples-csv", csv_tmp])
+        self._check_call(args)
+        self._validate_files(input_file, output_file)
+        with openDataSet(output_file) as ds_out:
+            samples = [("lbc1--lbc1", "Alice"), ("lbc2--lbc2", "Bob")]
+            samples_out = {s.DNABarcodes[0].name:s.name for s in ds_out.metadata.bioSamples}
+            self.assertEqual(samples_out, dict(samples))
