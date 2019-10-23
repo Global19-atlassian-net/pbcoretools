@@ -20,7 +20,8 @@ def run_args(args):
     return reparent_dataset(
         input_file=args.input_reads,
         dataset_name=args.dataset_name,
-        output_file=args.output_file)
+        output_file=args.output_file,
+        biosamples_csv=args.biosamples_csv)
 
 
 def _get_parser():
@@ -32,6 +33,10 @@ def _get_parser():
         "input_reads", help="SubreadSet or ConsensusReadSet use as INPUT for lima")
     p.add_argument("dataset_name", help="Dataset name")
     p.add_argument("output_file", help="Output dataset XML")
+    p.add_argument("--biosamples-csv",
+                   action="store",
+                   default=None,
+                   help="Optional CSV file containing Barcode/BioSample list")
     return p
 
 

@@ -13,7 +13,7 @@ from pysam import AlignmentFile  # pylint: disable=no-member, no-name-in-module
 
 from pbcommand.utils import setup_log
 from pbcommand.cli import pacbio_args_runner
-from pbcommand.models import FileTypes, get_pbparser, ResourceTypes, DataStore, DataStoreFile
+from pbcommand.models import FileTypes, DataStore, DataStoreFile
 from pbcore.io import ConsensusAlignmentSet, TranscriptAlignmentSet, TranscriptSet, openDataSet
 
 from pbcoretools.file_utils import get_prefixes
