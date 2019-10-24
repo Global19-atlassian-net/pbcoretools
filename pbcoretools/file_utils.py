@@ -172,9 +172,10 @@ def parse_biosamples_csv(csv_file):
             if len(row) != 2:
                 raise ValueError("Expected two fields, got %s" % row)
             try:
-                x = str(row)
+                for field in row:
+                    x = field.encode("UTF-8")
             except UnicodeDecodeError as e:
-                raise ValueError("Non-ASCII characters are not allowed in BioSamples CSV.  Please make sure you use a plain-text editor to generate the CSV file.")
+                raise ValueError("Non-ASCII characters are not allowed in BioSamples CSV.  Please make sure you use a plain-text editor to generate the CSV file and use only alphanumeric characters in your sample names.")
             if k > 0:
                 records.append(tuple(row))
     return records

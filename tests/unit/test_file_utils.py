@@ -1,3 +1,4 @@
+# coding=utf-8
 
 """
 Unit tests for pbcoretools.file_utils
@@ -388,6 +389,14 @@ class TestBarcodeUtils(unittest.TestCase):
         records = parse_biosamples_csv(csv_tmp)
         self.assertEqual(records, [("lbc1--lbc1", "Alice"),
                                    ("lbc2--lbc2", "Bob")])
+
+    def test_parse_biosamples_csv_non_ascii(self):
+        csv = "Barcode,BioSample Name\nlbc1--lbc1,Alice™\nlbc2--lbc2,Bob¢"
+        csv_tmp = tempfile.NamedTemporaryFile(suffix=".csv").name
+        with open(csv_tmp, "w") as csv_out:
+            csv_out.write(csv)
+        with self.assertRaises(ValueError):
+            parse_biosamples_csv(csv_tmp)
 
     def test_set_bio_samples(self):
         ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))
