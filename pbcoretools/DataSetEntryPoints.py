@@ -8,6 +8,7 @@ import argparse
 import logging
 import string
 import re
+import os.path as op
 import os
 
 from pbcore.io import DataSet, ContigSet, openDataSet, openDataFile
@@ -251,6 +252,10 @@ def splitXml(args):
     log.debug("Starting split")
     dataSet = openDataSet(args.infile, strict=args.strict)
     chunks = len(args.outfiles)
+    nSuf = -2 if re.search(r".+\.\w+set\.xml", args.infile.lower()) else -1
+    default_prefix = '.'.join(args.infile.split('.')[:nSuf])
+    ext = '.'.join(args.infile.split('.')[nSuf:])
+    prefix = args.prefix if args.prefix is not None else default_prefix
     if args.chunks:
         chunks = args.chunks
     if isinstance(dataSet, ContigSet):
@@ -266,38 +271,20 @@ def splitXml(args):
                             barcodes=args.barcodes,
                             byRecords=(not args.byRefLength),
                             updateCounts=(not args.noCounts))
-    log.debug("Splitting into {i} chunks".format(i=len(dss)))
-    infix = 'chunk{i}'
-    chNums = range(len(dss))
-    if args.barcodes and not args.simple_chunk_ids:
-        infix = '{i}'
-        chNums = ['_'.join(ds.barcodes).replace(
-            '[', '').replace(']', '').replace(', ', '-') for ds in dss]
-    nSuf = -2 if re.search(r".+\.\w+set\.xml", args.infile.lower()) else -1
-    default_prefix = '.'.join(args.infile.split('.')[:nSuf])
-    ext = '.'.join(args.infile.split('.')[nSuf:])
-    prefix = args.prefix if args.prefix is not None else default_prefix
-    if not args.outfiles:
-        if not args.outdir:
-            args.outfiles = ['.'.join([prefix, infix.format(i=chNum), ext])
-                             for chNum in chNums]
+    for i, ds in enumerate(dss):
+        infix = 'chunk{i}'
+        chNum = str(i)
+        if args.barcodes and not args.simple_chunk_ids:
+            infix = '{i}'
+            chNum = '_'.join(ds.barcodes).replace(
+                '[', '').replace(']', '').replace(', ', '-')
+        if args.outfiles:
+            out_fn = args.outfiles[i]
         else:
-            args.outfiles = ['.'.join([prefix, infix.format(i=chNum), ext])
-                             for chNum in chNums]
-            args.outfiles = [os.path.join(args.outdir,
-                                          os.path.basename(outfn))
-                             for outfn in args.outfiles]
-            num = len(dss)
-            end = ''
-            if num > 5:
-                num = 5
-                end = '...'
-            log.debug("Emitting {f} {e}".format(
-                f=', '.join(args.outfiles[:num]),
-                e=end))
-    log.debug("Finished splitting, now writing")
-    for out_fn, dset in zip(args.outfiles, dss):
-        dset.write(out_fn)
+            out_fn = '.'.join([prefix, infix.format(i=chNum), ext])
+            if args.outdir:
+                out_fn = op.join(args.outdir, op.basename(out_fn))
+        ds.write(out_fn)
     log.debug("Done writing files")
     return 0
 
