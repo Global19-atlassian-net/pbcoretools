@@ -11,10 +11,15 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
+from __future__ import absolute_import, division, print_function
+
+import pkg_resources
 import sys, os
-globals = {}
-execfile("../pbcoretools/__init__.py", globals)
-__VERSION__ = globals["__VERSION__"]
+
+try:
+    __VERSION__ = pkg_resources.get_distribution('pbcoretools').version
+except Exception:
+    __VERSION__ = 'unknown'
 
 
 # If extensions (or modules to document with autodoc) are in another directory,
