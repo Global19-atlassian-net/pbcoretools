@@ -1,6 +1,0 @@
-numpy
-pysam >= 0.15.1
-jinja2
-jsonschema
-xmlbuilder
-functools32
