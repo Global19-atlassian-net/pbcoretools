@@ -33,12 +33,14 @@ def split_reads(ds_file, max_chunks, target_size, lima_peek_guess):
         chunks = reads.split(maxChunks=max_chunks,
                              targetSize=target_size,
                              zmws=True)
-        log.info("%d chunked datasets will be written", len(chunks))
+        n_chunks = 0
         for i, ds in enumerate(chunks):
             file_name = "chunk{i}.{e}".format(i=i, e=ds_type.ext)
             ds.write(file_name)
             log.debug("Wrote %s", file_name)
-        return len(chunks)
+            n_chunks += 1
+        log.info("%d chunked datasets were written", n_chunks)
+        return n_chunks
 
 
 def _get_parser():

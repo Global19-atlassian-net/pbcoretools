@@ -1,4 +1,0 @@
-numpy >= 1.7.1
-pysam >= 0.15.1
-pbcore >= 1.7.0
-pbcommand >= 0.6.7
