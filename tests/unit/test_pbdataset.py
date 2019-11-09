@@ -92,11 +92,17 @@ class TestDataSet(unittest.TestCase):
             o=outdir,
             d=data.getXml(7))
         self._check_cmd(cmd)
-        for i in range(5):
+        for i in range(4):
             self.assertTrue(os.path.exists(
                 os.path.join(
                     outdir,
                     'pbalchemysim0.chunk{}.alignmentset.xml'.format(i))))
+
+        # pbalchemysim0.chunk4.alignmentset.xml shouldn't exist
+        self.assertFalse(os.path.exists(
+            os.path.join(
+                outdir,
+                'pbalchemysim0.chunk4.alignmentset.xml')))
 
     def test_copyTo_cli(self):
         # To a fname:
