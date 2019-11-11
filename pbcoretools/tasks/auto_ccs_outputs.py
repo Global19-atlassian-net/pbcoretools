@@ -115,7 +115,7 @@ def get_prefix_and_bam_file_name(ds, is_barcoded=False):
         movies = sorted(list({rg.MovieName for rg in ds.readGroupTable}))
         file_prefix = "_".join(movies)
         if len(movies) > 1:
-            log.warn("Multiple movies found: %s", movies)
+            log.warning("Multiple movies found: %s", movies)
             file_prefix = "multiple_movies"
     return bam_file_name, file_prefix
 

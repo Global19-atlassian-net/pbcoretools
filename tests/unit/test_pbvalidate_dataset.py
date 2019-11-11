@@ -67,7 +67,7 @@ class TestCase (unittest.TestCase):
         self.assertTrue(v.validate(ds))
         v = ValidateContents(aligned=False, content_type="CCS")
         self.assertFalse(v.validate(ds))
-        self.assertEqual([type(e).__name__ for e in v.to_errors(ds)],
+        self.assertEqual(sorted([type(e).__name__ for e in v.to_errors(ds)]),
                          ["FileAlignedError", "FileContentMismatchError"])
         v = ValidateResources()
         self.assertTrue(v.validate(ds))
@@ -102,15 +102,6 @@ class TestCase (unittest.TestCase):
         self.assertFalse(ValidateEncoding().validate(file_name))
         file_name = os.path.join(LOCAL_DATA_DIR, "tst_1c.subreadset.xml")
         self.assertFalse(ValidateEncoding().validate(file_name))
-
-    @skip_if_no_pyxb
-    def test_validate_xml_pyxb(self):
-        file_name = os.path.join(LOCAL_DATA_DIR, "tst_1d.subreadset.xml")
-        ds = pbcore.io.SubreadSet(file_name)
-        v = ValidateXML()
-        self.assertFalse(v.validate(file_name))
-        e = v.to_errors(file_name)
-        self.assertTrue(str(e[0]).startswith("XML schema error:"))
 
     def test_exit_code_0(self):
         xml = pbtestdata.get_file("subreads-sequel")

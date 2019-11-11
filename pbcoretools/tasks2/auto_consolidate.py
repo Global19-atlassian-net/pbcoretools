@@ -74,11 +74,11 @@ def run_args(args):
         return _to_datastore(args.output_bam, bai_file, datastore_json)
     elif size_gb > args.max_size:
         if not args.force:
-            log.warn(
+            log.warning(
                 "Skipping BAM consolidation because file size cutoff was exceeded")
             return 0
         else:
-            log.warn("--force was used, so BAM consolidation will be run anyway")
+            log.warning("--force was used, so BAM consolidation will be run anyway")
     args.dataset.consolidate(args.output_bam,
                              numFiles=1,
                              useTmp=not args.noTmp)

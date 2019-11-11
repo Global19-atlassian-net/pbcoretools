@@ -244,9 +244,9 @@ class ValidateFastaRaw (ValidateFile):
 
         def _open(file_name):
             if file_name.endswith(".gz"):
-                return gzip.open(file_name)
+                return gzip.open(file_name, mode="rt")
             else:
-                return open(file_name, "r")
+                return open(file_name, mode="rt")
         is_dos = is_unix = False
         with _open(path) as f:
             prev_line_was_header = False

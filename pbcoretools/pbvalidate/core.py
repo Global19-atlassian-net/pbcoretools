@@ -30,7 +30,7 @@ class ValidatorError(AssertionError):
         self.object_ref = object_ref
 
     def __repr__(self):
-        _d = dict(k=self.__class__.__name__, n=self.message)
+        _d = dict(k=self.__class__.__name__, n=str(self))
         return "<{k} {n} >".format(**_d)
 
     @classmethod
@@ -247,7 +247,7 @@ class ValidatorContextMaxRecords(ValidatorErrorContext):
         self._records = set([])
 
     def _save_record(self, object_ref):
-        self._records.add(object_ref)
+        self._records.add(str(object_ref))
         if len(self._records) >= self.max_records:
             raise ValidationStopException("Reached maximum record count, " +
                                           "stopping now.")

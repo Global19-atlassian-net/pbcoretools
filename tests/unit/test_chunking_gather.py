@@ -31,7 +31,7 @@ class Record(object):
 
 
 def _to_n_records(nrecords):
-    for i in xrange(nrecords):
+    for i in range(nrecords):
         r = Record(i, 90)
         yield r
 

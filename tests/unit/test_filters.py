@@ -5,6 +5,7 @@ import os.path as op
 
 from pbcoretools.filters import (run_filter_dataset,
                                  sanitize_read_length)
+from pbcoretools.DataSetEntryPoints import parse_filter_list
 from pbcore.io import openDataFile, openDataSet
 import pbcore.data.datasets as data
 
@@ -126,33 +127,33 @@ class TestFilterDataSet(unittest.TestCase):
                          "( rq > .7 AND length >= 100 )")
 
         # AND conjunction
-        run_filter_dataset(ssfn, ofn, "100", "rq > .7 AND length < 5000")
+        run_filter_dataset(ssfn, ofn, "100", "length < 5000 AND rq > .7")
         ds = openDataSet(ofn)
         self.assertEqual(
             str(ds.filters),
-            '( length < 5000 AND rq > .7 AND length >= 100 )')
+            "( length < 5000 AND rq > .7 AND length >= 100 )")
 
         ## semicolon conjunction
 
-        run_filter_dataset(ssfn, ofn, "100", "rq > .7; length < 5000")
+        run_filter_dataset(ssfn, ofn, "100", "length < 5000; rq > .7")
         ds = openDataSet(ofn)
         self.assertEqual(
             str(ds.filters),
-            '( length < 5000 AND rq > .7 AND length >= 100 )')
+            "( length < 5000 AND rq > .7 AND length >= 100 )")
 
         run_filter_dataset(ssfn, ofn, 0,
-                           "rq>=.7; length >= 1000; length <= 5000")
+                           "length >= 1000; length <= 5000; rq >= .7")
         ds = openDataSet(ofn)
         self.assertEqual(
             str(ds.filters),
-            '( length >= 1000 AND length <= 5000 AND rq >= .7 )')
+            "( length >= 1000 AND length <= 5000 AND rq >= .7 )")
 
         run_filter_dataset(ssfn, ofn, 0,
-                           "rq>=.7; length gte 1000; length lte 5000")
+                           "length gte 1000; length lte 5000; rq >= .7")
         ds = openDataSet(ofn)
         self.assertEqual(
             str(ds.filters),
-            '( length gte 1000 AND length lte 5000 AND rq >= .7 )')
+            "( length gte 1000 AND length lte 5000 AND rq >= .7 )")
 
     def test_filter_comma_raises(self):
         with self.assertRaises(ValueError):
@@ -166,19 +167,15 @@ class TestFilterDataSet(unittest.TestCase):
 
         # zm=[3,4,5] condition
         run_filter_dataset(ssfn, ofn, 0,
-                           "length >= 1000 AND zm=[3,4,5]")
+                           "zm=[3,4,5] AND length >= 1000")
         ds = openDataSet(ofn)
-        self.assertEqual(
-            str(ds.filters),
-            '( zm = [3,4,5] AND length >= 1000 )')
+        self.assertEqual(str(ds.filters), "( zm = [3,4,5] AND length >= 1000 )")
 
         # zm=[3,4,5] condition
-        run_filter_dataset(ssfn, ofn, 0,
-                           "length >= 1000; zm=[3,4,5]")
+        run_filter_dataset(ssfn, ofn, 0, "zm=[3,4,5]; length >= 1000")
         ds = openDataSet(ofn)
         self.assertEqual(
-            str(ds.filters),
-            '( zm = [3,4,5] AND length >= 1000 )')
+            str(ds.filters), "( zm = [3,4,5] AND length >= 1000 )")
 
         # zm=[3,4,5] condition by itself
         run_filter_dataset(ssfn, ofn, 0,
@@ -195,6 +192,11 @@ class TestFilterDataSet(unittest.TestCase):
         ds = openDataSet(ofn)
         self.assertTrue(ds.name.endswith("(filtered)"))
         self.assertTrue("filtered" in ds.tags)
+
+    def test_parse_filter_list(self):
+        f1 = ["rq >= 0.7 AND length <= 10000"]
+        f2 = parse_filter_list(f1)
+        self.assertEqual(f2, {"rq": [(">=", "0.7")], "length": [("<=", "10000")]})
 
 
 if __name__ == "__main__":

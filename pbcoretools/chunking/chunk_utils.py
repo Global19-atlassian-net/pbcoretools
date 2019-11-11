@@ -65,7 +65,7 @@ def _to_grouped_items_by_max_total_chunks(items, max_total_chunks):
     grouped_items = []
 
     n = int(math.ceil(float(nitems)) / max_total_chunks)
-    for i in xrange(max_total_chunks):
+    for i in range(max_total_chunks):
         if i != max_total_chunks - 1:
             cs = items[i * n: (i + 1) * n]
         else:
@@ -86,7 +86,7 @@ def _to_grouped_items_by_max_size_per_item(items, max_chunks_per_item):
             chunks.append(i)
     else:
         n = int(math.ceil(float(nitems) / max_chunks_per_item))
-        for i in xrange(n):
+        for i in range(n):
             if i != max_chunks_per_item - 1:
                 cs = items[i * n:n * (i + 1)]
             else:
@@ -120,7 +120,7 @@ def write_chunked_csv(chunk_key, csv_path, max_total_nchunks, dir_name, base_nam
         reader = csv.DictReader(csv_fh)
 
         it = iter(reader)
-        for i in xrange(max_total_nchunks):
+        for i in range(max_total_nchunks):
 
             chunk_id = "_".join([base_name, str(nchunks)])
             chunk_name = ".".join([chunk_id, ext])
@@ -132,7 +132,7 @@ def write_chunked_csv(chunk_key, csv_path, max_total_nchunks, dir_name, base_nam
                 writer = csv.DictWriter(csv_chunk_fh, field_names)
                 writer.writeheader()
                 if i != max_total_nchunks:
-                    for _ in xrange(n):
+                    for _ in range(n):
                         nchunk_records += 1
                         writer.writerow(next(it))
                 else:
@@ -209,7 +209,7 @@ def __to_chunked_fastx_files(write_records_func, pbcore_reader_class, pbcore_wri
     nchunks = 0
     with pbcore_reader_class(input_file) as r:
         it = iter(r)
-        for i in xrange(max_total_nchunks):
+        for i in range(max_total_nchunks):
             records = []
 
             chunk_id = "_".join([base_name, str(nchunks)])
@@ -221,7 +221,7 @@ def __to_chunked_fastx_files(write_records_func, pbcore_reader_class, pbcore_wri
                 n_left = nrecords - (n_per_chunk * i)
                 if n_left < 0 or (n_left == 0 and nchunks != 1):
                     break
-                for _ in xrange(min(n_per_chunk, n_left)):
+                for _ in range(min(n_per_chunk, n_left)):
                     records.append(next(it))
             else:
                 for x in it:
@@ -388,7 +388,7 @@ def _to_barcode_chunked_dataset_files(dataset_type, dataset_path,
         dset.write(chunk_path)
         d[chunk_key] = os.path.abspath(chunk_path)
         if extra_chunk_keys is not None:
-            for key, value in extra_chunk_keys.iteritems():
+            for key, value in extra_chunk_keys.items():
                 d[key] = value
         c = PipelineChunk(chunk_id, **d)
         yield c
