@@ -4,8 +4,7 @@ Validation of PacBio dataset XML (and referenced files)
 """
 
 import xml.etree.ElementTree as ET
-from cStringIO import StringIO
-from urlparse import urlparse
+from io import StringIO
 import xml.parsers.expat
 import traceback
 import itertools
@@ -13,6 +12,8 @@ import argparse
 import logging
 import os.path
 import sys
+
+from future.moves.urllib.parse import urlparse
 
 try:
     from pyxb import exceptions_ as pyxbexceptions
@@ -64,7 +65,7 @@ def _validate_read_groups(ctx, validators, reader):
         bam_readers = reader.resourceReaders()
         for bam_reader in reader.resourceReaders():
             if bam_reader is None:
-                log.warn("Skipping unopenable file")
+                log.warning("Skipping unopenable file")
                 continue
             log.debug("Opened file: " + str(bam_reader))
             bam.validate_read_groups(ctx, validators, bam_reader)
@@ -154,7 +155,7 @@ class ValidateXML(ValidateFile):
             emsg = "{t}: {m}".format(
                 t=type(e).__name__, m=e.details())  # pylint: disable=no-member
         except pyxbexceptions.PyXBException as e:
-            emsg = "{t}: {m})".format(t=type(e).__name__, m=str(e.message))
+            emsg = "{t}: {m})".format(t=type(e).__name__, m=str(e))
         except Exception as e:
             emsg = str(e)
         if emsg is not None:
@@ -240,8 +241,8 @@ class ValidateResourcesOpen (ValidateResources):
     def _get_errors(self, file_obj):
         errors = []
         try:
-            for r, f in itertools.izip(file_obj.externalResources,
-                                       file_obj.resourceReaders()):
+            for r, f in zip(file_obj.externalResources,
+                            file_obj.resourceReaders()):
                 if f is None:
                     errors.append(ResourceOpenError.from_args(file_obj,
                                                               urlparse(r.resourceId).path))
@@ -249,7 +250,7 @@ class ValidateResourcesOpen (ValidateResources):
             if e.filename is None or not os.path.exists(e.filename):
                 log.info("File %s doesn't exist, skipping" % e.filename)
                 return []
-            log.warn("Encountered IOError opening %s" % e.filename)
+            log.warning("Encountered IOError opening %s" % e.filename)
             return [ResourceOpenError.from_args(file_obj, e.filename)]
         else:
             return errors
@@ -379,7 +380,7 @@ class ValidateFileProxy (ValidateFileObject):
                     errors_ = self._validator.to_errors(_reader)
                     self._errors.update(set(errors_))
         except IOError as e:
-            #log.warn("Can't open file %s" % e.filename)
+            #log.warning("Can't open file %s" % e.filename)
             return True
         else:
             return len(self._errors) == 0
@@ -516,7 +517,7 @@ def validate_dataset(
         # XXX suppressing logging errors temporarily
         # logging.disable(logging.CRITICAL)
         try:
-            ds = ReaderClass(file_name, strict=True)
+            ds = ReaderClass(file_name, strict=True)  # pylint: disable=not-callable
         finally:
             pass  # logging.disable(logging.NOTSET)
     except Exception as e:

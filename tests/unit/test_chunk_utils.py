@@ -53,5 +53,5 @@ class TestChunkUtils(unittest.TestCase):
         self.assertEqual(guess_optimal_max_nchunks_for_consensus(4000000), 19)
         self.assertEqual(guess_optimal_max_nchunks_for_consensus(40000000), 51)
         self.assertEqual(guess_optimal_max_nchunks_for_consensus(400000000), 83)
-        self.assertEqual(guess_optimal_max_nchunks_for_consensus(sys.maxint), 96)
+        self.assertEqual(guess_optimal_max_nchunks_for_consensus(sys.maxsize), 96)
         self.assertEqual(guess_optimal_max_nchunks_for_consensus(400000000, 24), 24)

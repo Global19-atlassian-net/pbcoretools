@@ -25,7 +25,7 @@ HEADERS_SNR = ["snrA", "snrC", "snrG", "snrT"]
 HEADERS_NPASSES = ["np"]
 
 def _write_csv(rows, csv_file, headers=HEADERS):
-    with open(csv_file, "wb") as csv_out:
+    with open(csv_file, "wt") as csv_out:
         writer = csv.writer(csv_out,
                             delimiter=",",
                             lineterminator=os.linesep,
@@ -55,7 +55,7 @@ def run_args(args):
             reference = rr.referenceInfo(rr.pbi.tId[i])[2]
             aLen = rr.pbi.aEnd[i] - rr.pbi.aStart[i]
             if aLen <= 0 or identity[i] < 0:
-                log.warn("ZMW %s has negative-length alignment or negative computed identity, skipping", holeNumber)
+                log.warning("ZMW %s has negative-length alignment or negative computed identity, skipping", holeNumber)
                 continue
             rc = "FALSE"
             if rr.pbi.isReverseStrand[i]:

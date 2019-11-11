@@ -1,7 +1,7 @@
 
-from cStringIO import StringIO
 import xml.dom.minidom
 import unittest
+import tempfile
 import os.path as op
 import os
 
@@ -21,18 +21,20 @@ class MiscTests(unittest.TestCase):
             p = pbcoretools.pbvalidate.main.get_parser()
             args = p.parse_args([file_name, "--quiet"])
             results.append(pbcoretools.pbvalidate.main.run_validator(args))
-        out = StringIO()
-        pbcoretools.pbvalidate.utils.generate_multiple_file_junit_report(
-            results=results,
-            xml_out=out,
-            skipped_files=[os.path.join(DATA_DIR, "tst_3_subreads.bam")])
-        dom = xml.dom.minidom.parseString(out.getvalue())
-        tests = dom.getElementsByTagName("testcase")
-        self.assertEqual(len(tests), 3)
-        failures = dom.getElementsByTagName("failure")
-        self.assertEqual(len(failures), 1)
-        skipped = dom.getElementsByTagName("skipped")
-        self.assertEqual(len(skipped), 1)
+        tmp_out = tempfile.NamedTemporaryFile(suffix=".xml").name
+        with open(tmp_out, "wt") as out:
+            pbcoretools.pbvalidate.utils.generate_multiple_file_junit_report(
+                results=results,
+                xml_out=out,
+                skipped_files=[os.path.join(DATA_DIR, "tst_3_subreads.bam")])
+        with open(tmp_out, "rt") as out:
+            dom = xml.dom.minidom.parseString(out.read())
+            tests = dom.getElementsByTagName("testcase")
+            self.assertEqual(len(tests), 3)
+            failures = dom.getElementsByTagName("failure")
+            self.assertEqual(len(failures), 1)
+            skipped = dom.getElementsByTagName("skipped")
+            self.assertEqual(len(skipped), 1)
 
     def test_single_file_xunit_output(self):
         file_name = os.path.join(DATA_DIR, "tst_2_subreads.bam")

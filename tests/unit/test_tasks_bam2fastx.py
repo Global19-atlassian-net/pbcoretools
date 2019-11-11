@@ -126,7 +126,6 @@ class TestBam2Fasta(PbIntegrationBase):
             input_file, output_file
         ]
         self._check_call(args)
-        print os.getcwd()
         output_file = _get_zipped_fastx_file(output_file)
         self.run_after(input_file, output_file, nrecords_expected)
 
@@ -155,7 +154,6 @@ class TestBam2FastxBarcoded(PbIntegrationBase):
             os.chdir(tmp_dir)
             ZipFile(output_file, "r").extractall()
             file_names = sorted(os.listdir(tmp_dir))
-            print file_names
             self.assertEqual(file_names, self._get_expected_file_names(extension))
             fastx_ids = ["m54008_160219_003234/74056024/3985_5421", # bc 0
                          "m54008_160219_003234/28901719/5058_5262", # bc 2
