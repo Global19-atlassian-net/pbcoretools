@@ -73,6 +73,7 @@ def cat_txt_with_header(input_files, output_file):
                     if (i == 0 or not l.startswith('#')):
                         writer.write(l.strip()+"\n")
 
+
 gather_bed = cat_txt_with_header
 
 

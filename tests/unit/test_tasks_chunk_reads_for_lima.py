@@ -5,11 +5,12 @@ import tempfile
 import logging
 import os
 
-from pbcoretools.tasks2.chunk_reads_for_lima import split_reads
+from pbcoretools.tasks.chunk_reads_for_lima import split_reads
 
 import pbtestdata
 
 log = logging.getLogger(__name__)
+
 
 class TestChunkReadsForLima(unittest.TestCase):
 
@@ -43,7 +44,7 @@ class TestChunkReadsForLima(unittest.TestCase):
 
     def test_integration(self):
         args = [
-            "python", "-m", "pbcoretools.tasks2.chunk_reads_for_lima",
+            "python", "-m", "pbcoretools.tasks.chunk_reads_for_lima",
             pbtestdata.get_file("subreads-sequel"),
             "--targetSize", "1"
         ]
@@ -53,7 +54,7 @@ class TestChunkReadsForLima(unittest.TestCase):
 
     def test_integration_peek_guess(self):
         args = [
-            "python", "-m", "pbcoretools.tasks2.chunk_reads_for_lima",
+            "python", "-m", "pbcoretools.tasks.chunk_reads_for_lima",
             pbtestdata.get_file("subreads-sequel"),
             "--targetSize", "1"
         ]

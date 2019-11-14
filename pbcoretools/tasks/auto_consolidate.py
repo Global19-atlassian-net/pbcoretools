@@ -78,7 +78,8 @@ def run_args(args):
                 "Skipping BAM consolidation because file size cutoff was exceeded")
             return 0
         else:
-            log.warning("--force was used, so BAM consolidation will be run anyway")
+            log.warning(
+                "--force was used, so BAM consolidation will be run anyway")
     args.dataset.consolidate(args.output_bam,
                              numFiles=1,
                              useTmp=not args.noTmp)

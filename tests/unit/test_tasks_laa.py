@@ -42,14 +42,15 @@ class TestSplitLAATask(PbIntegrationBase):
     def test_split_laa_fastq(self):
         consensus_zip = tempfile.NamedTemporaryFile(suffix=".zip").name
         chimeras_zip = tempfile.NamedTemporaryFile(suffix=".zip").name
-        args = ["python", "-m", "pbcoretools.tasks2.split_laa_fastq",
+        args = ["python", "-m", "pbcoretools.tasks.split_laa_fastq",
                 self.INPUT_FILES[0], self.INPUT_FILES[1], self.INPUT_FILES[2],
                 consensus_zip, chimeras_zip]
         self._check_call(args)
         with ZipFile(consensus_zip, "r") as zip_out:
             files = zip_out.namelist()
             suffixes = sorted([".".join(of.split('.')[1:]) for of in files])
-            self.assertEqual(suffixes, ['Alice.lbc1--lbc1.fastq', 'Charles.lbc3--lbc3.fastq'])
+            self.assertEqual(
+                suffixes, ['Alice.lbc1--lbc1.fastq', 'Charles.lbc3--lbc3.fastq'])
 
 
 class TestCombinedLAAZip(PbIntegrationBase):
@@ -65,11 +66,12 @@ class TestCombinedLAAZip(PbIntegrationBase):
 
     def test_make_combined_laa_zip(self):
         combined_zip = tempfile.NamedTemporaryFile(suffix=".zip").name
-        args = ["python", "-m", "pbcoretools.tasks2.make_combined_laa_zip",
+        args = ["python", "-m", "pbcoretools.tasks.make_combined_laa_zip",
                 self.INPUT_FILES[0], self.INPUT_FILES[1], self.INPUT_FILES[2],
                 combined_zip]
         self._check_call(args)
         with ZipFile(combined_zip, "r") as zip_out:
             files = zip_out.namelist()
             suffixes = sorted([".".join(of.split('.')[1:]) for of in files])
-            self.assertEqual(suffixes, ['Alice.lbc1--lbc1.fastq', 'Charles.lbc3--lbc3.fastq', "csv", "csv"])
+            self.assertEqual(
+                suffixes, ['Alice.lbc1--lbc1.fastq', 'Charles.lbc3--lbc3.fastq', "csv", "csv"])

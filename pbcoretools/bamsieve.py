@@ -208,7 +208,7 @@ def filter_reads(input_bam,
         random.seed(seed)
     if whitelist is None and blacklist is None:
         if (not (percentage is not None and 0 < percentage < 100) and
-            not (count is not None and count > 0)):
+                not (count is not None and count > 0)):
             log.error("No reads selected for output.")
             return 1
     output_ds = base_name = None
@@ -280,8 +280,8 @@ def filter_reads(input_bam,
                 if ext_res.scraps is not None:
                     if use_barcodes:
                         log.warning("Scraps BAM is present but lacks " +
-                                 "barcodes - will not be propagated " +
-                                 "to output SubreadSet")
+                                    "barcodes - will not be propagated " +
+                                    "to output SubreadSet")
                     else:
                         scraps_in = IndexedBamReader(ext_res.scraps)
                     break

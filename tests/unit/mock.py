@@ -46,12 +46,12 @@ def __to_fastx_records(n, _to_seq_func, _to_record_func, prefix="record"):
 
 def to_fasta_records(n, prefix="record"):
     return __to_fastx_records(n, _random_dna_sequence, _to_fasta_record,
-        prefix=prefix)
+                              prefix=prefix)
 
 
 def to_fastq_records(n, prefix="record"):
     return __to_fastx_records(n, _random_dna_sequence, _to_fastq_record,
-        prefix=prefix)
+                              prefix=prefix)
 
 
 def write_fastx_records(fastx_writer_klass, records, path):
@@ -67,12 +67,12 @@ def write_fastx_records(fastx_writer_klass, records, path):
 
 def write_random_fasta_records(path, nrecords=100, prefix="record"):
     return write_fastx_records(FastaWriter, to_fasta_records(nrecords,
-        prefix=prefix), path)
+                                                             prefix=prefix), path)
 
 
 def write_random_fastq_records(path, nrecords=100, prefix="record"):
     return write_fastx_records(FastqWriter, to_fastq_records(nrecords,
-        prefix=prefix), path)
+                                                             prefix=prefix), path)
 
 
 def _to_random_tmp_fofn(nrecords):
@@ -106,7 +106,8 @@ def write_random_fofn(path, nrecords):
 
 def write_random_report(path, nrecords):
 
-    attributes = [Attribute("mock_attr_{i}".format(i=i), i, name="Attr {i}".format(i=i)) for i in range(nrecords)]
+    attributes = [Attribute("mock_attr_{i}".format(
+        i=i), i, name="Attr {i}".format(i=i)) for i in range(nrecords)]
     r = Report("mock_report", attributes=attributes)
     r.write_json(path)
     return r

@@ -150,7 +150,8 @@ class TestBamSieve(unittest.TestCase):
         with SubreadSet(ofn) as ds:
             ds.write(ds_tmp)
         ofn4 = tempfile.NamedTemporaryFile(suffix=".subreads.bam").name
-        args = ["bamsieve", "--subreads", "--blacklist", ds_tmp, SUBREADS3, ofn4]
+        args = ["bamsieve", "--subreads",
+                "--blacklist", ds_tmp, SUBREADS3, ofn4]
         rc = subprocess.check_call(args)
         with BamReader(ofn4) as bam_out:
             subreads4 = set([x.qName for x in bam_out])
@@ -255,6 +256,7 @@ class TestBamSieve(unittest.TestCase):
             output_bam=ofn,
             whitelist=[74056024])
         self.assertEqual(rc, 0)
+
         def _verify():
             with SubreadSet(ofn, strict=False) as ds_out:
                 ext_res = ds_out.externalResources[0]

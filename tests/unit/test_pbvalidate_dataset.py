@@ -76,7 +76,7 @@ class TestCase (unittest.TestCase):
         self.assertEqual([type(e).__name__ for e in v.to_errors(ds)],
                          ['DatasetTypeError'])
         # FIXME this isn't working any more
-        #self.assertFalse(ValidateNamespace().validate(ds))
+        # self.assertFalse(ValidateNamespace().validate(ds))
         self.assertFalse(ValidateFileName(ds_file).validate(ds))
 
     def test_file_name_and_contents_consistency(self):
@@ -111,4 +111,5 @@ class TestCase (unittest.TestCase):
     @unittest.skipUnless(os.path.isdir(TESTDATA_DIR), "Testdata not available")
     def test_validate_transcriptset(self):
         DS = "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/unpolished.transcriptset.xml"
-        self.assertEqual(subprocess.call(["pbvalidate", "--max-records", "1", DS]), 0)
+        self.assertEqual(subprocess.call(
+            ["pbvalidate", "--max-records", "1", DS]), 0)

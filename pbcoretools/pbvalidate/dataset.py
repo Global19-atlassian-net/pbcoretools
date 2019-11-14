@@ -517,7 +517,8 @@ def validate_dataset(
         # XXX suppressing logging errors temporarily
         # logging.disable(logging.CRITICAL)
         try:
-            ds = ReaderClass(file_name, strict=True)  # pylint: disable=not-callable
+            ds = ReaderClass(  # pylint: disable=not-callable
+                file_name, strict=True)
         finally:
             pass  # logging.disable(logging.NOTSET)
     except Exception as e:

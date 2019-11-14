@@ -12,7 +12,7 @@ import sys
 from pbcommand.models import DataStore
 from pbcore.io import AlignmentSet, ConsensusAlignmentSet, openDataSet
 
-from pbcoretools.tasks2 import auto_consolidate
+from pbcoretools.tasks import auto_consolidate
 
 import pbtestdata
 
@@ -20,7 +20,7 @@ import pbtestdata
 HAVE_PBMERGE = False
 try:
     with tempfile.TemporaryFile() as O, \
-         tempfile.TemporaryFile() as E:
+            tempfile.TemporaryFile() as E:
         assert subprocess.call(["pbmerge", "--help"], stdout=O, stderr=E) == 0
 except Exception as e:
     sys.stderr.write(str(e)+"\n")
@@ -65,12 +65,14 @@ class TestConsolidateBam(unittest.TestCase):
 
     def test_consolidate_split_alignments(self):
         path = pbtestdata.get_file("aligned-ds-2")
-        args = ["dataset", "consolidate", path, "mapped.bam", "mapped.alignmentset.xml"]
+        args = ["dataset", "consolidate", path,
+                "mapped.bam", "mapped.alignmentset.xml"]
         self._run_and_check_outputs(args)
 
     def test_consolidate_ccs_single_file(self):
         path = pbtestdata.get_file("rsii-ccs-aligned")
-        args = ["dataset", "consolidate", path, "mapped.bam", "mapped.consensusalignmentset.xml"]
+        args = ["dataset", "consolidate", path,
+                "mapped.bam", "mapped.consensusalignmentset.xml"]
         self._run_and_check_outputs(args)
 
     def _run_auto(self, args):
@@ -93,7 +95,8 @@ class TestConsolidateBam(unittest.TestCase):
     def test_auto_consolidate_ccs(self):
         args = [pbtestdata.get_file("rsii-ccs-aligned"), self.output_bam]
         self._run_auto(args)
-        xml_file = op.splitext(self.output_bam)[0] + ".consensusalignmentset.xml"
+        xml_file = op.splitext(self.output_bam)[
+            0] + ".consensusalignmentset.xml"
         self._check_outputs(xml_file)
         datastore_file = op.splitext(self.output_bam)[0] + ".datastore.json"
         self._check_datastore(datastore_file)
@@ -107,7 +110,8 @@ class TestConsolidateBam(unittest.TestCase):
         datastore_file = op.splitext(self.output_bam)[0] + ".datastore.json"
         self.assertFalse(op.isfile(datastore_file))
         # now force it
-        args = [self.SPLIT_SUBREADS, self.output_bam, "--max-size", "0", "--force"]
+        args = [self.SPLIT_SUBREADS, self.output_bam,
+                "--max-size", "0", "--force"]
         self._run_auto(args)
         xml_file = op.splitext(self.output_bam)[0] + ".alignmentset.xml"
         self._check_outputs(xml_file)

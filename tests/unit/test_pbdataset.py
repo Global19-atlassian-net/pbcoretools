@@ -30,11 +30,13 @@ from utils import skip_if_no_internal_data
 
 log = logging.getLogger(__name__)
 
+
 def _is_relative(xmlfile):
     for event, element in ET.iterparse(xmlfile, events=("start",)):
         if element.get("ResourceId", "noop").startswith(os.sep):
             return False
     return True
+
 
 def _check_constools():
     cmd = "dataset"
@@ -53,13 +55,16 @@ def _check_constools():
         return False
     return True
 
+
 def _internal_data():
     if os.path.exists("/pbi/dept/secondary/siv/testdata"):
         return True
     return False
 
+
 SKIP_MSG = "bamtools or pbindex not found, skipping"
 skip_if_no_constools = unittest.skipIf(not _check_constools(), SKIP_MSG)
+
 
 class TestDataSet(unittest.TestCase):
     """Unit and integrationt tests for the DataSet class and \
@@ -116,7 +121,8 @@ class TestDataSet(unittest.TestCase):
     def test_copyTo_cli_relative(self):
         # relative:
         fn = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
-        cmd = "dataset copyto --relative {i} {o}".format(i=data.getXml(7), o=fn)
+        cmd = "dataset copyto --relative {i} {o}".format(
+            i=data.getXml(7), o=fn)
         self._run_cmd_with_output(cmd, fn)
         sset = AlignmentSet(fn, strict=True)
         self.assertTrue(_is_relative(fn))
@@ -501,6 +507,7 @@ class TestDataSet(unittest.TestCase):
                "--reference-fasta-fname {r} {o} {i1} {i2}").format(
             o=ofn, i1=data.getXml(7), i2=data.getXml(10),
             r=otherdata.getFasta())
+
         def _run_and_validate(args, file_name):
             self._run_cmd_with_output(cmd, ofn)
             aset = AlignmentSet(ofn, strict=True)
@@ -519,7 +526,8 @@ class TestDataSet(unittest.TestCase):
         with open(fasta, "w") as fasta_out:
             fasta_out.write(">chr1\nacgtacgtacgt")
         ref_xml = os.path.join(tmp_dir, "test.referenceset.xml")
-        cmd = "dataset create {d} {f} --generateIndices --type ReferenceSet --name test_reference_name --organism test_reference_organism --ploidy octaploid".format(d=ref_xml, f=fasta)
+        cmd = "dataset create {d} {f} --generateIndices --type ReferenceSet --name test_reference_name --organism test_reference_organism --ploidy octaploid".format(
+            d=ref_xml, f=fasta)
         self._run_cmd_with_output(cmd, ref_xml)
         ref = ReferenceSet(ref_xml)
         self.assertEqual(ref.metadata.organism, "test_reference_organism")
@@ -538,7 +546,8 @@ class TestDataSet(unittest.TestCase):
     def test_dataset_create_set_sample_names(self):
         sample_args = "--well-sample-name WELLSAMPLE --bio-sample-name BIOSAMPLE".split()
         outfile = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
-        cmd = " ".join(["dataset", "create", "--force", outfile, pbtestdata.get_file("subreads-bam")] + sample_args)
+        cmd = " ".join(["dataset", "create", "--force", outfile,
+                        pbtestdata.get_file("subreads-bam")] + sample_args)
         self._run_cmd_with_output(cmd, outfile)
         with SubreadSet(outfile) as ds:
             self.assertEqual(len(ds.metadata.collections), 1)
@@ -548,7 +557,8 @@ class TestDataSet(unittest.TestCase):
             self.assertEqual(len(ds.metadata.bioSamples), 1)
         # now with existing samples
         outfile = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
-        cmd = " ".join(["dataset", "create", "--force", outfile, pbtestdata.get_file("barcoded-subreadset")] + sample_args)
+        cmd = " ".join(["dataset", "create", "--force", outfile,
+                        pbtestdata.get_file("barcoded-subreadset")] + sample_args)
         self._run_cmd_with_output(cmd, outfile)
         with SubreadSet(outfile) as ds:
             self.assertEqual(len(ds.metadata.collections), 1)
