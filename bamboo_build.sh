@@ -41,7 +41,7 @@ fi
 
 set +ve
 type module >& /dev/null || . /mnt/software/Modules/current/init/bash
-module load python/2
+module load python/3
 module load htslib  # since pysam was built against this
 set -ve
 
@@ -60,8 +60,7 @@ PIP="pip --cache-dir=${bamboo_build_working_directory:-$PWD}/.pip"
 $PIP install --user --no-compile --no-index --find-link $WHEELHOUSE -e repos/PacBioTestData
 $PIP install --user --no-compile --no-index --find-link $WHEELHOUSE -e repos/pbcommand
 $PIP install --user --no-compile --no-index --find-link $WHEELHOUSE -e repos/pbcore
-#$PIP install --user --no-compile --no-index --find-link $WHEELHOUSE "pylint<2.0.0"
-$PIP install --no-compile --upgrade --user --find-link $WHEELHOUSE pytest pytest-xdist pytest-cov
+$PIP install --no-compile --upgrade --user --find-link $WHEELHOUSE pytest pytest-xdist pytest-cov pylint pep8
 
 $PIP install --user -e '.[test]'
 
