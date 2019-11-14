@@ -57,10 +57,11 @@ class TestAutoCCSOutputs(PbIntegrationBase):
     def _check_all_datastore_files(self, files):
         self._check_datastore_files(files, self.OUTPUT_FILES)
 
-    def _to_args(self, input_file):
+    def _to_args(self, input_file, mode):
         return [
             "python", "-m",
             "pbcoretools.tasks.auto_ccs_outputs",
+            mode,
             input_file,
             "output.datastore.json"
         ]
