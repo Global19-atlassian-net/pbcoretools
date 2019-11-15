@@ -284,7 +284,7 @@ class ValidateFastaRaw (ValidateFile):
         check_current_sequence_lines(current_seq_line_lengths,
                                      label=prev_header)
         # XXX disabled as this is no longer relevant
-        #if len(all_seq_line_lengths) > 1:
+        # if len(all_seq_line_lengths) > 1:
         #    self._errors.append(GlobalWrappingError.from_args(path))
         if is_dos and is_unix:
             self._errors.append(LineEndingsError.from_args(path))

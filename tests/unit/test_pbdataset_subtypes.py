@@ -26,6 +26,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+
 class TestDataSet(unittest.TestCase):
     """Unit and integrationt tests for the DataSet class and \
     associated module functions"""
@@ -117,8 +118,8 @@ class TestDataSet(unittest.TestCase):
         datafile = os.path.join(outdir, "merged.bam")
         xmlfile = os.path.join(outdir, "merged.xml")
         cmd = "dataset consolidate {i} {d} {x}".format(i=data.getXml(11),
-                                                          d=datafile,
-                                                          x=xmlfile)
+                                                       d=datafile,
+                                                       x=xmlfile)
         log.debug(cmd)
         o, r, m = backticks(cmd)
         self.assertEqual(r, 0)
@@ -156,4 +157,3 @@ class TestDataSet(unittest.TestCase):
         log.debug(cmd)
         o, r, m = backticks(cmd)
         self.assertEqual(r, 0)
-

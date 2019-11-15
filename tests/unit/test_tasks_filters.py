@@ -18,9 +18,10 @@ import pbtestdata
 
 log = logging.getLogger(__name__)
 
+
 class TestFilterDataSet(PbIntegrationBase):
     BASE_ARGS = [
-        "python", "-m", "pbcoretools.tasks2.dataset_filter"
+        "python", "-m", "pbcoretools.tasks.dataset_filter"
     ]
     READER_CLASS = SubreadSet
 

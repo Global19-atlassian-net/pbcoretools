@@ -224,7 +224,7 @@ class TestCase (unittest.TestCase):
     def test_gzip(self):
         """Test that gzipped files are handled correctly"""
         file_name = op.join(op.dirname(op.dirname(__file__)), "data",
-            "tst2.fasta.gz")
+                            "tst2.fasta.gz")
         e, m = validate_file(file_name)
         self.assertEqual(len(e), 1)
         self.assertEqual(str(

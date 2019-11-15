@@ -116,9 +116,11 @@ def get_barcode_sample_mappings(ds):
     bc_sets = {extRes.barcodes for extRes in ds.externalResources
                if extRes.barcodes is not None}
     if len(bc_sets) > 1:
-        log.warning("Multiple BarcodeSets detected - further processing skipped.")
+        log.warning(
+            "Multiple BarcodeSets detected - further processing skipped.")
     elif len(bc_sets) == 0:
-        log.warning("Can't find original BarcodeSet - further processing skipped.")
+        log.warning(
+            "Can't find original BarcodeSet - further processing skipped.")
     else:
         with BarcodeSet(list(bc_sets)[0]) as bcs:
             labels = [rec.id for rec in bcs]
@@ -175,7 +177,8 @@ def parse_biosamples_csv(csv_file):
                 for field in row:
                     x = field.encode("ascii")
             except UnicodeDecodeError as e:
-                raise ValueError("Non-ASCII characters are not allowed in BioSamples CSV.  Please make sure you use a plain-text editor to generate the CSV file and use only alphanumeric characters in your sample names.")
+                raise ValueError(
+                    "Non-ASCII characters are not allowed in BioSamples CSV.  Please make sure you use a plain-text editor to generate the CSV file and use only alphanumeric characters in your sample names.")
             if k > 0:
                 records.append(tuple(row))
     return records
@@ -542,7 +545,7 @@ def force_set_all_bio_sample_names(ds, sample_name):
         bioSamples[0].name = sample_name
     else:
         log.warning("Multiple BioSamples found: '%s'",
-                 "', '".join([s.name for s in bioSamples]))
+                    "', '".join([s.name for s in bioSamples]))
         log.warning("These will be overwritten with '%s'", sample_name)
         for sample in bioSamples:
             sample.name = sample_name
@@ -620,7 +623,7 @@ def reparent_dataset(input_file,
     with openDataSet(input_file, strict=True) as ds_in:
         if len(ds_in.metadata.provenance) > 0:
             log.warning("Removing existing provenance record: %s",
-                     ds_in.metadata.provenance)
+                        ds_in.metadata.provenance)
             ds_in.metadata.provenance = None
         ds_in.name = dataset_name
         ds_in.newUuid(random=True)

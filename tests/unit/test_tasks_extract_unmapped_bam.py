@@ -14,9 +14,11 @@ import pbtestdata
 
 def assert_no_reads_in_common(self, alignment_file, output_file):
     with AlignmentSet(alignment_file) as mapped:
-        mapped_subreads = set(zip(mapped.index.holeNumber, mapped.index.qStart))
+        mapped_subreads = set(
+            zip(mapped.index.holeNumber, mapped.index.qStart))
         with SubreadSet(output_file) as unmapped:
-            unmapped_subreads = set(zip(unmapped.index.holeNumber, unmapped.index.qStart))
+            unmapped_subreads = set(
+                zip(unmapped.index.holeNumber, unmapped.index.qStart))
             self.assertTrue(len(unmapped_subreads) > 0)
             self.assertEqual(len(mapped_subreads & unmapped_subreads), 0)
 

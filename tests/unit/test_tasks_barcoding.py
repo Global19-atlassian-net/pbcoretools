@@ -34,7 +34,7 @@ class TestUpdateBarcodedSampleMetadata(PbIntegrationBase):
         ds.write_json("input.datastore.json")
         args = [
             "python", "-m",
-            "pbcoretools.tasks2.update_barcoded_sample_metadata",
+            "pbcoretools.tasks.update_barcoded_sample_metadata",
             ds_in,
             "input.datastore.json",
             barcodes,
@@ -79,7 +79,7 @@ class TestReparent(PbIntegrationBase):
 
     def _to_args(self, file_name, output_file_name):
         return [
-            "python", "-m", "pbcoretools.tasks2.reparent_dataset",
+            "python", "-m", "pbcoretools.tasks.reparent_dataset",
             file_name,
             self.DATASET_NAME,
             output_file_name
@@ -109,5 +109,6 @@ class TestReparent(PbIntegrationBase):
         self._validate_files(input_file, output_file)
         with openDataSet(output_file) as ds_out:
             samples = [("lbc1--lbc1", "Alice"), ("lbc2--lbc2", "Bob")]
-            samples_out = {s.DNABarcodes[0].name:s.name for s in ds_out.metadata.bioSamples}
+            samples_out = {
+                s.DNABarcodes[0].name: s.name for s in ds_out.metadata.bioSamples}
             self.assertEqual(samples_out, dict(samples))

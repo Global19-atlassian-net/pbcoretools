@@ -35,7 +35,7 @@ setup(
             'dataset = pbcoretools.dataset:main',
             'pbvalidate = pbcoretools.pbvalidate.main:main',
             'bamsieve = pbcoretools.bamsieve:main',
-            'pbtools-gather = pbcoretools.tasks2.gather:main',
+            'pbtools-gather = pbcoretools.tasks.gather:main',
         ]},
     install_requires=[
         'numpy >= 1.7.1',
