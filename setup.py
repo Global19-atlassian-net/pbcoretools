@@ -22,7 +22,7 @@ setup(
     author_email='devnet@pacificbiosciences.com',
     description='Python CLI tools and add-ons for reading and writing PacBio® data files',
     license='BSD-3-Clause-Clear',
-    packages=find_packages('.'),
+    packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
     entry_points={
@@ -33,7 +33,7 @@ setup(
             'pbtools-gather = pbcoretools.tasks.gather:main',
         ]},
     install_requires=[
-        'numpy >= 1.7.1',
+        'numpy >= 1.17',
         'pysam >= 0.15.1',
         'pbcore >= 2.0.0',
         'pbcommand >= 2.0.0',
