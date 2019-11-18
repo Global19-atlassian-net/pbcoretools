@@ -4,8 +4,6 @@ Utility for validating files produced by PacBio software against our own
 internal specifications.
 """
 
-from __future__ import absolute_import
-
 from xml.dom import minidom
 import warnings
 import argparse

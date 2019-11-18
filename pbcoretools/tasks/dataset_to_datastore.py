@@ -3,7 +3,6 @@
 Convert arbitrary dataset to datastore, and datastore to dataset
 """
 
-from __future__ import absolute_import
 import argparse
 import sys
 import logging

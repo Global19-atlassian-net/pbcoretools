@@ -5,7 +5,6 @@ assumption that the input file will at least be processed by the parser in
 pbcore.io without raising an exception.
 """
 
-from __future__ import division, print_function
 import argparse
 import logging
 import gzip
