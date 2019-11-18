@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import, division, print_function
-
 from setuptools import setup, find_packages
 import sys
 
@@ -16,9 +14,6 @@ test_deps = [
     'sphinx',
     'xmlbuilder',
 ]
-
-if sys.version_info[0] == 2:
-    test_deps += ['functools32']
 
 setup(
     name='pbcoretools',
@@ -40,11 +35,11 @@ setup(
     install_requires=[
         'numpy >= 1.7.1',
         'pysam >= 0.15.1',
-        'pbcore >= 1.9.900',
+        'pbcore >= 2.0.0',
         'pbcommand >= 2.0.0',
-        'future >= 0.16.0',
     ],
     test_requires=test_deps,
     extras_require={
         'test': test_deps},
+    python_requires='>=3.7',
 )

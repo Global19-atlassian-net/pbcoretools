@@ -3,7 +3,6 @@
 BAM consolidation wrapper whose default behavior is dependent on input size.
 """
 
-from __future__ import division
 import logging
 import uuid
 import os.path as op

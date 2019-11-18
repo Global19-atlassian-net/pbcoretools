@@ -4,8 +4,6 @@ Tool for subsetting a BAM or PacBio DataSet file based on either a whitelist of
 hole numbers or a percentage of reads to be randomly selected.
 """
 
-from __future__ import division
-from __future__ import print_function
 from collections import defaultdict, OrderedDict
 import subprocess
 import warnings
@@ -16,10 +14,7 @@ import os.path as op
 import re
 import sys
 
-try:
-    from pysam.calignmentfile import AlignmentFile  # pylint: disable=no-name-in-module, import-error, fixme, line-too-long
-except ImportError:
-    from pysam.libcalignmentfile import AlignmentFile  # pylint: disable=no-name-in-module, import-error, fixme, line-too-long
+from pysam.libcalignmentfile import AlignmentFile  # pylint: disable=no-name-in-module, import-error, fixme, line-too-long
 
 from pbcommand.common_options import (add_log_quiet_option,
                                       add_log_verbose_option)

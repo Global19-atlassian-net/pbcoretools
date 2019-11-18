@@ -5,7 +5,6 @@ that files can be read by the pbcore.io module, which will do some checking
 implicitly.
 """
 
-from __future__ import division, print_function
 from collections import defaultdict
 from functools import wraps
 import warnings
@@ -82,17 +81,6 @@ class Constants (object):
     READ_TYPE_SCRAP = "SCRAP"
     READ_TYPE_MIXED = "mixed"
     SORT_ORDER_UNKNOWN = "unknown"
-
-
-def _check_pysam_version():  # XXX unused, see below
-    import pysam.version
-    version = pysam.version.__version__.split(".")
-    if (version < ["0", "15", "1"]):
-        raise ImportError("pysam >= 0.15.1 required")
-
-# workaround for lack of has_tag() in pysam < 0.8.2
-# FIXME it would be nice if we could just require a newer version, but one of
-# the other PacBio modules forces me to use 0.8.1
 
 
 def _has_tag(aln, tag):

@@ -19,10 +19,7 @@ from utils import _check_constools, _internal_data
 import pbcore.data.datasets as data
 from pbcore.io.dataset.DataSetValidator import validateXml
 
-try:
-    import pbtestdata
-except ImportError:
-    pbtestdata is None
+import pbtestdata
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +28,7 @@ class TestDataSet(unittest.TestCase):
     """Unit and integrationt tests for the DataSet class and \
     associated module functions"""
 
-    @unittest.skipIf((not _check_constools()) or (pbtestdata is None),
+    @unittest.skipIf(not _check_constools(),
                      "pbmerge or pbindex not found, skipping")
     def test_alignmentset_consolidate(self):
 
