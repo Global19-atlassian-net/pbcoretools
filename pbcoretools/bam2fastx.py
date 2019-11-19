@@ -14,8 +14,6 @@ import pipes
 import os
 import sys
 
-from future.utils import string_types
-
 from pbcore.io import (openDataSet, BarcodeSet, FastaReader, FastaWriter,
                        FastqReader, FastqWriter, SubreadSet)
 from pbcommand.engine import run_cmd
@@ -76,7 +74,7 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
     If the dataset is barcoded, it will split the fastx files per-barcode.
     If the output file is .zip, the fastx file(s) will be archived accordingly.
     """
-    assert isinstance(program_name, string_types)
+    assert isinstance(program_name, str)
     barcode_mode = False
     barcode_sets = set()
     if output_file_name.endswith(".zip"):

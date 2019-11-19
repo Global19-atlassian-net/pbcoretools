@@ -13,7 +13,7 @@ import logging
 import os.path
 import sys
 
-from future.moves.urllib.parse import urlparse
+from urllib.parse import urlparse
 
 try:
     from pyxb import exceptions_ as pyxbexceptions
