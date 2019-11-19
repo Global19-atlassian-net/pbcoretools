@@ -6,7 +6,7 @@ import tempfile
 import os
 import itertools
 
-from future.moves.urllib.parse import urlparse
+from urllib.parse import urlparse
 
 from pbcore.util.Process import backticks
 from pbcore.io.dataset.utils import _infixFname

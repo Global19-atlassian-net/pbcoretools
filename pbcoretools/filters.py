@@ -3,8 +3,6 @@ Dataset filtering tool that incorporates downsampling; replaces old pbsmrtpipe
 task pbcoretools.tasks.filter_dataset.
 """
 
-from __future__ import print_function
-
 import logging
 import re
 import os.path as op
