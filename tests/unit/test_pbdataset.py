@@ -369,7 +369,8 @@ class TestDataSet:
                    i1=data.getXml(7),
                    i2=data.getXml(10)))
         log.debug(cmd)
-        subprocess.check_call(cmd.split())
+        with self.assertRaises(subprocess.CalledProcessError):
+            subprocess.check_call(cmd.split())
         assert os.path.exists(ofn)
         assert mtime == os.path.getmtime(ofn)
 
