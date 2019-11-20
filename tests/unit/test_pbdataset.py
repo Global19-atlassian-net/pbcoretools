@@ -1,4 +1,5 @@
 import xml.etree.cElementTree as ET
+import subprocess
 import itertools
 import tempfile
 import logging
