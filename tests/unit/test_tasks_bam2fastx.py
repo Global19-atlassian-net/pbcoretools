@@ -1,4 +1,3 @@
-
 """
 Tool contract wrapper tests of pbcoretools.tasks.bam2fast*.
 """
@@ -6,12 +5,12 @@ Tool contract wrapper tests of pbcoretools.tasks.bam2fast*.
 from zipfile import ZipFile
 import subprocess
 import tempfile
-import unittest
 import logging
 import shutil
 import uuid
 import os.path as op
 import os
+import pytest
 import sys
 
 from pbcore.io import (FastaReader, FastqReader, openDataSet,
@@ -34,28 +33,6 @@ from test_file_utils import (validate_barcoded_datastore_files,
 log = logging.getLogger(__name__)
 
 
-class Constants:
-    BAM2FASTA = "bam2fasta"
-    XMLLINT = "xmllint"
-
-
-SIV_DATA_DIR = "/pbi/dept/secondary/siv/testdata"
-
-
-def _to_skip_msg(exe):
-    return "Missing {e} or {d}".format(d=SIV_DATA_DIR, e=exe)
-
-
-# XXX hacks to make sure tools are actually available
-HAVE_BAM2FASTX = which(Constants.BAM2FASTA) is not None
-HAVE_DATA_DIR = op.isdir(SIV_DATA_DIR)
-HAVE_XMLLINT = which(Constants.XMLLINT)
-
-SKIP_MSG_BAM2FX = _to_skip_msg(Constants.BAM2FASTA)
-
-skip_unless_bam2fastx = unittest.skipUnless(HAVE_BAM2FASTX, SKIP_MSG_BAM2FX)
-
-
 def _get_zipped_fastx_file(zip_file):
     with ZipFile(zip_file, "r") as zip_in:
         file_name = zip_in.namelist()[0]
@@ -64,6 +41,7 @@ def _get_zipped_fastx_file(zip_file):
         return op.join(dir_name, file_name)
 
 
+@pytest.mark.bam2fastx
 class TestBam2Fasta(PbIntegrationBase):
     READER_CLASS = FastaReader
     EXTENSION = "fasta"
@@ -77,9 +55,9 @@ class TestBam2Fasta(PbIntegrationBase):
 
     def run_after(self, input_file, output_file, nrecords_expected=None):
         n_expected, n_actual = self._get_counts(input_file, output_file)
-        self.assertEqual(n_actual, n_expected)
+        assert n_actual == n_expected
         if nrecords_expected is not None:
-            self.assertEqual(n_actual, nrecords_expected)
+            assert n_actual == nrecords_expected
 
     def run_and_check(self, args, input_file, output_file, nrecords_expected=None):
         self._check_call(args)
@@ -102,7 +80,7 @@ class TestBam2Fasta(PbIntegrationBase):
         with SubreadSet(input_file) as ds_in:
             with self.READER_CLASS(output_file) as fa_out:
                 for bam_rec, fa_rec in zip(ds_in, fa_out):
-                    self.assertEqual(fa_rec.id, bam_rec.qName)
+                    assert fa_rec.id == bam_rec.qName
 
     def test_bam2fastx_filtered(self):
         input_file = pbtestdata.get_file("subreads-xml")
@@ -137,7 +115,7 @@ class TestBam2Fastq(TestBam2Fasta):
     EXTENSION = "fastq"
 
 
-@skip_unless_bam2fastx
+@pytest.mark.bam2fastx
 class TestBam2FastxBarcoded(PbIntegrationBase):
     INPUT_FILE = pbtestdata.get_file("barcoded-subreadset")
 
@@ -156,16 +134,15 @@ class TestBam2FastxBarcoded(PbIntegrationBase):
             os.chdir(tmp_dir)
             ZipFile(output_file, "r").extractall()
             file_names = sorted(os.listdir(tmp_dir))
-            self.assertEqual(
-                file_names, self._get_expected_file_names(extension))
+            assert file_names == self._get_expected_file_names(extension)
             fastx_ids = ["m54008_160219_003234/74056024/3985_5421",  # bc 0
                          "m54008_160219_003234/28901719/5058_5262",  # bc 2
                          "m54008_160219_003234/4194401/236_10027"]  # bc -1
             for file_name, fastx_id in zip(file_names, fastx_ids):
                 with reader_class(file_name) as f:
                     records = [rec.id for rec in f]
-                    self.assertEqual(len(records), 1)
-                    self.assertEqual(records[0], fastx_id)
+                    assert len(records) == 1
+                    assert records[0] == fastx_id
         finally:
             os.chdir(_cwd)
 
@@ -187,18 +164,19 @@ class TestBam2FastxBarcoded(PbIntegrationBase):
             self.INPUT_FILE, "fastq", FastqReader)
 
 
-@skip_unless_bam2fastx
+@pytest.mark.bam2fastx
 class TestBam2FastxBarcodedNoLabels(TestBam2FastxBarcoded):
     INPUT_FILE = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         bam_files = []
         with SubreadSet(pbtestdata.get_file("barcoded-subreadset")) as ds_in:
             for er in ds_in.externalResources:
                 bam_files.append(er.bam)
         with SubreadSet(*bam_files, strict=True) as ds_out:
             ds_out.write(cls.INPUT_FILE)
+        # FIXME: use `.setup_class()` once pbcommand uses pytest exclusively too
         super(TestBam2FastxBarcodedNoLabels, cls).setUpClass()
 
     def _get_expected_file_names(self, extension):
@@ -209,7 +187,7 @@ class TestBam2FastxBarcodedNoLabels(TestBam2FastxBarcoded):
         ]
 
 
-@skip_unless_bam2fastx
+@pytest.mark.bam2fastx
 class TestBam2FastxTranscripts(PbIntegrationBase):
     INPUT_FILES = [
         "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/polished.hq_tiny.transcriptset.xml",
@@ -223,14 +201,14 @@ class TestBam2FastxTranscripts(PbIntegrationBase):
                 for bam_rec, fx_rec in zip(bam_reader.__iter__(), fx_records):
                     seqid = "Alice_{t}_{i}".format(t=transcript_type,
                                                    i=bam_rec.qName)
-                    self.assertEqual(fx_rec.id, seqid)
+                    assert fx_rec.id == seqid
         with ReaderClass(hq_out) as hq_fastx:
             records = [rec for rec in hq_fastx]
-            self.assertEqual(len(records), 1)
+            assert len(records) == 1
             _compare_records(self.INPUT_FILES[0], records, "HQ")
         with ReaderClass(lq_out) as lq_fastx:
             records = [rec for rec in lq_fastx]
-            self.assertEqual(len(records), 1)
+            assert len(records) == 1
             _compare_records(self.INPUT_FILES[1], records, "LQ")
 
     def _get_args(self, fastx):

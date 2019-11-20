@@ -1,4 +1,3 @@
-
 from zipfile import ZipFile
 import tempfile
 import logging
@@ -27,7 +26,7 @@ class TestSplitLAATask(PbIntegrationBase):
     ]
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         make_fastq_inputs(ofn=cls.INPUT_FILES[0])
         chimera_records = [
             FastqRecord("Barcode3--3_Cluster0_Phase0_NumReads10",
@@ -49,8 +48,7 @@ class TestSplitLAATask(PbIntegrationBase):
         with ZipFile(consensus_zip, "r") as zip_out:
             files = zip_out.namelist()
             suffixes = sorted([".".join(of.split('.')[1:]) for of in files])
-            self.assertEqual(
-                suffixes, ['Alice.lbc1--lbc1.fastq', 'Charles.lbc3--lbc3.fastq'])
+            assert suffixes == ['Alice.lbc1--lbc1.fastq', 'Charles.lbc3--lbc3.fastq']
 
 
 class TestCombinedLAAZip(PbIntegrationBase):
@@ -61,7 +59,7 @@ class TestCombinedLAAZip(PbIntegrationBase):
     ]
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         make_mock_laa_inputs(cls.INPUT_FILES[0], cls.INPUT_FILES[1])
 
     def test_make_combined_laa_zip(self):
@@ -73,5 +71,4 @@ class TestCombinedLAAZip(PbIntegrationBase):
         with ZipFile(combined_zip, "r") as zip_out:
             files = zip_out.namelist()
             suffixes = sorted([".".join(of.split('.')[1:]) for of in files])
-            self.assertEqual(
-                suffixes, ['Alice.lbc1--lbc1.fastq', 'Charles.lbc3--lbc3.fastq', "csv", "csv"])
+            assert suffixes == ['Alice.lbc1--lbc1.fastq', 'Charles.lbc3--lbc3.fastq', "csv", "csv"]

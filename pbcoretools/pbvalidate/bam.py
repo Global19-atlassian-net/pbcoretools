@@ -9,7 +9,6 @@ from collections import defaultdict
 from functools import wraps
 import warnings
 import argparse
-import unittest
 import hashlib
 import logging
 import os.path

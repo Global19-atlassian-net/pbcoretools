@@ -1,14 +1,13 @@
-
 """
 Tests for barcoding-related tasks used in SMRT Link applications.
 """
 
 import tempfile
-import unittest
 import logging
 import uuid
 import os.path as op
 import os
+import pytest
 import sys
 
 from pbcore.io import openDataSet
@@ -26,6 +25,7 @@ from test_file_utils import (validate_barcoded_datastore_files,
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.constools
 class TestUpdateBarcodedSampleMetadata(PbIntegrationBase):
 
     def _to_args(self, ds_in, extension=".subreadset.xml", use_barcode_uuids=True):
@@ -69,9 +69,9 @@ class TestReparent(PbIntegrationBase):
 
     def _validate_files(self, input_file, output_file):
         with openDataSet(output_file, strict=True) as ds_out:
-            self.assertEqual(ds_out.name, self.DATASET_NAME)
+            assert ds_out.name == self.DATASET_NAME
             with openDataSet(input_file, strict=True) as ds_in:
-                self.assertNotEqual(ds_out.uuid, ds_in.uuid)
+                assert ds_out.uuid != ds_in.uuid
 
     def _run_and_check_output(self, args):
         self._check_call(args)
@@ -111,4 +111,4 @@ class TestReparent(PbIntegrationBase):
             samples = [("lbc1--lbc1", "Alice"), ("lbc2--lbc2", "Bob")]
             samples_out = {
                 s.DNABarcodes[0].name: s.name for s in ds_out.metadata.bioSamples}
-            self.assertEqual(samples_out, dict(samples))
+            assert samples_out == dict(samples)

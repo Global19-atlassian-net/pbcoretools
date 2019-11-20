@@ -1,15 +1,14 @@
-
 from zipfile import ZipFile
 import tempfile
 import textwrap
 import json
 import os.path as op
+import pytest
 
 from pbcore.io import FastaReader, FastaWriter, FastqReader, FastqWriter
 from pbcommand.testkit import PbIntegrationBase
 
 from test_chunking_gather import create_zip
-from utils import skip_if_no_internal_data
 
 
 class GatherTextRecordsBase:
@@ -18,7 +17,7 @@ class GatherTextRecordsBase:
     EXTENSION = None
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls.INPUT_FILES = []
         base = tempfile.mkdtemp()
         for i in range(2):
@@ -36,11 +35,11 @@ class GatherTextRecordsBase:
 
     def _validate_result(self, gathered_file):
         base, ext = op.splitext(gathered_file)
-        self.assertEqual(ext, "%s" % self.EXTENSION)
+        assert ext == "%s" % self.EXTENSION
         with open(gathered_file) as f:
             lines_ = f.readlines()
             lines = self._get_lines(lines_)
-            self.assertEqual(lines, self.RECORDS)
+            assert lines == self.RECORDS
             self.validate_content(lines_)
 
     def validate_content(self, lines):
@@ -91,8 +90,8 @@ class TestGatherToolGff(GatherTextRecordsBase, PbIntegrationBase):
         return [l.strip() for l in lines if l[0] != '#']
 
     def validate_content(self, lines):
-        self.assertEqual(len(lines), 6)
-        self.assertEqual(lines[1].strip(), "##source-id ipdSummary")
+        assert len(lines) == 6
+        assert lines[1].strip() == "##source-id ipdSummary"
 
 
 MOCK_VCF_RECORDS = textwrap.dedent('''\
@@ -126,9 +125,8 @@ class TestGatherToolVcf(GatherTextRecordsBase, PbIntegrationBase):
         return [l.strip() for l in lines if l[0] != '#']
 
     def validate_content(self, lines):
-        self.assertEqual(len(lines), 9)
-        self.assertEqual(lines[3].strip(),
-                         "##reference=ecoliK12_pbi_March2013.fasta")
+        assert len(lines) == 9
+        assert lines[3].strip() == "##reference=ecoliK12_pbi_March2013.fasta"
 
 
 class TestGatherToolFasta(PbIntegrationBase):
@@ -142,7 +140,7 @@ class TestGatherToolFasta(PbIntegrationBase):
     EXTRA_ARGS = []
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls.INPUT_FILES = []
         for header, seq in cls.CHUNK_CONTIGS:
             cls.INPUT_FILES.append(cls._write_fastx_file(header, seq))
@@ -164,10 +162,10 @@ class TestGatherToolFasta(PbIntegrationBase):
     def _validate_result(self, gathered_file):
         with self.READER(gathered_file) as fastx_out:
             records = [rec for rec in fastx_out]
-            self.assertEqual(len(records), 3)
+            assert len(records) == 3
             for (header, seq), rec2 in zip(self.CHUNK_CONTIGS, records):
-                self.assertEqual(header+"|arrow", rec2.header)
-                self.assertEqual(seq, rec2.sequence)
+                assert header+"|arrow" == rec2.header
+                assert seq == rec2.sequence
 
 
 class TestGatherToolFastq(TestGatherToolFasta):
@@ -190,9 +188,9 @@ class TestGatherToolFastaJoinContigs(TestGatherToolFasta):
     def _validate_result(self, gathered_file):
         with self.READER(gathered_file) as fastx_out:
             records = [rec for rec in fastx_out]
-            self.assertEqual(len(records), 1)
+            assert len(records) == 1
             combined_seq = "".join([x[1] for x in self.CHUNK_CONTIGS])
-            self.assertEqual(len(combined_seq), len(records[0].sequence))
+            assert len(combined_seq) == len(records[0].sequence)
 
 
 class TestGatherToolFastqJoinContigs(TestGatherToolFastaJoinContigs):
@@ -225,10 +223,10 @@ class TestGatherToolZip(PbIntegrationBase):
             for member in gathered.namelist():
                 d = json.loads(gathered.open(member).read())
                 uuids.add(d["uuid"])
-        self.assertEqual(len(uuids), 4)
+        assert len(uuids) == 4
 
 
-@skip_if_no_internal_data
+@pytest.mark.internal_data
 def test_gather_datastore_json():
     import subprocess
     from pbcommand.models import DataStore
@@ -267,4 +265,4 @@ class TestGatherToolBed(PbIntegrationBase):
         out = open(of, 'r').readlines()
         expected = ['#chr\tstart\tend\n',
                     '1\t2\t3\n', '2\t3\t4\n', '1\t2\t3\n']
-        self.assertEqual(out, expected)
+        assert out == expected

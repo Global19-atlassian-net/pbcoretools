@@ -1,7 +1,5 @@
-
 import subprocess
 import tempfile
-import unittest
 import shutil
 import os.path as op
 import os
@@ -137,10 +135,10 @@ def validate_file(file_name, strict=False, validate_index=False):
         validators=validators)
 
 
-class TestCase (unittest.TestCase):
+class TestCase:
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls._cwd = os.getcwd()
         tmp_dir = tempfile.mkdtemp()
         os.chdir(tmp_dir)
@@ -148,21 +146,21 @@ class TestCase (unittest.TestCase):
             open("test_%d.fa" % i, "w").write(seq)
 
     @classmethod
-    def tearDownClass(cls):
+    def teardown_class(cls):
         os.chdir(cls._cwd)
 
     def test_allowed(self):
         e, c = validate_file("test_1.fa")
-        self.assertEqual(len(e), 0)
+        assert len(e) == 0
 
     def test_index(self):
         e, c = validate_file("test_1.fa", validate_index=True)
-        self.assertEqual(len(e), 1)
+        assert len(e) == 1
 
     def test_empty_line(self):
         e, c = validate_file("test_2.fa")
-        self.assertEqual(len(e), 1)
-        self.assertIsInstance(e[0], EmptyLineError)
+        assert len(e) == 1
+        assert isinstance(e[0], EmptyLineError)
 
     # pure formatting errors (independent of parser)
     def test_whitespace(self):
@@ -170,92 +168,81 @@ class TestCase (unittest.TestCase):
         # FIXME there are actually two errors corresponding to different lines
         # in the file, but the current structure of the code only allows us
         # to catch one of these
-        self.assertEqual(len(e), 1)
-        self.assertIsInstance(e[0], WhitespaceError)
+        assert len(e) == 1
+        assert isinstance(e[0], WhitespaceError)
 
     def test_wrapping(self):
         e, c = validate_file("test_4.fa")
-        self.assertEqual(len(e), 0)
-        #self.assertIsInstance(e[0], NoWrappingError)
+        assert len(e) == 0
+        #assert isinstance(e[0], NoWrappingError)
         e, c = validate_file("test_5.fa")
-        self.assertEqual(len(e), 1)
-        self.assertIsInstance(e[0], SeqWrappingError)
+        assert len(e) == 1
+        assert isinstance(e[0], SeqWrappingError)
         #e, c = validate_file("test_6.fa")
-        #self.assertEqual(len(e), 1)
-        #self.assertIsInstance(e[0], GlobalWrappingError)
+        #assert len(e) == 1
+        #assert isinstance(e[0], GlobalWrappingError)
         e, c = validate_file("test_7.fa")
-        self.assertEqual(len(e), 0)
+        assert len(e) == 0
 
     # sequence errors
     def test_bad_nucleotide(self):
         e, c = validate_file("test_8.fa")
-        self.assertEqual(len(e), 2)
-        self.assertIsInstance(e[0], BadNucleotideError)
+        assert len(e) == 2
+        assert isinstance(e[0], BadNucleotideError)
         e, c = validate_file("test_9.fa", strict=True)
-        self.assertEqual(len(e), 1)
-        self.assertIsInstance(e[0], BadNucleotideError)
+        assert len(e) == 1
+        assert isinstance(e[0], BadNucleotideError)
         e, c = validate_file("test_9.fa", strict=False)
-        self.assertEqual(len(e), 0)
+        assert len(e) == 0
 
     def test_extra_gt(self):
         e, c = validate_file("test_10.fa")
-        self.assertEqual(len(e), 1)
-        self.assertIsInstance(e[0], ExtraGTError)
+        assert len(e) == 1
+        assert isinstance(e[0], ExtraGTError)
 
     def test_identifier(self):
         e, c = validate_file("test_11.fa")
-        self.assertEqual(len(e), 1)
-        self.assertIsInstance(e[0], IdentifierAsteriskError)
+        assert len(e) == 1
+        assert isinstance(e[0], IdentifierAsteriskError)
         e, c = validate_file("test_12.fa")
-        self.assertEqual(len(e), 3)
-        self.assertIsInstance(e[0], BadIdentifierError)
+        assert len(e) == 3
+        assert isinstance(e[0], BadIdentifierError)
         e, c = validate_file("test_13.fa")
-        self.assertEqual(len(e), 1)
-        self.assertIsInstance(e[0], BlankIdentifierError)
+        assert len(e) == 1
+        assert isinstance(e[0], BlankIdentifierError)
         e, c = validate_file("test_14.fa")
-        self.assertEqual(len(e), 1)
-        self.assertIsInstance(e[0], DuplicateIdError)
+        assert len(e) == 1
+        assert isinstance(e[0], DuplicateIdError)
 
     def test_misc(self):
         e, c = validate_file("test_15.fa")
-        self.assertEqual(len(e), 1)
-        self.assertIsInstance(e[0], MissingSequenceError)
+        assert len(e) == 1
+        assert isinstance(e[0], MissingSequenceError)
 
     def test_gzip(self):
         """Test that gzipped files are handled correctly"""
         file_name = op.join(op.dirname(op.dirname(__file__)), "data",
                             "tst2.fasta.gz")
         e, m = validate_file(file_name)
-        self.assertEqual(len(e), 1)
-        self.assertEqual(str(
-            e[0]), "Inconsistent line wrapping for sequence 'ecoliK12_pbi_March2013_2955000_to_2980000'")
+        assert len(e) == 1
+        assert str(
+            e[0]) == "Inconsistent line wrapping for sequence 'ecoliK12_pbi_March2013_2955000_to_2980000'"
 
     def test_exit_code_0(self):
         rc = subprocess.call(["pbvalidate", "test_1.fa"])
-        self.assertEqual(rc, 0)
+        assert rc == 0
 
     def test_exit_code_1(self):
         rc = subprocess.call(["pbvalidate", "test_2.fa"])
-        self.assertEqual(rc, 1)
-
-    @unittest.skip("No longer applicable in Python3???")
-    def test_carriage_returns(self):
-        file_name = op.join(op.dirname(op.dirname(__file__)), "data",
-                            "bc_bad_returns.fasta")
-        e, m = validate_file(file_name)
-        self.assertEqual(len(e), 1)
+        assert rc == 1
 
     def test_dos(self):
         file_name = op.join(op.dirname(op.dirname(__file__)), "data",
                             "tst_dos.fasta")
         e, m = validate_file(file_name)
-        self.assertEqual(len(e), 0)
+        assert len(e) == 0
 
     def test_fsa_extension(self):
         shutil.copyfile("test_1.fa", "test_1.fsa")
         rc = subprocess.call(["pbvalidate", "test_1.fsa"])
-        self.assertEqual(rc, 0)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert rc == 0
