@@ -31,7 +31,7 @@ class Record(object):
 
 
 def _to_n_records(nrecords):
-    for i in xrange(nrecords):
+    for i in range(nrecords):
         r = Record(i, 90)
         yield r
 
@@ -78,18 +78,17 @@ class TestJsonGather(unittest.TestCase):
 
     def test_smoke(self):
         t = get_temp_file(suffix="-stats-1.json")
-        _write_stats_to_json({'n_reads':549,'n_zmws':100}, t)
+        _write_stats_to_json({'n_reads': 549, 'n_zmws': 100}, t)
         t2 = get_temp_file(suffix="-stats-2.json")
-        _write_stats_to_json({'n_reads':733,'n_zmws':100}, t2)
+        _write_stats_to_json({'n_reads': 733, 'n_zmws': 100}, t2)
 
         tg = get_temp_file(suffix="stats-gather.json")
         G.gather_report([t, t2], tg)
 
         r = load_report_from_json(tg)
-        stats = { a.id:a.value for a in r.attributes }
+        stats = {a.id: a.value for a in r.attributes}
         self.assertEqual(stats['pb_n_reads'], 549+733)
         self.assertEqual(stats['pb_n_zmws'], 200)
-
 
 
 def _mkjson():

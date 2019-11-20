@@ -67,7 +67,7 @@ class TestCase (unittest.TestCase):
         self.assertTrue(v.validate(ds))
         v = ValidateContents(aligned=False, content_type="CCS")
         self.assertFalse(v.validate(ds))
-        self.assertEqual([type(e).__name__ for e in v.to_errors(ds)],
+        self.assertEqual(sorted([type(e).__name__ for e in v.to_errors(ds)]),
                          ["FileAlignedError", "FileContentMismatchError"])
         v = ValidateResources()
         self.assertTrue(v.validate(ds))
@@ -76,7 +76,7 @@ class TestCase (unittest.TestCase):
         self.assertEqual([type(e).__name__ for e in v.to_errors(ds)],
                          ['DatasetTypeError'])
         # FIXME this isn't working any more
-        #self.assertFalse(ValidateNamespace().validate(ds))
+        # self.assertFalse(ValidateNamespace().validate(ds))
         self.assertFalse(ValidateFileName(ds_file).validate(ds))
 
     def test_file_name_and_contents_consistency(self):
@@ -103,15 +103,6 @@ class TestCase (unittest.TestCase):
         file_name = os.path.join(LOCAL_DATA_DIR, "tst_1c.subreadset.xml")
         self.assertFalse(ValidateEncoding().validate(file_name))
 
-    @skip_if_no_pyxb
-    def test_validate_xml_pyxb(self):
-        file_name = os.path.join(LOCAL_DATA_DIR, "tst_1d.subreadset.xml")
-        ds = pbcore.io.SubreadSet(file_name)
-        v = ValidateXML()
-        self.assertFalse(v.validate(file_name))
-        e = v.to_errors(file_name)
-        self.assertTrue(str(e[0]).startswith("XML schema error:"))
-
     def test_exit_code_0(self):
         xml = pbtestdata.get_file("subreads-sequel")
         rc = subprocess.call(["pbvalidate", xml])
@@ -120,4 +111,5 @@ class TestCase (unittest.TestCase):
     @unittest.skipUnless(os.path.isdir(TESTDATA_DIR), "Testdata not available")
     def test_validate_transcriptset(self):
         DS = "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/unpolished.transcriptset.xml"
-        self.assertEqual(subprocess.call(["pbvalidate", "--max-records", "1", DS]), 0)
+        self.assertEqual(subprocess.call(
+            ["pbvalidate", "--max-records", "1", DS]), 0)

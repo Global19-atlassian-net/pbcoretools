@@ -66,7 +66,7 @@ def split_laa_fastq(input_file_name, output_file_base, subreads_file_name,
     if bio_samples_by_bc is None:
         bio_samples_by_bc = {}
         with SubreadSet(subreads_file_name, strict=True) as ds:
-            if ds.isBarcoded:
+            if ds.isBarcoded:  # pylint: disable=no-member
                 bio_samples_by_bc = get_barcode_sample_mappings(ds)
     outputs = []
     for bc_id in sorted(records.keys()):
@@ -116,9 +116,11 @@ def get_barcode_sample_mappings(ds):
     bc_sets = {extRes.barcodes for extRes in ds.externalResources
                if extRes.barcodes is not None}
     if len(bc_sets) > 1:
-        log.warn("Multiple BarcodeSets detected - further processing skipped.")
+        log.warning(
+            "Multiple BarcodeSets detected - further processing skipped.")
     elif len(bc_sets) == 0:
-        log.warn("Can't find original BarcodeSet - further processing skipped.")
+        log.warning(
+            "Can't find original BarcodeSet - further processing skipped.")
     else:
         with BarcodeSet(list(bc_sets)[0]) as bcs:
             labels = [rec.id for rec in bcs]
@@ -153,7 +155,7 @@ def make_barcode_sample_csv(subreads, csv_file):
     headers = ["Barcode Name", "Bio Sample Name"]
     barcoded_samples = {}
     with SubreadSet(subreads, strict=True) as ds:
-        if ds.isBarcoded:
+        if ds.isBarcoded:  # pylint: disable=no-member
             barcoded_samples = get_barcode_sample_mappings(ds)
     with open(csv_file, "w") as csv_out:
         writer = csv.writer(csv_out, delimiter=',', lineterminator="\n")
@@ -173,9 +175,10 @@ def parse_biosamples_csv(csv_file):
                 raise ValueError("Expected two fields, got %s" % row)
             try:
                 for field in row:
-                    x = field.encode("UTF-8")
+                    x = field.encode("ascii")
             except UnicodeDecodeError as e:
-                raise ValueError("Non-ASCII characters are not allowed in BioSamples CSV.  Please make sure you use a plain-text editor to generate the CSV file and use only alphanumeric characters in your sample names.")
+                raise ValueError(
+                    "Non-ASCII characters are not allowed in BioSamples CSV.  Please make sure you use a plain-text editor to generate the CSV file and use only alphanumeric characters in your sample names.")
             if k > 0:
                 records.append(tuple(row))
     return records
@@ -224,13 +227,13 @@ def discard_bio_samples(subreads, barcode_label):
                 consolidate_barcodes(subreads, bio_sample)
             continue
         if len(barcodes) == 0:
-            log.warn("No barcodes defined for sample %s", bio_sample.name)
+            log.warning("No barcodes defined for sample %s", bio_sample.name)
         deletions.append(k)
     for k in reversed(deletions):
         subreads.metadata.bioSamples.pop(k)
     if len(subreads.metadata.bioSamples) == 0:
-        log.warn("Dataset has no BioSamples")
-        log.warn("Will create new BioSample and DNABarcode records")
+        log.warning("Dataset has no BioSamples")
+        log.warning("Will create new BioSample and DNABarcode records")
         subreads.metadata.bioSamples.addSample(barcode_label)
         subreads.metadata.bioSamples[0].DNABarcodes.addBarcode(barcode_label)
 
@@ -247,10 +250,10 @@ def set_bio_samples(ds, barcodes_and_samples):
 def get_bio_sample_name(ds):
     bio_samples = {s.name for s in ds.metadata.bioSamples}
     if len(bio_samples) == 0:
-        log.warn("No BioSample records present")
+        log.warning("No BioSample records present")
         return "UnnamedSample"
     elif len(bio_samples) > 1:
-        log.warn("Multiple unique BioSample records present")
+        log.warning("Multiple unique BioSample records present")
         return "multiple_samples"
     else:
         return list(bio_samples)[0]
@@ -329,7 +332,7 @@ def _update_barcoded_dataset(
             dataset.objMetadata["UniqueId"] = uuid
             log.info("Set dataset UUID to %s", dataset.uuid)
         else:
-            log.warn("No UUID defined for this barcoded dataset.")
+            log.warning("No UUID defined for this barcoded dataset.")
             dataset.newUuid()
     else:
         dataset.newUuid()
@@ -541,9 +544,9 @@ def force_set_all_bio_sample_names(ds, sample_name):
     elif n_samples == 1:
         bioSamples[0].name = sample_name
     else:
-        log.warn("Multiple BioSamples found: '%s'",
-                 "', '".join([s.name for s in bioSamples]))
-        log.warn("These will be overwritten with '%s'", sample_name)
+        log.warning("Multiple BioSamples found: '%s'",
+                    "', '".join([s.name for s in bioSamples]))
+        log.warning("These will be overwritten with '%s'", sample_name)
         for sample in bioSamples:
             sample.name = sample_name
     return n_total
@@ -619,8 +622,8 @@ def reparent_dataset(input_file,
                      biosamples_csv=None):
     with openDataSet(input_file, strict=True) as ds_in:
         if len(ds_in.metadata.provenance) > 0:
-            log.warn("Removing existing provenance record: %s",
-                     ds_in.metadata.provenance)
+            log.warning("Removing existing provenance record: %s",
+                        ds_in.metadata.provenance)
             ds_in.metadata.provenance = None
         ds_in.name = dataset_name
         ds_in.newUuid(random=True)
@@ -645,9 +648,9 @@ def update_consensus_reads(ccs_in, subreads_in, ccs_out, use_run_design_uuid=Fal
             if len(uuids) == 1:
                 run_design_uuid = list(uuids)[0]
             elif len(uuids) == 0:
-                log.warn("No pre-defined ConsensusReadSetRef UUID found")
+                log.warning("No pre-defined ConsensusReadSetRef UUID found")
             else:
-                log.warn("Multiple ConsensusReadSetRef UUIDs found")
+                log.warning("Multiple ConsensusReadSetRef UUIDs found")
         if len(ds.metadata.bioSamples) == 0:
             for bio_sample in ds_subreads.metadata.bioSamples:
                 ds.metadata.bioSamples.append(bio_sample)

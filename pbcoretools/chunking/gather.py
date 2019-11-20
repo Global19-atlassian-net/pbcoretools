@@ -73,6 +73,7 @@ def cat_txt_with_header(input_files, output_file):
                     if (i == 0 or not l.startswith('#')):
                         writer.write(l.strip()+"\n")
 
+
 gather_bed = cat_txt_with_header
 
 
@@ -215,7 +216,7 @@ def gather_fofn(input_files, output_file, skip_empty=True):
 def gather_datastore(input_files, output_file, skip_empty=True):
     ds = DataStore([])
     for i_fn in input_files:
-        for uuid, f in DataStore.load_from_json(i_fn).files.iteritems():
+        for uuid, f in DataStore.load_from_json(i_fn).files.items():
             ds.add(f)
     ds.write_json(output_file)
 
@@ -444,7 +445,7 @@ def __gather_runner(func, chunk_input_json, output_file, chunk_key, **kwargs):
     # Allow looseness
     if not chunk_key.startswith('$chunk.'):
         chunk_key = '$chunk.' + chunk_key
-        log.warn(
+        log.warning(
             "Prepending chunk key with '$chunk.' to '{c}'".format(c=chunk_key))
 
     chunked_files = get_datum_from_chunks_by_chunk_key(chunks, chunk_key)

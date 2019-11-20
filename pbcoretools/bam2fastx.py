@@ -48,8 +48,8 @@ def _ungzip_fastx(gzip_file_name, fastx_file_name, retry=True):
         # would be accepted by gzip.open().
         _check_exists_and_not_empty(gzip_file_name)
 
-        with gzip.open(gzip_file_name, "rb") as gz_in:
-            with open(fastx_file_name, "wb") as fastx_out:
+        with gzip.open(gzip_file_name, "rt") as gz_in:
+            with open(fastx_file_name, "wt") as fastx_out:
                 def _fread():
                     return gz_in.read(1024)
                 for chunk in iter(_fread, ''):
@@ -57,7 +57,7 @@ def _ungzip_fastx(gzip_file_name, fastx_file_name, retry=True):
     except IOError as e:
         if retry:
             log.error(e)
-            log.warn("Will re-try in 10 seconds in case of NFS glitch")
+            log.warning("Will re-try in 10 seconds in case of NFS glitch")
             time.sleep(10)
             return _ungzip_fastx(gzip_file_name, fastx_file_name, retry=False)
         else:
@@ -74,7 +74,7 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
     If the dataset is barcoded, it will split the fastx files per-barcode.
     If the output file is .zip, the fastx file(s) will be archived accordingly.
     """
-    assert isinstance(program_name, basestring)
+    assert isinstance(program_name, str)
     barcode_mode = False
     barcode_sets = set()
     if output_file_name.endswith(".zip"):
@@ -100,15 +100,15 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                 log.error("Can't read %s", bc_file)
                 log.error(e)
         elif len(barcode_sets) > 1:
-            log.warn("Multiple barcode sets used for this SubreadSet:")
+            log.warning("Multiple barcode sets used for this SubreadSet:")
             for fn in sorted(list(barcode_sets)):
-                log.warn("  %s", fn)
+                log.warning("  %s", fn)
         else:
             log.info("No barcode labels available")
         if subreads_in is not None:
             bio_samples_to_bc = {}
             with SubreadSet(subreads_in, strict=True) as subread_ds:
-                if subread_ds.isBarcoded:
+                if subread_ds.isBarcoded:  # pylint: disable=no-member
                     bio_samples_to_bc = get_barcode_sample_mappings(subread_ds)
     base_ext = re.sub("bam2", ".", program_name)
     suffix = "{f}.gz".format(f=base_ext)

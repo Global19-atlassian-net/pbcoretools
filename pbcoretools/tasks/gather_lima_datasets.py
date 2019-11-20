@@ -58,7 +58,7 @@ def gather_chunks(chunks, output_file, nproc=1):
     log.info("Found %d unique barcode pairs", len(file_names_by_bc))
     _results = []
     pool = multiprocessing.Pool(nproc)
-    for bc_pair, file_names in file_names_by_bc.iteritems():
+    for bc_pair, file_names in file_names_by_bc.items():
         _results.append(
             pool.apply_async(_merge_chunks,
                              (file_names,

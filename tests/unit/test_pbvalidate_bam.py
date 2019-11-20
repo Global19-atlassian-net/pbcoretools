@@ -4,22 +4,22 @@ Unit tests for BAM validation, using embedded SAM-format string that is
 manipulated to trigger various errors.
 """
 
-from cStringIO import StringIO
+from io import StringIO
 import subprocess
 import warnings
 import unittest
 import logging
-import os.path
+import os.path as op
 import time
-op = os.path
 import sys
 
 import pysam
 
+import pbcore.io
+
 from pbcoretools.pbvalidate.core import ValidateFile, ValidateRecord, ValidateFileObject
 from pbcoretools.pbvalidate.bam import ValidateReadGroup
 from pbcoretools.pbvalidate import bam
-import pbcore.io
 
 TESTDATA = "/pbi/dept/secondary/siv/testdata"
 

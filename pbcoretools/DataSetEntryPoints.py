@@ -1,8 +1,6 @@
 # /usr/bin/env python
 
-from __future__ import print_function
-
-from collections import defaultdict
+from collections import OrderedDict
 from functools import reduce
 import argparse
 import logging
@@ -102,11 +100,11 @@ def createXml(args):
         dset.loadMetadata(args.metadata)
     if args.well_sample_name or args.bio_sample_name:
         if args.metadata:
-            log.warn(
+            log.warning(
                 "Setting the WellSample or BioSample name will overwrite fields pulled from %s", args.metadata)
         n_new_collections = add_mock_collection_metadata(dset)
         if n_new_collections > 0:
-            log.warn(
+            log.warning(
                 "Created new CollectionMetadata from blank template for %d movies", n_new_collections)
         if args.well_sample_name:
             force_set_all_well_sample_names(dset, args.well_sample_name)
@@ -192,11 +190,11 @@ def pad_separators(base_set):
 
 
 def parse_filter_list(filtStrs):
-    filters = defaultdict(list)
+    filters = OrderedDict()
     # pull them from the filter parser:
     separators = OPMAP.keys()
     # pad the ones that start and end with letters
-    separators = pad_separators(separators)
+    separators = sorted(pad_separators(separators), key=lambda o: -1*len(o))
     for filtStr in filtStrs:
         for filt in pbcoretools.utils.split_filtStr(filtStr):
             for sep in separators:
@@ -207,9 +205,13 @@ def parse_filter_list(filtStrs):
                         log.exception('{!r}.split({!r})'.format(filt, sep))
                         raise
                     condition = (sep.strip(), condition.strip())
+                    param = param.strip()
                     log.debug('filt={!r} param={!r} condition={!r}'.format(
                         filt, param, condition))
-                    filters[param.strip()].append(condition)
+                    if param in filters:
+                        filters[param].append(condition)
+                    else:
+                        filters[param] = [condition]
                     break
     return filters
 

@@ -4,8 +4,6 @@ Tool for subsetting a BAM or PacBio DataSet file based on either a whitelist of
 hole numbers or a percentage of reads to be randomly selected.
 """
 
-from __future__ import division
-from __future__ import print_function
 from collections import defaultdict, OrderedDict
 import subprocess
 import warnings
@@ -16,10 +14,7 @@ import os.path as op
 import re
 import sys
 
-try:
-    from pysam.calignmentfile import AlignmentFile  # pylint: disable=no-name-in-module, import-error, fixme, line-too-long
-except ImportError:
-    from pysam.libcalignmentfile import AlignmentFile  # pylint: disable=no-name-in-module, import-error, fixme, line-too-long
+from pysam.libcalignmentfile import AlignmentFile  # pylint: disable=no-name-in-module, import-error, fixme, line-too-long
 
 from pbcommand.common_options import (add_log_quiet_option,
                                       add_log_verbose_option)
@@ -207,7 +202,8 @@ def filter_reads(input_bam,
     if seed is not None:
         random.seed(seed)
     if whitelist is None and blacklist is None:
-        if not 0 < percentage < 100 and not count > 0:
+        if (not (percentage is not None and 0 < percentage < 100) and
+                not (count is not None and count > 0)):
             log.error("No reads selected for output.")
             return 1
     output_ds = base_name = None
@@ -256,7 +252,7 @@ def filter_reads(input_bam,
                 if sts_xml is None:
                     sts_xml = ext_res.sts
                 else:
-                    log.warn("Multiple sts.xml files, will not propagate")
+                    log.warning("Multiple sts.xml files, will not propagate")
         f1 = ds_in.resourceReaders()[0]
         if percentage is not None or count is not None:
             bam_readers = list(ds_in.resourceReaders())
@@ -278,9 +274,9 @@ def filter_reads(input_bam,
             for ext_res in ds_in.externalResources:
                 if ext_res.scraps is not None:
                     if use_barcodes:
-                        log.warn("Scraps BAM is present but lacks " +
-                                 "barcodes - will not be propagated " +
-                                 "to output SubreadSet")
+                        log.warning("Scraps BAM is present but lacks " +
+                                    "barcodes - will not be propagated " +
+                                    "to output SubreadSet")
                     else:
                         scraps_in = IndexedBamReader(ext_res.scraps)
                     break
@@ -321,7 +317,7 @@ def filter_reads(input_bam,
             rc = subprocess.call(["pbindex", bam_file])
         except OSError as e:
             if e.errno == 2:
-                log.warn("pbindex not present, will not create .pbi file")
+                log.warning("pbindex not present, will not create .pbi file")
             else:
                 raise
     _run_pbindex(output_bam)
@@ -347,7 +343,7 @@ def filter_reads(input_bam,
             if relative:
                 ds_out.makePathsRelative(op.dirname(output_ds))
             if keep_original_uuid:
-                log.warn("Keeping input UUID {u}".format(u=ds_in.uuid))
+                log.warning("Keeping input UUID {u}".format(u=ds_in.uuid))
                 ds_out.objMetadata["UniqueId"] = ds_in.uuid
             ds_out.write(output_ds)
             log.info("wrote {t} XML to {x}".format(

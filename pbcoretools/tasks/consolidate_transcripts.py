@@ -39,8 +39,10 @@ def get_parser():
     p.add_argument("lq_ds_in", help="Gathered LQ transcripts")
     p.add_argument("hq_ds_out", help="Output HQ transcripts")
     p.add_argument("lq_ds_out", help="Output LQ transcripts")
-    p.add_argument("hq_datastore", help="Datastore containing HQ transcripts BAM")
-    p.add_argument("lq_datastore", help="Datastore containing LQ transcripts BAM")
+    p.add_argument(
+        "hq_datastore", help="Datastore containing HQ transcripts BAM")
+    p.add_argument(
+        "lq_datastore", help="Datastore containing LQ transcripts BAM")
     return p
 
 
@@ -95,9 +97,11 @@ def run_consolidate(dataset_file, output_file, datastore_file,
     with openDataSet(dataset_file) as ds_in:
         if consolidate:
             if len(ds_in.toExternalFiles()) <= 0:
-                raise ValueError("DataSet {} must contain one or more files!".format(dataset_file))
+                raise ValueError(
+                    "DataSet {} must contain one or more files!".format(dataset_file))
             new_resource_file = bam_of_dataset(output_file)
-            consolidate_f(ds_in)(new_resource_file, numFiles=n_files, useTmp=False)
+            consolidate_f(ds_in)(new_resource_file,
+                                 numFiles=n_files, useTmp=False)
             # always display the BAM/BAI if consolidation is enabled
             # XXX there is no uniqueness constraint on the sourceId, but this
             # seems sloppy nonetheless - unfortunately I don't know how else to
@@ -118,7 +122,7 @@ def run_consolidate(dataset_file, output_file, datastore_file,
                     added_resources = set()
                     for index in ext_res.indices:
                         if (index.metaType in Constants.BAI_FILE_TYPES and
-                            index.resourceId not in added_resources):
+                                index.resourceId not in added_resources):
                             added_resources.add(index.resourceId)
                             ds_file = DataStoreFile(
                                 index.uniqueId,

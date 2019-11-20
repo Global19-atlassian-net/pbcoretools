@@ -44,6 +44,7 @@ from pbcoretools.file_utils import (
 
 HAVE_XMLLINT = which("xmllint")
 
+
 def _validate_dataset_xml(file_name):
     if HAVE_XMLLINT and "PB_DATASET_XSD" in os.environ:
         args = ["xmllint", "--schema", os.environ["PB_DATASET_XSD"], file_name]
@@ -132,7 +133,8 @@ def validate_barcoded_datastore_files(self, subreads, datastore,
             self.assertEqual(ds.uuid, f.uuid)
             bc_label = op.basename(f.path).split(".")[1]
             bio_name = bio_sample_names[bc_label]
-            expected_tags = set(["TotalLength", "NumRecords", "Provenance", "BioSamples"])
+            expected_tags = set(
+                ["TotalLength", "NumRecords", "Provenance", "BioSamples"])
             self.assertEqual(len(ds.metadata.bioSamples), 1)
             self.assertEqual(ds.metadata.bioSamples[0].name, bio_name)
             self.assertEqual(ds.metadata.provenance.parentDataSet.uniqueId,
@@ -168,7 +170,8 @@ class TestSplitLAA(unittest.TestCase):
         ofs = split_laa_fastq(ifn, ofb, self._subreads)
         self.assertEqual(len(ofs), 2)
         suffixes = sorted([".".join(of.split('.')[1:]) for of in ofs])
-        self.assertEqual(suffixes, ['Alice.lbc1--lbc1.fastq', 'Charles.lbc3--lbc3.fastq'])
+        self.assertEqual(
+            suffixes, ['Alice.lbc1--lbc1.fastq', 'Charles.lbc3--lbc3.fastq'])
         for i, ofn in enumerate(ofs):
             with FastqReader(ofn) as fastq_in:
                 recs = [rec for rec in fastq_in]
@@ -184,7 +187,8 @@ class TestSplitLAA(unittest.TestCase):
         with ZipFile(ofn, "r") as zip_in:
             files = zip_in.namelist()
             suffixes = sorted([".".join(of.split('.')[1:]) for of in files])
-            self.assertEqual(suffixes, ['Alice.lbc1--lbc1.fastq', 'Charles.lbc3--lbc3.fastq'])
+            self.assertEqual(
+                suffixes, ['Alice.lbc1--lbc1.fastq', 'Charles.lbc3--lbc3.fastq'])
 
     def test_get_barcode_sample_mappings(self):
         with SubreadSet(self._subreads) as ds:
@@ -198,7 +202,8 @@ class TestSplitLAA(unittest.TestCase):
     def test_make_barcode_sample_csv(self):
         csv_file = tempfile.NamedTemporaryFile(suffix=".csv").name
         sample_mappings = make_barcode_sample_csv(self._subreads, csv_file)
-        self.assertEqual(sample_mappings, {'lbc3--lbc3': 'Charles', 'lbc1--lbc1': 'Alice'})
+        self.assertEqual(sample_mappings, {
+                         'lbc3--lbc3': 'Charles', 'lbc1--lbc1': 'Alice'})
         with open(csv_file) as f:
             self.assertEqual(
                 f.read(), "Barcode Name,Bio Sample Name\nlbc1--lbc1,Alice\nlbc3--lbc3,Charles\n")
@@ -273,7 +278,8 @@ class TestBarcodeUtils(unittest.TestCase):
         self.assertEqual(name, "My Data (unknown sample)")
 
     def test_update_barcoded_sample_metadata(self):
-        datastore_tmp = tempfile.NamedTemporaryFile(suffix=".datastore.json").name
+        datastore_tmp = tempfile.NamedTemporaryFile(
+            suffix=".datastore.json").name
         barcodes = pbtestdata.get_file("barcodeset")
         ds = split_barcoded_dataset(self.SUBREADS)
         ds.write_json(datastore_tmp)
@@ -322,6 +328,7 @@ class TestBarcodeUtils(unittest.TestCase):
             "eef1a8ea-c6a7-4233-982a-d426e1e7d8c9"
         ]
         ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))
+
         def _add_barcoded_sample(sn, bn, id_):
             ds.metadata.bioSamples.addSample(sn)
             ds.metadata.bioSamples[-1].DNABarcodes.addBarcode(bn)
@@ -335,7 +342,8 @@ class TestBarcodeUtils(unittest.TestCase):
             ds.uuid = str(dsid)
             ds.name = ds.name + " ({b})".format(b=bc)
             ds.write(fn)
-        ds_files = [DataStoreFile(dsid, "barcoding.tasks.lima-0", FileTypes.DS_SUBREADS.file_type_id, fn) for (dsid, fn) in zip(uuids, files)]
+        ds_files = [DataStoreFile(dsid, "barcoding.tasks.lima-0",
+                                  FileTypes.DS_SUBREADS.file_type_id, fn) for (dsid, fn) in zip(uuids, files)]
         ds = DataStore(ds_files)
         ds.write_json(datastore_tmp)
         base_dir = tempfile.mkdtemp()
@@ -344,7 +352,7 @@ class TestBarcodeUtils(unittest.TestCase):
                                                          tmp_ds,
                                                          barcodeset)
         validate_barcoded_datastore_files(self, tmp_ds, datastore,
-            number_of_expected_filters=0)
+                                          number_of_expected_filters=0)
 
     def test_add_mock_collection_metadata(self):
         bam = pbtestdata.get_file("subreads-bam")
@@ -353,7 +361,7 @@ class TestBarcodeUtils(unittest.TestCase):
         add_mock_collection_metadata(ds)
         self.assertEqual(len(ds.metadata.collections), 1)
         self.assertEqual(ds.metadata.collections[0].context,
-            "m140905_042212_sidney_c100564852550000001823085912221377_s1_X0")
+                         "m140905_042212_sidney_c100564852550000001823085912221377_s1_X0")
 
     def test_force_set_all_well_sample_names(self):
         ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))
@@ -402,5 +410,6 @@ class TestBarcodeUtils(unittest.TestCase):
         ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))
         samples = [("lbc1--lbc1", "Alice"), ("lbc2--lbc2", "Bob")]
         set_bio_samples(ds, samples)
-        samples_out = {s.DNABarcodes[0].name:s.name for s in ds.metadata.bioSamples}
+        samples_out = {
+            s.DNABarcodes[0].name: s.name for s in ds.metadata.bioSamples}
         self.assertEqual(samples_out, dict(samples))

@@ -45,6 +45,7 @@ SIV_DATA_DIR = "/pbi/dept/secondary/siv/testdata"
 def _to_skip_msg(exe):
     return "Missing {e} or {d}".format(d=SIV_DATA_DIR, e=exe)
 
+
 # XXX hacks to make sure tools are actually available
 HAVE_BAM2FASTX = which(Constants.BAM2FASTA) is not None
 HAVE_DATA_DIR = op.isdir(SIV_DATA_DIR)
@@ -53,6 +54,7 @@ HAVE_XMLLINT = which(Constants.XMLLINT)
 SKIP_MSG_BAM2FX = _to_skip_msg(Constants.BAM2FASTA)
 
 skip_unless_bam2fastx = unittest.skipUnless(HAVE_BAM2FASTX, SKIP_MSG_BAM2FX)
+
 
 def _get_zipped_fastx_file(zip_file):
     with ZipFile(zip_file, "r") as zip_in:
@@ -126,7 +128,6 @@ class TestBam2Fasta(PbIntegrationBase):
             input_file, output_file
         ]
         self._check_call(args)
-        print os.getcwd()
         output_file = _get_zipped_fastx_file(output_file)
         self.run_after(input_file, output_file, nrecords_expected)
 
@@ -155,11 +156,11 @@ class TestBam2FastxBarcoded(PbIntegrationBase):
             os.chdir(tmp_dir)
             ZipFile(output_file, "r").extractall()
             file_names = sorted(os.listdir(tmp_dir))
-            print file_names
-            self.assertEqual(file_names, self._get_expected_file_names(extension))
-            fastx_ids = ["m54008_160219_003234/74056024/3985_5421", # bc 0
-                         "m54008_160219_003234/28901719/5058_5262", # bc 2
-                         "m54008_160219_003234/4194401/236_10027" ] # bc -1
+            self.assertEqual(
+                file_names, self._get_expected_file_names(extension))
+            fastx_ids = ["m54008_160219_003234/74056024/3985_5421",  # bc 0
+                         "m54008_160219_003234/28901719/5058_5262",  # bc 2
+                         "m54008_160219_003234/4194401/236_10027"]  # bc -1
             for file_name, fastx_id in zip(file_names, fastx_ids):
                 with reader_class(file_name) as f:
                     records = [rec.id for rec in f]
@@ -178,10 +179,12 @@ class TestBam2FastxBarcoded(PbIntegrationBase):
         self.run_after(output_file, reader_class, ext)
 
     def test_bam2fasta_barcoded(self):
-        self._run_test_bam2fastx_barcoded(self.INPUT_FILE, "fasta", FastaReader)
+        self._run_test_bam2fastx_barcoded(
+            self.INPUT_FILE, "fasta", FastaReader)
 
     def test_bam2fastq_barcoded(self):
-        self._run_test_bam2fastx_barcoded(self.INPUT_FILE, "fastq", FastqReader)
+        self._run_test_bam2fastx_barcoded(
+            self.INPUT_FILE, "fastq", FastqReader)
 
 
 @skip_unless_bam2fastx

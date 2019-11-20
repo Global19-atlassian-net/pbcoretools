@@ -82,8 +82,10 @@ class TestGatherToolGff(GatherTextRecordsBase, PbIntegrationBase):
 
     @classmethod
     def _get_chunk_records(cls, i_chunk):
-        if i_chunk == 0: return cls.RECORDS[2:]
-        else: return cls.RECORDS[0:2]
+        if i_chunk == 0:
+            return cls.RECORDS[2:]
+        else:
+            return cls.RECORDS[0:2]
 
     def _get_lines(self, lines):
         return [l.strip() for l in lines if l[0] != '#']
@@ -107,6 +109,7 @@ MOCK_VCF_HEADER = textwrap.dedent('''\
     #CHROM POS ID REF ALT QUAL FILTER INFO
     ''')
 
+
 class TestGatherToolVcf(GatherTextRecordsBase, PbIntegrationBase):
     RECORDS = MOCK_VCF_RECORDS
     RECORD_HEADER = MOCK_VCF_HEADER
@@ -114,15 +117,18 @@ class TestGatherToolVcf(GatherTextRecordsBase, PbIntegrationBase):
 
     @classmethod
     def _get_chunk_records(cls, i_chunk):
-        if i_chunk == 0: return cls.RECORDS[2:]
-        else: return cls.RECORDS[0:2]
+        if i_chunk == 0:
+            return cls.RECORDS[2:]
+        else:
+            return cls.RECORDS[0:2]
 
     def _get_lines(self, lines):
         return [l.strip() for l in lines if l[0] != '#']
 
     def validate_content(self, lines):
         self.assertEqual(len(lines), 9)
-        self.assertEqual(lines[3].strip(), "##reference=ecoliK12_pbi_March2013.fasta")
+        self.assertEqual(lines[3].strip(),
+                         "##reference=ecoliK12_pbi_March2013.fasta")
 
 
 class TestGatherToolFasta(PbIntegrationBase):
@@ -173,7 +179,8 @@ class TestGatherToolFastq(TestGatherToolFasta):
         fn = tempfile.NamedTemporaryFile(suffix=".fastq").name
         suffix = "|arrow"
         with FastqWriter(fn) as f:
-            f.writeRecord("{h}{s}".format(h=header, s=suffix), seq, [35]*len(seq))
+            f.writeRecord("{h}{s}".format(
+                h=header, s=suffix), seq, [35]*len(seq))
         return fn
 
 
@@ -197,7 +204,8 @@ class TestGatherToolFastqJoinContigs(TestGatherToolFastaJoinContigs):
         fn = tempfile.NamedTemporaryFile(suffix=".fastq").name
         suffix = "|arrow"
         with FastqWriter(fn) as f:
-            f.writeRecord("{h}{s}".format(h=header, s=suffix), seq, [35]*len(seq))
+            f.writeRecord("{h}{s}".format(
+                h=header, s=suffix), seq, [35]*len(seq))
         return fn
 
 
@@ -228,7 +236,7 @@ def test_gather_datastore_json():
     if1 = op.join(d, '1.aln.datastore.json')
     if2 = op.join(d, '2.aln.datastore.json')
     of = tempfile.NamedTemporaryFile(suffix=".datastore.json").name
-    args = ['python', '-m', 'pbcoretools.tasks2.gather', of, if1, if2]
+    args = ['python', '-m', 'pbcoretools.tasks.gather', of, if1, if2]
     subprocess.check_call(args)
     out_fns = DataStore.load_from_json(of).to_dict()['files']
     expected_bam_1 = op.join(d, '1.bam')
@@ -252,10 +260,11 @@ class TestGatherToolBed(PbIntegrationBase):
             writer.write("")
         of = "test_gather_bed_out.bed"
         args = [
-            "python", "-m", "pbcoretools.tasks2.gather",
+            "python", "-m", "pbcoretools.tasks.gather",
             of, if1, if2
         ]
         self._check_call(args)
         out = open(of, 'r').readlines()
-        expected = ['#chr\tstart\tend\n', '1\t2\t3\n', '2\t3\t4\n', '1\t2\t3\n']
+        expected = ['#chr\tstart\tend\n',
+                    '1\t2\t3\n', '2\t3\t4\n', '1\t2\t3\n']
         self.assertEqual(out, expected)
