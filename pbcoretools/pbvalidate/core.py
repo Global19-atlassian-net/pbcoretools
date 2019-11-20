@@ -57,7 +57,7 @@ class RecordValidatorError (ValidatorError):
     pass
 
 
-class ValidateBase(object):
+class ValidateBase:
 
     """Base class for all validation classes"""
 
@@ -156,7 +156,7 @@ class ValidationStopException(BaseException):
 ValidMetric = namedtuple("ValidMetric", ["metric_type", "object_ref", ])
 
 
-class ValidatorErrorContext(object):
+class ValidatorErrorContext:
 
     def __init__(self, errors, metrics):
         self._errors = errors

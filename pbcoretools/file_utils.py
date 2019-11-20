@@ -24,7 +24,7 @@ from pbcommand.models import FileTypes, DataStore
 log = logging.getLogger(__name__)
 
 
-class Constants(object):
+class Constants:
     # default filter applied to output of 'lima'
     BARCODE_QUALITY_GREATER_THAN = 26
     ALLOWED_BC_TYPES = set([f.file_type_id for f in

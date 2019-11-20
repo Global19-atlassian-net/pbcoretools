@@ -12,7 +12,7 @@ from test_chunking_gather import create_zip
 from utils import skip_if_no_internal_data
 
 
-class GatherTextRecordsBase(object):
+class GatherTextRecordsBase:
     RECORDS = []
     RECORD_HEADER = None
     EXTENSION = None

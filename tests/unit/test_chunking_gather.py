@@ -21,7 +21,7 @@ from base import get_temp_file, get_temp_dir
 log = logging.getLogger(__name__)
 
 
-class Record(object):
+class Record:
     def __init__(self, idx, alpha):
         self.idx = idx
         self.alpha = alpha

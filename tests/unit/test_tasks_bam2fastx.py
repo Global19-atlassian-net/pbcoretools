@@ -34,7 +34,7 @@ from test_file_utils import (validate_barcoded_datastore_files,
 log = logging.getLogger(__name__)
 
 
-class Constants(object):
+class Constants:
     BAM2FASTA = "bam2fasta"
     XMLLINT = "xmllint"
 

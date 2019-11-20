@@ -17,7 +17,7 @@ from pbcoretools.datastore_utils import datastore_to_datastorefile_objs, dataset
 log = logging.getLogger(__name__)
 
 
-class Constants(object):
+class Constants:
     CHUNK_KEY_SUBSET = "$chunk.subreadset_id"
     CHUNK_KEY_CCSSET = "$chunk.ccsset_id"
     CHUNK_KEY_ALNSET = "$chunk.alignmentset_id"

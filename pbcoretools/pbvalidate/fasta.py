@@ -19,7 +19,7 @@ from pbcoretools.pbvalidate.core import *
 log = logging.getLogger()
 
 
-class Constants (object):
+class Constants:
     OUTER_WHITESPACE = r"^(\s)|(\s)$"
     # IUPAC nucleotide characters, minus '-' and '.'
     ILLEGAL_NUCLEOTIDES = r"([^gatcuryswkmbdhvnGATCURYSWKMBDHVN]+)"
