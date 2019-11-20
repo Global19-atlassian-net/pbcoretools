@@ -11,7 +11,7 @@ from pbcommand.models.report import Report, Attribute
 log = logging.getLogger(__name__)
 
 
-class Constants(object):
+class Constants:
     SEQ = ('A', 'C', 'G', 'T')
 
 

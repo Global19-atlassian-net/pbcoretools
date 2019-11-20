@@ -4,9 +4,9 @@ Test application of the 'dataset' tool to BAM consolidation.
 
 import subprocess
 import tempfile
-import unittest
 import os.path as op
 import os
+import pytest
 import sys
 
 from pbcommand.models import DataStore
@@ -17,29 +17,17 @@ from pbcoretools.tasks import auto_consolidate
 import pbtestdata
 
 
-HAVE_PBMERGE = False
-try:
-    with tempfile.TemporaryFile() as O, \
-            tempfile.TemporaryFile() as E:
-        assert subprocess.call(["pbmerge", "--help"], stdout=O, stderr=E) == 0
-except Exception as e:
-    sys.stderr.write(str(e)+"\n")
-    sys.stderr.write("pbmerge missing, skipping test\n")
-else:
-    HAVE_PBMERGE = True
-
-
-@unittest.skipUnless(HAVE_PBMERGE, "pbmerge not installed")
-class TestConsolidateBam(unittest.TestCase):
+@pytest.mark.constools
+class TestConsolidateBam:
 
     SPLIT_SUBREADS = pbtestdata.get_file("aligned-ds-2")
 
-    def setUp(self):
+    def setup_method(self, method):
         self._cwd = os.getcwd()
         self._tmp_dir = tempfile.mkdtemp()
         os.chdir(self._tmp_dir)
 
-    def tearDown(self):
+    def teardown_method(self, method):
         os.chdir(self._cwd)
 
     @property
@@ -51,17 +39,17 @@ class TestConsolidateBam(unittest.TestCase):
         self._check_outputs(args[-1])
 
     def _check_outputs(self, dataset_file):
-        self.assertTrue(op.isfile(self.output_bam))
-        self.assertTrue(op.isfile(self.output_bam + ".bai"))
-        self.assertTrue(op.isfile(self.output_bam + ".pbi"))
+        assert op.isfile(self.output_bam)
+        assert op.isfile(self.output_bam + ".bai")
+        assert op.isfile(self.output_bam + ".pbi")
         with openDataSet(dataset_file) as f:
             f.assertIndexed()
-            self.assertEqual(len(f.toExternalFiles()), 1)
+            assert len(f.toExternalFiles()) == 1
             # test for bug 33778
             qnames = set()
             for rec in f:
                 qnames.add(rec.qName)
-            self.assertEqual(len(qnames), len(f))
+            assert len(qnames) == len(f)
 
     def test_consolidate_split_alignments(self):
         path = pbtestdata.get_file("aligned-ds-2")
@@ -82,7 +70,7 @@ class TestConsolidateBam(unittest.TestCase):
     def _check_datastore(self, file_name):
         ds = DataStore.load_from_json(file_name)
         files = sorted([f.source_id for f in ds.files.values()])
-        self.assertEqual(files, ["mapped_bam", "mapped_bam_bai"])
+        assert files == ["mapped_bam", "mapped_bam_bai"]
 
     def test_auto_consolidate_split(self):
         args = [self.SPLIT_SUBREADS, self.output_bam]
@@ -103,12 +91,12 @@ class TestConsolidateBam(unittest.TestCase):
 
     def test_auto_consolidate_exceeds_cutoff(self):
         args = [self.SPLIT_SUBREADS, self.output_bam, "--max-size", "0"]
-        self.assertEqual(self._run_auto(args), 0)
+        assert self._run_auto(args) == 0
         # this should not have written any files
-        self.assertFalse(op.isfile(self.output_bam))
-        self.assertFalse(op.isfile(self.output_bam + ".bai"))
+        assert not op.isfile(self.output_bam)
+        assert not op.isfile(self.output_bam + ".bai")
         datastore_file = op.splitext(self.output_bam)[0] + ".datastore.json"
-        self.assertFalse(op.isfile(datastore_file))
+        assert not op.isfile(datastore_file)
         # now force it
         args = [self.SPLIT_SUBREADS, self.output_bam,
                 "--max-size", "0", "--force"]

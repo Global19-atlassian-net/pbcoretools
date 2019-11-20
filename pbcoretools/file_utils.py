@@ -24,7 +24,7 @@ from pbcommand.models import FileTypes, DataStore
 log = logging.getLogger(__name__)
 
 
-class Constants(object):
+class Constants:
     # default filter applied to output of 'lima'
     BARCODE_QUALITY_GREATER_THAN = 26
     ALLOWED_BC_TYPES = set([f.file_type_id for f in
@@ -555,7 +555,7 @@ def force_set_all_bio_sample_names(ds, sample_name):
 # Regular expression pattern of sample strings: must be a string
 # of length >= 1, the leading character must be a letter or number,
 # the remaining characters must be in [a-zA-Z0-9\_\-]
-SAMPLE_CHARSET_RE_STR = '[a-zA-Z0-9\-\_]'
+SAMPLE_CHARSET_RE_STR = r'[a-zA-Z0-9\-\_]'
 SAMPLE_CHARSET_RE = re.compile(r"{}".format(SAMPLE_CHARSET_RE_STR))
 
 

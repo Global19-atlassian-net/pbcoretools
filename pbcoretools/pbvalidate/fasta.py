@@ -19,12 +19,12 @@ from pbcoretools.pbvalidate.core import *
 log = logging.getLogger()
 
 
-class Constants (object):
-    OUTER_WHITESPACE = "^(\s)|(\s)$"
+class Constants:
+    OUTER_WHITESPACE = r"^(\s)|(\s)$"
     # IUPAC nucleotide characters, minus '-' and '.'
-    ILLEGAL_NUCLEOTIDES = "([^gatcuryswkmbdhvnGATCURYSWKMBDHVN]+)"
-    ILLEGAL_NUC_STRICT = "([^gatcnGATCN]+)"
-    ILLEGAL_IDENTIFIER = "([\,\:\"]+)"
+    ILLEGAL_NUCLEOTIDES = r"([^gatcuryswkmbdhvnGATCURYSWKMBDHVN]+)"
+    ILLEGAL_NUC_STRICT = r"([^gatcnGATCN]+)"
+    ILLEGAL_IDENTIFIER = r"([\,\:\"]+)"
 
 
 class FastaError (ValidatorError):

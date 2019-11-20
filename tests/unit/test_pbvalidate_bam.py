@@ -1,4 +1,3 @@
-
 """
 Unit tests for BAM validation, using embedded SAM-format string that is
 manipulated to trigger various errors.
@@ -7,9 +6,9 @@ manipulated to trigger various errors.
 from io import StringIO
 import subprocess
 import warnings
-import unittest
 import logging
 import os.path as op
+import pytest
 import time
 import sys
 
@@ -171,13 +170,7 @@ def remove_data_files():
         os.remove("tst_%d_subreads.bam" % (i + 1))
 
 
-class TestPbvalidateBam (unittest.TestCase):
-
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        return
+class TestPbvalidateBam:
 
     def test_api_1(self):
         file_name = op.join(DATA_DIR, "tst_1_subreads.bam")
@@ -201,7 +194,7 @@ class TestPbvalidateBam (unittest.TestCase):
                             errors.extend(v.to_errors(aln))
             found = sorted(list(set([type(e).__name__ for e in errors])))
             expected = sorted(list(set(expected_failures)))
-            self.assertEqual(found, expected)
+            assert found == expected
         bam_file = pbcore.io.BamReader(file_name)
         _run_validators(f=bam_file, expected_failures=[])
         # now a bad one
@@ -241,20 +234,19 @@ class TestPbvalidateBam (unittest.TestCase):
     def test_1(self):
         file_name = op.join(DATA_DIR, "tst_1_subreads.bam")
         e, c = bam.validate_bam(file_name)
-        self.assertEqual(len(e), 0)
+        assert len(e) == 0
 
     def test_1b(self):
         file_name = op.join(DATA_DIR, "tst_1_subreads.bam")
         e, c = bam.validate_bam(file_name, aligned=False, contents="CCS")
         errors = sorted([type(err).__name__ for err in e])
-        self.assertEqual(errors,
-                         ['FileAlignedError', 'FileContentMismatchError'])
+        assert errors == ['FileAlignedError', 'FileContentMismatchError']
 
     def test_1c_reference_fasta(self):
         file_name = op.join(DATA_DIR, "tst_1_subreads.bam")
         fasta_file = op.join(DATA_DIR, "tst1.fasta")
         e, c = bam.validate_bam(file_name, reference=fasta_file)
-        self.assertEqual(len(e), 0)
+        assert len(e) == 0
         e, c = bam.validate_bam(file_name, aligned=False)
 
     def test_2(self):
@@ -262,8 +254,8 @@ class TestPbvalidateBam (unittest.TestCase):
         file_name = op.join(DATA_DIR, "tst_2_subreads.bam")
         e, c = bam.validate_bam(file_name, validate_index=True)
         errors = sorted(list(set([type(err).__name__ for err in e])))
-        self.assertEqual(errors,
-                         ['AlignmentCigarMatchError',
+        assert errors == [
+                          'AlignmentCigarMatchError',
                           'AlignmentUnmappedError',
                           'BasecallerVersionError',
                           'MissingCodecError', 'MissingIndexError',
@@ -271,78 +263,70 @@ class TestPbvalidateBam (unittest.TestCase):
                           'QnameRangeError', 'ReadGroupChemistryError',
                           'ReadGroupIdMismatchError', "ReadLengthError",
                           'TagValueError',
-                          'UninitializedSNRError', 'UnsortedError'])
+                          'UninitializedSNRError', 'UnsortedError']
 
     def test_3_unmapped(self):
         file_name = op.join(DATA_DIR, "tst_3_subreads.bam")
         e, c = bam.validate_bam(file_name)
-        self.assertEqual(len(e), 0)
+        assert len(e) == 0
 
     def test_4_unmapped(self):
         file_name = op.join(DATA_DIR, "tst_4_subreads.bam")
         e, c = bam.validate_bam(file_name)
         errors1 = sorted([type(err).__name__ for err in e])
-        self.assertEqual(errors1, ['BasecallerVersionError',
-                                   'MissingCodecError',
-                                   'QnameHoleNumberError', 'QnameMovieError',
-                                   'ReadGroupChemistryError',
-                                   'UninitializedSNRError',
-                                   'UnmappedPropertiesError', 'UnsortedError',
-                                   'WrongPlatformError'])
+        assert errors1 == ['BasecallerVersionError',
+                           'MissingCodecError',
+                           'QnameHoleNumberError', 'QnameMovieError',
+                           'ReadGroupChemistryError',
+                           'UninitializedSNRError',
+                           'UnmappedPropertiesError', 'UnsortedError',
+                           'WrongPlatformError']
         e, c = bam.validate_bam(file_name, aligned=True)
         errors2 = sorted([type(err).__name__ for err in e])
-        self.assertEqual(errors2,
-                         ['BasecallerVersionError',
-                          'FileNotAlignedError', 'MissingCodecError',
-                          'QnameHoleNumberError', 'QnameMovieError',
-                          'ReadGroupChemistryError',
-                          'UninitializedSNRError', 'UnsortedError',
-                          'WrongPlatformError'])
+        assert errors2 == ['BasecallerVersionError',
+                           'FileNotAlignedError', 'MissingCodecError',
+                           'QnameHoleNumberError', 'QnameMovieError',
+                           'ReadGroupChemistryError',
+                           'UninitializedSNRError', 'UnsortedError',
+                           'WrongPlatformError']
         # this should yield the same result as the first run
         e, c = bam.validate_bam(file_name, aligned=False)
         errors3 = sorted([type(err).__name__ for err in e])
-        self.assertEqual(errors3, errors1)
+        assert errors3 == errors1
 
     def test_bad_encoding(self):
         file_name = op.join(DATA_DIR, "tst_5_subreads.bam")
         e, c = bam.validate_bam(file_name)
         errors1 = sorted([type(err).__name__ for err in e])
-        self.assertEqual(errors1, ["BadEncodingError"])
+        assert errors1 == ["BadEncodingError"]
 
     def test_exit_code_0(self):
         file_name = op.join(DATA_DIR, "tst_1_subreads.bam")
         rc = subprocess.call(["pbvalidate", file_name])
-        self.assertEqual(rc, 0)
+        assert rc == 0
 
     def test_exit_code_1(self):
         file_name = op.join(DATA_DIR, "tst_s_subreads.bam")
         rc = subprocess.call(["pbvalidate", file_name])
-        self.assertEqual(rc, 1)
+        assert rc == 1
 
-    @unittest.skipUnless(op.isdir(TESTDATA), "Testdata not found")
+    @pytest.mark.internal_data
     def test_transcript_bam(self):
         BAM = "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/unpolished.bam"
         e, c = bam.validate_bam(BAM, max_records=10)
-        self.assertEqual(len(e), 0)
+        assert len(e) == 0
 
-    @unittest.skipUnless(op.isdir(TESTDATA), "Testdata not found")
+    @pytest.mark.internal_data
     def test_overlapping_alignments(self):
         BAM = "/pbi/dept/secondary/siv/testdata/pbreports-unittest/data/mapping_stats/pbmm2/aligned.bam"
         e, c = bam.validate_bam(BAM, aligned=True)
         errors2 = list(set(sorted([type(err).__name__ for err in e])))
-        self.assertEqual(errors2, ["AlignmentNotUniqueError"])
+        assert errors2 == ["AlignmentNotUniqueError"]
 
-    @unittest.skipUnless(op.isdir(TESTDATA), "Testdata not found")
+    @pytest.mark.internal_data
     def test_zero_length_scrap(self):
         BAM = "/pbi/dept/secondary/siv/testdata/SA3-Sequel/ecoli/EmptyRecords/m54043_180414_094215.scraps.bam"
         with warnings.catch_warnings(record=True) as w:
             e, c = bam.validate_bam(BAM, aligned=False)
-            self.assertEqual(len(e), 0)
-            self.assertEqual(len(w), 7)
-
-
-if __name__ == "__main__":
-    if "--make-files" in sys.argv:
-        generate_data_files(DATA_DIR)
-    else:
-        unittest.main()
+            assert len(e) == 0
+            assert len(w) == 7

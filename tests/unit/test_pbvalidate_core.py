@@ -1,6 +1,5 @@
 import logging
 import tempfile
-import unittest
 import os
 import sys
 
@@ -69,15 +68,15 @@ def _to_max_records(max_records):
     return _wrapper
 
 
-class TestValidatorsContext(unittest.TestCase):
+class TestValidatorsContext:
     FILE_PATH = _get_tmp("tmp_file.txt")
     DATA = ["cat dog bird", "dog"]
 
-    def setUp(self):
+    def setup_method(self, method):
         with open(self.FILE_PATH, 'w+') as f:
             f.write("\n".join(self.DATA))
 
-    def tearDown(self):
+    def teardown_method(self, method):
         os.remove(self.FILE_PATH)
 
     def test_1(self):
@@ -90,7 +89,7 @@ class TestValidatorsContext(unittest.TestCase):
         errors, metrics = run_validators(ValidatorContextFirstError, file_path,
                                          TextFileReader, validators)
         os.remove(file_path)
-        self.assertEqual(len(errors), 0)
+        assert len(errors) == 0
 
     def test_2(self):
         """This file has many errors"""
@@ -104,10 +103,10 @@ class TestValidatorsContext(unittest.TestCase):
         errors, metrics = run_validators(_to_max_errors(2), file_path,
                                          TextFileReader, validators)
         os.remove(file_path)
-        self.assertEqual(len(errors), 2)
+        assert len(errors) == 2
         errors, metrics = run_validators(_to_max_records(1), file_path,
                                          TextFileReader, validators)
-        self.assertEqual(len(errors), 1)
+        assert len(errors) == 1
 
     def test_3(self):
         """Test for consistent behavior when a validator is broken"""
@@ -119,7 +118,7 @@ class TestValidatorsContext(unittest.TestCase):
         _write_example_file(contents, file_path)
         errors, metrics = run_validators(ValidatorErrorContext, file_path,
                                          TextFileReader, validators)
-        self.assertEqual(len(errors), 6)
+        assert len(errors) == 6
         os.remove(file_path)
         # TODO figure out how to check for log error output showing traceback
         # of exception raised by failed validator
