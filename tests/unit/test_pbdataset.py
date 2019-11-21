@@ -1,4 +1,5 @@
 import xml.etree.cElementTree as ET
+import subprocess
 import itertools
 import tempfile
 import logging
@@ -9,6 +10,7 @@ import re
 import os
 
 import numpy as np
+from pytest import raises
 
 from pbcore.io import PacBioBamIndex, IndexedBamReader
 from pbcore.io import openIndexedAlignmentFile
@@ -19,7 +21,6 @@ from pbcore.io.dataset.DataSetIO import dsIdToSuffix
 from pbcore.io.dataset.DataSetMembers import ExternalResource, Filters
 from pbcore.io.dataset.DataSetWriter import toXml
 from pbcore.io.dataset.DataSetValidator import validateFile
-from pbcore.util.Process import backticks
 import pbcore.data.datasets as data
 import pbcore.data as otherdata
 
@@ -41,8 +42,7 @@ class TestDataSet:
 
     def _check_cmd(self, cmd):
         log.debug(cmd)
-        o, r, m = backticks(cmd)
-        assert r == 0
+        subprocess.check_call(cmd.split())
 
     def _run_cmd_with_output(self, cmd, outfile):
         self._check_cmd(cmd)
@@ -370,8 +370,8 @@ class TestDataSet:
                    i1=data.getXml(7),
                    i2=data.getXml(10)))
         log.debug(cmd)
-        o, r, m = backticks(cmd)
-        assert r != 0
+        with raises(subprocess.CalledProcessError):
+            subprocess.check_call(cmd.split())
         assert os.path.exists(ofn)
         assert mtime == os.path.getmtime(ofn)
 

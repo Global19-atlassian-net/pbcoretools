@@ -1,4 +1,5 @@
 import xml.etree.ElementTree as ET
+import subprocess
 import logging
 import tempfile
 import os
@@ -7,7 +8,6 @@ import pytest
 
 from urllib.parse import urlparse
 
-from pbcore.util.Process import backticks
 from pbcore.io.dataset.utils import _infixFname
 from pbcore.io import (DataSet, SubreadSet, ConsensusReadSet,
                        ReferenceSet, ContigSet, AlignmentSet,
@@ -115,8 +115,7 @@ class TestDataSet:
                                                        d=datafile,
                                                        x=xmlfile)
         log.debug(cmd)
-        o, r, m = backticks(cmd)
-        assert r == 0
+        subprocess.check_call(cmd.split())
 
     @pytest.mark.skip(reason="DISABLED FOR AUTOMATED TESTING")
     @pytest.mark.constools
@@ -148,5 +147,4 @@ class TestDataSet:
         cmd = "dataset consolidate --numFiles 2 {i} {d} {x}".format(
             i=testFile, d=datafile, x=xmlfile)
         log.debug(cmd)
-        o, r, m = backticks(cmd)
-        assert r == 0
+        subprocess.check_call(cmd.split())
