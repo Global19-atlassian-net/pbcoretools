@@ -10,6 +10,7 @@ import re
 import os
 
 import numpy as np
+from pytest import raises
 
 from pbcore.io import PacBioBamIndex, IndexedBamReader
 from pbcore.io import openIndexedAlignmentFile
@@ -369,7 +370,7 @@ class TestDataSet:
                    i1=data.getXml(7),
                    i2=data.getXml(10)))
         log.debug(cmd)
-        with self.assertRaises(subprocess.CalledProcessError):
+        with raises(subprocess.CalledProcessError):
             subprocess.check_call(cmd.split())
         assert os.path.exists(ofn)
         assert mtime == os.path.getmtime(ofn)
