@@ -176,8 +176,6 @@ class TestBam2FastxBarcodedNoLabels(TestBam2FastxBarcoded):
                 bam_files.append(er.bam)
         with SubreadSet(*bam_files, strict=True) as ds_out:
             ds_out.write(cls.INPUT_FILE)
-        # FIXME: use `.setup_class()` once pbcommand uses pytest exclusively too
-        super(TestBam2FastxBarcodedNoLabels, cls).setUpClass()
 
     def _get_expected_file_names(self, extension):
         return [

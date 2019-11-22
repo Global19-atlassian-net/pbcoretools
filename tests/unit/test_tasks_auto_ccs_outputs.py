@@ -33,7 +33,7 @@ class TestAutoCCSOutputs(PbIntegrationBase):
     def setup_method(self, method):
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
-        PbIntegrationBase.setUp(self)
+        PbIntegrationBase.setup_method(self, method)
 
     def _check_datastore_files_exist(self, file_name):
         file_name = op.abspath(file_name)
