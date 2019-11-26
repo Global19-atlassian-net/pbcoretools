@@ -2,7 +2,7 @@
 import os.path as op
 import os
 
-from pbcoretools.cloud_utils import get_zmw_bgzf_borders, get_bam_offsets, split_bam, extract_bam_chunk
+from pbcoretools.cloud_utils import get_zmw_bgzf_borders, get_bam_offsets, split_bam, extract_bam_chunk, combine_with_header
 
 from pbcommand.testkit import PbIntegrationBase
 from pbcore.io import openDataSet, BamReader, IndexedBamReader, PacBioBamIndex
@@ -60,3 +60,26 @@ class TestCloudUtils(PbIntegrationBase):
         assert offsets == [396, 77209]
         offsets = get_bam_offsets(bam_file, 1)
         assert offsets == [396]
+
+    def test_combine_with_header(self):
+        bam_file = self._get_bam_path(self.DS1)
+        bam_size = op.getsize(bam_file)
+        # see above - these are known boundaries for this particular input
+        byte_ranges = [(396, 26575), (26575, 77209), (77209, bam_size)]
+        with open(bam_file, "rb") as bam_in:
+            with open("header.bam", "wb") as header_out:
+                header_out.write(bam_in.read(396))
+            for i, (start, end) in enumerate(byte_ranges):
+                with open("tmp.chunk%d.bam" % i, "wb") as chunk_out:
+                    bam_in.seek(start)
+                    nbytes = end - start
+                    chunk_out.write(bam_in.read(nbytes))
+        for i in range(3):
+            combine_with_header("header.bam", "tmp.chunk%d.bam" % i, "combined.chunk%d.bam" % i)
+        bam_in = IndexedBamReader(bam_file)
+        records_in = [rec.qName for rec in bam_in]
+        records_out = []
+        for i in range(3):
+            bam_out = BamReader("combined.chunk%d.bam" % i)
+            records_out.extend([rec.qName for rec in bam_out])
+        assert records_in == records_out

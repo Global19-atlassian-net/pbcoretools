@@ -1,5 +1,7 @@
 """
-Utilities for running PacBio workflows on cloud services
+Utilities for use in running PacBio workflows on cloud services.  Currently
+this mostly deals with storage mechanisms, in particular optimizing downloads
+to local disk.
 """
 
 import logging
@@ -30,6 +32,22 @@ def extract_bam_chunk(bam_in,
         bam_in.seek(0)
         header_bytes = bam_in.read(header_n_bytes)
         _write_bam_chunk(bam_in, bam_out, header_bytes, offset, record_n_bytes)
+
+
+def combine_with_header(bam_header_file, bam_chunk_file, output_file_name):
+    """
+    Given a header-only file and a records-only file, both extracted from a
+    complete BAM, combine them into a single file.
+    """
+    with open(output_file_name, "wb") as bam_out:
+        with open(bam_header_file, "rb") as header_in:
+            bam_out.write(header_in.read())
+        with open(bam_chunk_file, "rb") as chunk_in:
+            def _fread():
+                return chunk_in.read(1024)
+            for chunk in iter(_fread, b''):
+                bam_out.write(chunk)
+            bam_out.write(BGZF_TERM)
 
 
 def get_zmw_bgzf_borders(pbi):
