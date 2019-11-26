@@ -81,6 +81,16 @@ def get_bam_offsets(file_name, nchunks):
     return chunk_offsets
 
 
+def write_bam_byte_ranges(file_name, nchunks, tsv_file="chunks.tsv"):
+    bam_size = op.getsize(file_name)
+    offsets = get_bam_offsets(file_name, nchunks)
+    b_ends = [x - 1 for x in offsets[1:]] + [bam_size]
+    with open(tsv_file, "wt") as tsv_out:
+        tsv_out.write("start\tend\n")
+        ranges = ["%d\t%d" % (s, e) for s, e in zip(offsets, b_ends)]
+        tsv_out.write("\n".join(ranges))
+
+
 def split_bam(file_name, nchunks, prefix="reads"):
     """
     Given a BAM file name and target number of chunks, write out up to nchunks

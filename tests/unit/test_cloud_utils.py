@@ -2,7 +2,7 @@
 import os.path as op
 import os
 
-from pbcoretools.cloud_utils import get_zmw_bgzf_borders, get_bam_offsets, split_bam, extract_bam_chunk, combine_with_header
+from pbcoretools.cloud_utils import get_zmw_bgzf_borders, get_bam_offsets, split_bam, extract_bam_chunk, combine_with_header, write_bam_byte_ranges
 
 from pbcommand.testkit import PbIntegrationBase
 from pbcore.io import openDataSet, BamReader, IndexedBamReader, PacBioBamIndex
@@ -83,3 +83,9 @@ class TestCloudUtils(PbIntegrationBase):
             bam_out = BamReader("combined.chunk%d.bam" % i)
             records_out.extend([rec.qName for rec in bam_out])
         assert records_in == records_out
+
+    def test_write_bam_byte_ranges(self):
+        bam_file = self._get_bam_path(self.DS1)
+        write_bam_byte_ranges(bam_file, 3)
+        with open("chunks.tsv", "rt") as tsv_in:
+            assert tsv_in.read() == "start\tend\n396\t26574\n26575\t77208\n77209\t204543"
