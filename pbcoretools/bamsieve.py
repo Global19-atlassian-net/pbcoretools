@@ -107,7 +107,37 @@ def _anonymize_sequence(rec):
     return rec
 
 
-def _create_whitelist(bam_readers, percentage=None, count=None):
+def _create_n_adapters_whitelist(bam_readers, min_adapters):
+    ADAPTER_BEFORE = 1
+    ADAPTER_AFTER  = 2
+    read_contexts = defaultdict(list)
+    for bam in bam_readers:
+        for rgId, zmw, cx in zip(bam.pbi.qId,
+                                 bam.pbi.holeNumber,
+                                 bam.pbi.contextFlag):
+            read_contexts[(rgId, zmw)].append(cx)
+    whitelist = set()
+    for (rgId, zmw), contexts in read_contexts.items():
+        # XXX this is pretty hacky, need to double-check
+        n_adapters = 0
+        for i, cx in enumerate(contexts):
+            if cx & ADAPTER_AFTER > 0:
+                n_adapters += 1
+            elif ((cx & ADAPTER_BEFORE > 0) and
+                    (contexts[i - 1] & ADAPTER_AFTER == 0)):
+                n_adapters += 1
+        log.debug("ZMW {z} has {n} adapters".format(z=zmw, n=n_adapters))
+        if n_adapters >= min_adapters:
+            whitelist.add(zmw)
+    return whitelist
+
+
+def _create_whitelist(bam_readers,
+                      percentage=None,
+                      count=None,
+                      min_adapters=None):
+    if min_adapters is not None:
+        return _create_n_adapters_whitelist(bam_readers, min_adapters)
     zmws = set()
     movies = set()
     for i_file, bam in enumerate(bam_readers):
@@ -185,7 +215,8 @@ def filter_reads(input_bam,
                  use_barcodes=False,
                  sample_scraps=False,
                  keep_original_uuid=False,
-                 use_subreads=False):
+                 use_subreads=False,
+                 min_adapters=None):
     if output_bam is None:
         log.error("Must specify output file")
         return 1
@@ -194,16 +225,18 @@ def filter_reads(input_bam,
         log.error("Output path '{d}' does not exist.".format(
                   d=op.dirname(output_bam)))
         return 1
-    n_specified = 4 - [whitelist, blacklist, percentage, count].count(None)
+    n_specified = 5 - [whitelist, blacklist, percentage, count, min_adapters].count(None)
     if n_specified != 1:
         log.error("You must choose one and only one of the following " +
-                  "options: --whitelist, --blacklist, --count, --percentage")
+                  "options: --whitelist, --blacklist, --count, --percentage," +
+                  "         --min-adapters")
         return 1
     if seed is not None:
         random.seed(seed)
     if whitelist is None and blacklist is None:
         if (not (percentage is not None and 0 < percentage < 100) and
-                not (count is not None and count > 0)):
+                not (count is not None and count > 0) and
+                not (min_adapters is not None and min_adapters > 0)):
             log.error("No reads selected for output.")
             return 1
     output_ds = base_name = None
@@ -254,14 +287,14 @@ def filter_reads(input_bam,
                 else:
                     log.warning("Multiple sts.xml files, will not propagate")
         f1 = ds_in.resourceReaders()[0]
-        if percentage is not None or count is not None:
+        if percentage is not None or count is not None or min_adapters is not None:
             bam_readers = list(ds_in.resourceReaders())
             if sample_scraps:
                 for ext_res in ds_in.externalResources:
                     if ext_res.scraps is not None:
                         scraps_in = IndexedBamReader(ext_res.scraps)
                         bam_readers.append(scraps_in)
-            whitelist = _create_whitelist(bam_readers, percentage, count)
+            whitelist = _create_whitelist(bam_readers, percentage, count, min_adapters)
         # convert these to Python sets
         if use_subreads:
             _whitelist = _process_subread_list(whitelist)
@@ -401,7 +434,8 @@ def run(args):
         use_barcodes=args.barcodes,
         sample_scraps=args.sample_scraps,
         keep_original_uuid=args.keep_uuid,
-        use_subreads=args.subreads)
+        use_subreads=args.subreads,
+        min_adapters=args.min_adapters)
 
 
 def get_parser():
@@ -451,6 +485,8 @@ def get_parser():
     p.add_argument("--keep-uuid", action="store_true",
                    help="If enabled, the UUID from the input dataset will " +
                         "be used for the output as well.")
+    p.add_argument("--min-adapters", action="store", type=int, default=None,
+                   help="Minimum number of adapters to filter for")
     return p
 
 

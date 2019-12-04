@@ -26,7 +26,7 @@ from pbcoretools import __VERSION__
 log = logging.getLogger(__name__)
 
 
-class Constants(object):
+class Constants:
     BASE_EXT = ".Q20"
     BAM_EXT = ".ccs.bam"
     BAM_ID = "ccs_bam_out"

@@ -1,6 +1,5 @@
-
+import pytest
 import tempfile
-import unittest
 import re
 
 from pbcommand.models.common import DataStore
@@ -19,8 +18,8 @@ def assert_no_reads_in_common(self, alignment_file, output_file):
         with SubreadSet(output_file) as unmapped:
             unmapped_subreads = set(
                 zip(unmapped.index.holeNumber, unmapped.index.qStart))
-            self.assertTrue(len(unmapped_subreads) > 0)
-            self.assertEqual(len(mapped_subreads & unmapped_subreads), 0)
+            assert len(unmapped_subreads) > 0
+            assert len(mapped_subreads & unmapped_subreads) == 0
 
 
 def _make_filtered(ds_file):
@@ -32,6 +31,7 @@ def _make_filtered(ds_file):
     return tmp_file
 
 
+@pytest.mark.constools
 class TestExtractUnmappedBam(PbIntegrationBase):
 
     def test_run_bamsieve_extract_unmapped(self):

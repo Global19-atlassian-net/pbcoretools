@@ -1,4 +1,3 @@
-
 from collections import namedtuple
 from zipfile import ZipFile
 import tempfile
@@ -8,7 +7,6 @@ import uuid
 import json
 import csv
 import os
-import unittest
 import logging
 
 from pbcommand.models.report import Report
@@ -21,7 +19,7 @@ from base import get_temp_file, get_temp_dir
 log = logging.getLogger(__name__)
 
 
-class Record(object):
+class Record:
     def __init__(self, idx, alpha):
         self.idx = idx
         self.alpha = alpha
@@ -44,7 +42,7 @@ def _write_records_to_csv(records, output_csv):
         writer.writerows([r.to_dict() for r in records])
 
 
-class TestCsvGather(unittest.TestCase):
+class TestCsvGather:
 
     def test_smoke(self):
         t = get_temp_file(suffix="-records-1.csv")
@@ -63,7 +61,7 @@ class TestCsvGather(unittest.TestCase):
             for _ in reader:
                 nrecords += 1
 
-        self.assertEqual(nrecords, 157)
+        assert nrecords == 157
 
 
 def _write_stats_to_json(stats, output_json):
@@ -74,7 +72,7 @@ def _write_stats_to_json(stats, output_json):
             namespace="pb").to_json())
 
 
-class TestJsonGather(unittest.TestCase):
+class TestJsonGather:
 
     def test_smoke(self):
         t = get_temp_file(suffix="-stats-1.json")
@@ -87,8 +85,8 @@ class TestJsonGather(unittest.TestCase):
 
         r = load_report_from_json(tg)
         stats = {a.id: a.value for a in r.attributes}
-        self.assertEqual(stats['pb_n_reads'], 549+733)
-        self.assertEqual(stats['pb_n_zmws'], 200)
+        assert stats['pb_n_reads'] == 549+733
+        assert stats['pb_n_zmws'] == 200
 
 
 def _mkjson():
@@ -108,7 +106,7 @@ def create_tarball(file_name, n=2):
     return file_name
 
 
-class TestTgzGather(unittest.TestCase):
+class TestTgzGather:
 
     def test_gather_tgz(self):
         tmp_dir = tempfile.mkdtemp()
@@ -126,7 +124,7 @@ class TestTgzGather(unittest.TestCase):
                 for member in gathered.getmembers():
                     d = json.loads(gathered.extractfile(member.name).read())
                     uuids.add(d["uuid"])
-            self.assertEqual(len(uuids), 4)
+            assert len(uuids) == 4
         finally:
             os.chdir(base_dir)
             shutil.rmtree(tmp_dir)
@@ -141,7 +139,7 @@ def create_zip(file_name, n=2):
     return file_name
 
 
-class TestZipGather(unittest.TestCase):
+class TestZipGather:
 
     def test_gather_zip(self):
         tmp_dir = tempfile.mkdtemp()
@@ -159,7 +157,7 @@ class TestZipGather(unittest.TestCase):
                 for member in gathered.namelist():
                     d = json.loads(gathered.open(member).read())
                     uuids.add(d["uuid"])
-            self.assertEqual(len(uuids), 4)
+            assert len(uuids) == 4
         finally:
             os.chdir(base_dir)
             shutil.rmtree(tmp_dir)

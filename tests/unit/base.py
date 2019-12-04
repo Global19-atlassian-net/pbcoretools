@@ -1,15 +1,10 @@
-
 import subprocess
-import unittest
 import tempfile
 import logging
 import os.path as op
 import os
 
 TESTDATA = "/pbi/dept/secondary/siv/testdata/pbcoretools-unittest/data"
-
-skip_if_no_testdata = unittest.skipUnless(
-    op.isdir(TESTDATA), "Testdata not found")
 
 log = logging.getLogger(__name__)
 

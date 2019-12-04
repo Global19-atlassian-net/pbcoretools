@@ -68,7 +68,7 @@ def get_parser():
     return parser
 
 
-class run_validator (object):
+class run_validator:
 
     def __init__(self, args, out=sys.stdout, save_exit_code=False):
         if not os.path.isfile(args.file):

@@ -9,7 +9,6 @@ from collections import defaultdict
 from functools import wraps
 import warnings
 import argparse
-import unittest
 import hashlib
 import logging
 import os.path
@@ -31,7 +30,7 @@ from pbcoretools.pbvalidate.core import (
 #log = logging.getLogger()
 
 
-class Constants (object):
+class Constants:
     PYSAM_VERSION = [int(x) for x in pysam.__version__.split(".")]
     # first some global definitions
     FLAG_SEGMENT_UNMAPPED = 4

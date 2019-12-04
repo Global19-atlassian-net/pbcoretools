@@ -46,7 +46,7 @@ def get_parser():
     return p
 
 
-class Constants(object):
+class Constants:
     TOOL_ID = "consolidate_transcripts"
     BAI_FILE_TYPES = {
         FileTypes.BAMBAI.file_type_id,

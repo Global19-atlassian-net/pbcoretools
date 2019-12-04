@@ -17,7 +17,7 @@ from pbcoretools.utils import get_base_parser
 log = logging.getLogger(__name__)
 
 
-class Constants(object):
+class Constants:
     FORMAT_NAME = "fasta"
     TOOL_NAME = "bam2fasta"
     READ_TYPE = "subreads"

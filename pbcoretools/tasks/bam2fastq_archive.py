@@ -16,7 +16,7 @@ from pbcoretools.tasks.bam2fasta_archive import get_parser_impl, run_args_impl
 log = logging.getLogger(__name__)
 
 
-class Constants(object):
+class Constants:
     FORMAT_NAME = "fastq"
     TOOL_NAME = "bam2fastq"
     READ_TYPE = "subreads"

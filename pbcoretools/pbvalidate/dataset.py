@@ -18,7 +18,7 @@ from urllib.parse import urlparse
 try:
     from pyxb import exceptions_ as pyxbexceptions
 except ImportError:
-    class pyxbexceptions(object):
+    class pyxbexceptions:
 
         class PyXBException(Exception):
             pass
@@ -43,11 +43,11 @@ from pbcoretools.pbvalidate import bam
 log = logging.getLogger(__name__)
 
 
-class Constants(object):
+class Constants:
     XML_NAMESPACE = "http://pacificbiosciences.com/PacBioBaseDataModel.xsd"
 
 
-class DatasetTypes(object):
+class DatasetTypes:
     BAM_DATASET = ["AlignmentSet", "ConsensusSet", "ConsensusAlignmentSet",
                    "SubreadSet", "TranscriptSet"]
     FASTA_DATASET = ["BarcodeSet", "ContigSet", "ReferenceSet",
@@ -439,7 +439,7 @@ class ValidateNumRecords(ValidateResources):
         return []
 
 
-class DatasetReader (object):
+class DatasetReader:
 
     """
     Proxy for opening a dataset and iterating over records while avoiding an

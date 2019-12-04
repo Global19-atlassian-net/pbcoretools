@@ -8,9 +8,10 @@ test_deps = [
     'coverage',
     'jinja2',
     'jsonschema',
-    'nose',
     'pbtestdata',
     'pytest',
+    'pytest-cov',
+    'pyxb == 1.2.6',
     'sphinx',
     'xmlbuilder',
 ]
@@ -32,6 +33,9 @@ setup(
             'bamsieve = pbcoretools.bamsieve:main',
             'pbtools-gather = pbcoretools.tasks.gather:main',
         ]},
+    setup_requires=[
+        'pytest-runner',
+    ],
     install_requires=[
         'numpy >= 1.17',
         'pysam >= 0.15.1',

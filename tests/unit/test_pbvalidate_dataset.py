@@ -1,13 +1,8 @@
-
 import subprocess
-import unittest
 import os.path as op
 import os
-
-try:
-    import pyxb
-except ImportError:
-    pyxb = None
+import pytest
+import pyxb
 
 import pbcore.data.datasets as data
 import pbcore.io
@@ -20,12 +15,10 @@ TESTDATA_DIR = "/pbi/dept/secondary/siv/testdata"
 LOCAL_DATA_DIR = op.join(op.dirname(op.dirname(__file__)), "data")
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
-skip_if_no_pyxb = unittest.skipUnless(pyxb is not None, "pyxb not available")
 
+class TestCase:
 
-class TestCase (unittest.TestCase):
-
-    @unittest.skip("currently disabled")
+    @pytest.mark.skip(reason="broken")
     def test_missing_resource(self):
         xml_str = """\
 <?xml version='1.0' encoding='UTF-8'?>
@@ -36,9 +29,8 @@ class TestCase (unittest.TestCase):
         try:
             v = ValidateResources()
             ds = pbcore.io.DataSet(xml_tmp)
-            self.assertFalse(v.validate(ds))
-            self.assertEqual([type(e).__name__ for e in v.to_errors(ds)],
-                             ["MissingResourceError"])
+            assert not v.validate(ds)
+            assert [type(e).__name__ for e in v.to_errors(ds)] == ["MissingResourceError"]
             e, c = validate_dataset(xml_tmp)
         finally:
             os.remove(xml_tmp)
@@ -49,67 +41,65 @@ class TestCase (unittest.TestCase):
         with DatasetReader(pbcore.io.AlignmentSet, ds_file) as f:
             for aln in f:
                 n_aln += 1
-        self.assertEqual(n_aln, 4)
+        assert n_aln == 4
 
     def test_api(self):
         ds_file = os.path.join(LOCAL_DATA_DIR, "tst_1.alignmentset.xml")
         ds = pbcore.io.openDataSet(ds_file)
-        self.assertTrue(ValidateNamespace().validate(ds))
+        assert ValidateNamespace().validate(ds)
         ds2 = DatasetReader(pbcore.io.AlignmentSet, ds_file)
-        self.assertTrue(ValidateNamespace().validate(ds2))
-        self.assertTrue(ValidateFileName(ds_file).validate(ds2))
+        assert ValidateNamespace().validate(ds2)
+        assert ValidateFileName(ds_file).validate(ds2)
 
     def test_bad_subreadset(self):
         # bad file
         ds_file = os.path.join(LOCAL_DATA_DIR, "tst_2_subreads.xml")
         ds = pbcore.io.openDataSet(ds_file)
         v = ValidateContents(aligned=None, content_type=None)
-        self.assertTrue(v.validate(ds))
+        assert v.validate(ds)
         v = ValidateContents(aligned=False, content_type="CCS")
-        self.assertFalse(v.validate(ds))
-        self.assertEqual(sorted([type(e).__name__ for e in v.to_errors(ds)]),
-                         ["FileAlignedError", "FileContentMismatchError"])
+        assert not v.validate(ds)
+        assert sorted([type(e).__name__ for e in v.to_errors(ds)]) == [
+                       "FileAlignedError", "FileContentMismatchError"]
         v = ValidateResources()
-        self.assertTrue(v.validate(ds))
+        assert v.validate(ds)
         v = ValidateDatasetType("ReferenceSet")
-        self.assertFalse(v.validate(ds))
-        self.assertEqual([type(e).__name__ for e in v.to_errors(ds)],
-                         ['DatasetTypeError'])
+        assert not v.validate(ds)
+        assert [type(e).__name__ for e in v.to_errors(ds)] == [
+                'DatasetTypeError']
         # FIXME this isn't working any more
-        # self.assertFalse(ValidateNamespace().validate(ds))
-        self.assertFalse(ValidateFileName(ds_file).validate(ds))
+        # assert not ValidateNamespace().validate(ds)
+        assert not ValidateFileName(ds_file).validate(ds)
 
     def test_file_name_and_contents_consistency(self):
         # file name/content type mismatch
         ds_file = os.path.join(LOCAL_DATA_DIR, "tst_1.ccs.xml")
         ds = pbcore.io.DataSet(ds_file)
         v = ValidateFileName("tst_1.ccs.xml")
-        self.assertFalse(v.validate(ds))
-        self.assertEqual([type(e).__name__ for e in v.to_errors(ds)],
-                         ["FileNameError"])
+        assert not v.validate(ds)
+        assert [type(e).__name__ for e in v.to_errors(ds)] == ["FileNameError"]
 
     def test_root_tag_type(self):
         # MetaType wrong
         file_name = os.path.join(LOCAL_DATA_DIR, "tst_1b_subreads.xml")
-        self.assertFalse(ValidateRootTag().validate(file_name))
+        assert not ValidateRootTag().validate(file_name)
 
     def test_validate_encoding(self):
         # good file
         file_name = os.path.join(LOCAL_DATA_DIR, "tst_1.subreadset.xml")
-        self.assertTrue(ValidateEncoding().validate(file_name))
+        assert ValidateEncoding().validate(file_name)
         # no header
         file_name = os.path.join(LOCAL_DATA_DIR, "tst_1b.subreadset.xml")
-        self.assertFalse(ValidateEncoding().validate(file_name))
+        assert not ValidateEncoding().validate(file_name)
         file_name = os.path.join(LOCAL_DATA_DIR, "tst_1c.subreadset.xml")
-        self.assertFalse(ValidateEncoding().validate(file_name))
+        assert not ValidateEncoding().validate(file_name)
 
     def test_exit_code_0(self):
         xml = pbtestdata.get_file("subreads-sequel")
         rc = subprocess.call(["pbvalidate", xml])
-        self.assertEqual(rc, 0)
+        assert rc == 0
 
-    @unittest.skipUnless(os.path.isdir(TESTDATA_DIR), "Testdata not available")
+    @pytest.mark.internal_data
     def test_validate_transcriptset(self):
         DS = "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/unpolished.transcriptset.xml"
-        self.assertEqual(subprocess.call(
-            ["pbvalidate", "--max-records", "1", DS]), 0)
+        assert subprocess.call(["pbvalidate", "--max-records", "1", DS]) == 0
