@@ -661,3 +661,18 @@ def update_consensus_reads(ccs_in, subreads_in, ccs_out, use_run_design_uuid=Fal
         sanitize_dataset_tags(ds, remove_hidden=True)
         ds.write(ccs_out)
     return 0
+
+
+def collect_all_dataset_paths(ds_file):
+    paths = [op.abspath(ds_file)]
+    with openDataSet(ds_file) as ds_in:
+        ds_in.makePathsAbsolute()
+        for ext_res in ds_in.externalResources:
+            paths.append(ext_res.resourceId)
+            for index in ext_res.indices:
+                paths.append(index.resourceId)
+            for ext_res2 in ext_res.externalResources:
+                paths.append(ext_res2.resourceId)
+                for index in ext_res2.indices:
+                    paths.append(index.resourceId)
+    return paths

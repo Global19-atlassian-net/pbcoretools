@@ -2,11 +2,13 @@ import xml.etree.cElementTree as ET
 import subprocess
 import itertools
 import tempfile
+import tarfile
 import logging
 import shutil
 import pytest
 import time
 import re
+import os.path as op
 import os
 
 import numpy as np
@@ -533,3 +535,38 @@ class TestDataSet:
             assert ds.metadata.collections[0].wellSample.name == "WELLSAMPLE"
             biosamples = {s.name for s in ds.metadata.bioSamples}
             assert biosamples == {"BIOSAMPLE"}
+
+    def _run_export_and_check_outputs(self, ifn, expected_paths):
+        tar_out = tempfile.NamedTemporaryFile(suffix=".tar.gz").name
+        args = " ".join(["dataset", "export", tar_out, ifn])
+        self._run_cmd_with_output(args, tar_out)
+        with tarfile.open(tar_out, "r:gz") as tar:
+            paths = [op.basename(f) for f in tar.getnames()]
+            assert paths == expected_paths
+
+    def test_export_subreads(self):
+        ifn = pbtestdata.get_file("subreads-sequel")
+        self._run_export_and_check_outputs(ifn, [
+            "m54006_160504_020705.tiny.subreadset.xml",
+            "m54006_160504_020705.tiny.subreads.bam",
+            "m54006_160504_020705.tiny.subreads.bam.pbi",
+            "m54006_160504_020705.tiny.scraps.bam",
+            "m54006_160504_020705.tiny.scraps.bam.pbi",
+            "m54006_160504_020705.sts.xml"
+        ])
+
+    def test_export_ccs(self):
+        ifn = pbtestdata.get_file("ccs-sequel")
+        self._run_export_and_check_outputs(ifn, [
+            "m54012_170527_013324.consensusreadset.xml",
+            "m54012_170527_013324.ccs.bam",
+            "m54012_170527_013324.ccs.bam.pbi"
+        ])
+
+    def test_export_barcodes(self):
+        ifn = pbtestdata.get_file("barcodeset")
+        self._run_export_and_check_outputs(ifn, [
+            "example_barcodes.barcodeset.xml",
+            "example_barcodes.fasta",
+            "example_barcodes.fasta.fai"
+        ])

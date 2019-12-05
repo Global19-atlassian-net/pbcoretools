@@ -39,7 +39,8 @@ from pbcoretools.file_utils import (
     add_mock_collection_metadata,
     force_set_all_well_sample_names,
     force_set_all_bio_sample_names,
-    sanitize_dataset_tags)
+    sanitize_dataset_tags,
+    collect_all_dataset_paths)
 
 
 def _validate_dataset_xml(file_name):
@@ -142,6 +143,23 @@ def validate_barcoded_datastore_files(self, subreads, datastore,
                 assert ds.uuid != dna_bc_uuids[bc_label]
             md_tags = [r['tag'] for r in ds.metadata.record['children']]
             assert set(md_tags).issuperset(expected_tags)
+
+
+class TestFileUtils:
+    def test_collect_all_dataset_paths(self):
+        expected_paths = [
+            "m54006_160504_020705.tiny.subreadset.xml",
+            "m54006_160504_020705.tiny.subreads.bam",
+            "m54006_160504_020705.tiny.subreads.bam.pbi",
+            "m54006_160504_020705.tiny.scraps.bam",
+            "m54006_160504_020705.tiny.scraps.bam.pbi",
+            "m54006_160504_020705.sts.xml"
+        ]
+        fn = pbtestdata.get_file("subreads-sequel")
+        paths = collect_all_dataset_paths(fn)
+        assert paths != expected_paths
+        paths = [op.basename(f) for f in paths]
+        assert paths == expected_paths
 
 
 class TestSplitLAA:
