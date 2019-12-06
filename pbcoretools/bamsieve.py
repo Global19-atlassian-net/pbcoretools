@@ -236,7 +236,7 @@ def filter_reads(input_bam,
     if whitelist is None and blacklist is None:
         if (not (percentage is not None and 0 < percentage < 100) and
                 not (count is not None and count > 0) and
-                not (min_adapters is not None and min_adapters > 0)):
+                not (min_adapters is not None and min_adapters >= 0)):
             log.error("No reads selected for output.")
             return 1
     output_ds = base_name = None
