@@ -340,7 +340,8 @@ def mergeXml(args):
             allds.metadata.provenance = None
         if args.name:
             allds.name = args.name
-        allds.updateCounts()
+        if not args.skipCounts:
+            allds.updateCounts()
         if args.no_sub_datasets:
             allds.subdatasets = []
         if args.unique_collections:
