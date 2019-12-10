@@ -571,7 +571,10 @@ def export_datasets(args):
     with tarfile.open(args.outfile, "w:gz") as tar:
         for file_name in paths:
             log.info("Archiving %s", file_name)
-            tar.add(file_name, arcname=file_name)
+            archive_file_name = file_name
+            if args.relative_to is not None:
+                archive_file_name = op.relpath(file_name, args.relative_to)
+            tar.add(file_name, arcname=archive_file_name)
     log.info("Wrote %d dataset and resource files to %s", len(paths), args.outfile)
     return 0
 
@@ -579,6 +582,8 @@ def export_datasets(args):
 def export_datasets_options(parser):
     parser.description = ("Export one or more DataSet XML files and all "
                           "external resources to a tar.gz archive")
+    parser.add_argument("--relative-to", action="store", default=None,
+                        help="Make all filenames relative to this path")
     parser.add_argument("outfile", type=str,
                         help="The resulting tar.gz file")
     # parser.add_argument("infiles", type=validate_file, nargs='+',
