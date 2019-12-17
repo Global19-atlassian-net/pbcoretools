@@ -12,6 +12,7 @@ from pbcore.io import openDataFile, BamReader, SubreadSet
 import pbtestdata
 
 from pbcoretools import bamsieve
+from pbcoretools.bamsieve import UserError
 
 DATA_DIR = op.join(op.dirname(op.dirname(__file__)), "data")
 SUBREADS1 = op.join(DATA_DIR, "tst_1_subreads.bam")
@@ -341,36 +342,36 @@ class TestBamSieve:
 
     def test_error(self):
         ofn = tempfile.NamedTemporaryFile(suffix=".bam").name
-        rc = bamsieve.filter_reads(
-            input_bam=DS1,
-            output_bam=ofn,
-            whitelist=set([5, 6, 7, 8]),
-            blacklist=set([1, 2, 3, 4]))
-        assert rc == 1
-        rc = bamsieve.filter_reads(
-            input_bam=DS1,
-            output_bam=ofn,
-            whitelist=set([5, 6, 7, 8]),
-            percentage=50)
-        assert rc == 1
-        rc = bamsieve.filter_reads(
-            input_bam=DS1,
-            output_bam=ofn,
-            percentage=500)
-        assert rc == 1
-        rc = bamsieve.filter_reads(
-            input_bam=DS1,
-            output_bam=ofn,
-            percentage=50,
-            count=1)
-        assert rc == 1
+        with pytest.raises(UserError) as exc:
+            rc = bamsieve.filter_reads(
+                input_bam=DS1,
+                output_bam=ofn,
+                whitelist=set([5, 6, 7, 8]),
+                blacklist=set([1, 2, 3, 4]))
+        with pytest.raises(UserError) as exc:
+            rc = bamsieve.filter_reads(
+                input_bam=DS1,
+                output_bam=ofn,
+                whitelist=set([5, 6, 7, 8]),
+                percentage=50)
+        with pytest.raises(UserError) as exc:
+            rc = bamsieve.filter_reads(
+                input_bam=DS1,
+                output_bam=ofn,
+                percentage=500)
+        with pytest.raises(UserError) as exc:
+            rc = bamsieve.filter_reads(
+                input_bam=DS1,
+                output_bam=ofn,
+                percentage=50,
+                count=1)
         # dataset output, but BAM input
         ofn = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
-        rc = bamsieve.filter_reads(
-            input_bam=SUBREADS2,
-            output_bam=ofn,
-            percentage=50)
-        assert rc == 1
+        with pytest.raises(UserError) as exc:
+            rc = bamsieve.filter_reads(
+                input_bam=SUBREADS2,
+                output_bam=ofn,
+                percentage=50)
 
     def test_integration(self):
         args = ["bamsieve", "--help"]
