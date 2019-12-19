@@ -3,6 +3,7 @@
 from collections import OrderedDict
 from functools import reduce
 import argparse
+import tarfile
 import logging
 import string
 import re
@@ -19,7 +20,8 @@ from pbcommand.validators import validate_output_dir
 from pbcoretools.file_utils import (add_mock_collection_metadata,
                                     force_set_all_well_sample_names,
                                     force_set_all_bio_sample_names,
-                                    uniqueify_collections)
+                                    uniqueify_collections,
+                                    collect_all_dataset_paths)
 import pbcoretools.utils
 
 log = logging.getLogger(__name__)
@@ -338,7 +340,8 @@ def mergeXml(args):
             allds.metadata.provenance = None
         if args.name:
             allds.name = args.name
-        allds.updateCounts()
+        if not args.skipCounts:
+            allds.updateCounts()
         if args.no_sub_datasets:
             allds.subdatasets = []
         if args.unique_collections:
@@ -557,3 +560,34 @@ def consolidate_options(parser):
     parser.add_argument("xmlfile", type=str,
                         help="The resulting DataSet XML file")
     parser.set_defaults(func=consolidateXml)
+
+
+def export_datasets(args):
+    if not args.outfile.endswith(".tar.gz"):
+        raise ValueError("Output file name must end in .tar.gz")
+    paths = []
+    for file_name in args.infiles:
+        paths.extend(collect_all_dataset_paths(file_name))
+    paths = list(OrderedDict.fromkeys(paths).keys())
+    with tarfile.open(args.outfile, "w:gz") as tar:
+        for file_name in paths:
+            log.info("Archiving %s", file_name)
+            archive_file_name = file_name
+            if args.relative_to is not None:
+                archive_file_name = op.relpath(file_name, args.relative_to)
+            tar.add(file_name, arcname=archive_file_name)
+    log.info("Wrote %d dataset and resource files to %s", len(paths), args.outfile)
+    return 0
+
+
+def export_datasets_options(parser):
+    parser.description = ("Export one or more DataSet XML files and all "
+                          "external resources to a tar.gz archive")
+    parser.add_argument("--relative-to", action="store", default=None,
+                        help="Make all filenames relative to this path")
+    parser.add_argument("outfile", type=str,
+                        help="The resulting tar.gz file")
+    # parser.add_argument("infiles", type=validate_file, nargs='+',
+    parser.add_argument("infiles", type=str, nargs='+',
+                        help="The XML files to export")
+    parser.set_defaults(func=export_datasets)
