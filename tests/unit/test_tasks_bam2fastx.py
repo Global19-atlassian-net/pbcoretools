@@ -197,7 +197,7 @@ class TestBam2FastxTranscripts(PbIntegrationBase):
         def _compare_records(bam_file, fx_records, transcript_type):
             with TranscriptSet(bam_file) as bam_reader:
                 for bam_rec, fx_rec in zip(bam_reader.__iter__(), fx_records):
-                    seqid = "Alice_{t}_{i}".format(t=transcript_type,
+                    seqid = "UnnamedSample_{t}_{i}".format(t=transcript_type,
                                                    i=bam_rec.qName)
                     assert fx_rec.id == seqid
         with ReaderClass(hq_out) as hq_fastx:
