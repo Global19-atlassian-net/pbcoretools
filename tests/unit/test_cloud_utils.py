@@ -48,7 +48,7 @@ class TestCloudUtils(PbIntegrationBase):
         pbi_file = bam_file + ".pbi"
         pbi = PacBioBamIndex(pbi_file)
         offsets = get_zmw_bgzf_borders(pbi)
-        assert offsets == [(0, 5177614, 447)]
+        assert offsets == [(0, 5177614, 455)]
 
     def test_get_bam_offsets(self):
         bam_file = self._get_bam_path(self.DS1)
