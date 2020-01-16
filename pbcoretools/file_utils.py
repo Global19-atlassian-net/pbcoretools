@@ -248,15 +248,43 @@ def set_bio_samples(ds, barcodes_and_samples):
 
 
 def get_bio_sample_name(ds):
-    bio_samples = {s.name for s in ds.metadata.bioSamples}
-    if len(bio_samples) == 0:
-        log.warning("No BioSample records present")
+    """
+    TAG-4488: Biosample name processing special for IsoSeq application in Narwhal.
+
+    Return exactly one biosample name string to represent the dataset
+    0) if dataset has NO movie (empty dataset), return 'UnnamedSample'.
+    1) if dataset has multiple movies, return 'Multiple'.
+    2) if dataset has exactly one movie
+       2.1) if it has NO SM tag, return 'UnnamedSample'
+       2.2) if it has exactly one SM tag, return that SM tag
+       2.3) if it has multiple SM tags, return 'Multiple'
+    """
+    readers = ds.resourceReaders()
+    bioSamples = set()
+    movies = set()
+    for reader in readers:
+        bioSamples.update(list(reader.readGroupTable.SampleName))
+        movies.update(list(reader.readGroupTable.MovieName))
+
+    numBioSamples = len(bioSamples)
+    numMovies = len(movies)
+
+    if numMovies == 0:  # Input dataset is empty, return something
+        log.warning("No movie present in dataset!")
         return "UnnamedSample"
-    elif len(bio_samples) > 1:
-        log.warning("Multiple unique BioSample records present")
-        return "multiple_samples"
-    else:
-        return list(bio_samples)[0]
+    if numMovies > 1:  # Multiple movies, return 'Multiple'
+        log.warning("Multiple movies present in dataset!")
+        return "Multiple"
+
+    # assert numMovies == 1, exactly one movie
+    if numBioSamples == 0:
+        log.warning("Has one movie, but NO SM tag present in dataset!")
+        return "UnnamedSample"
+    if numBioSamples == 1:
+        return list(bioSamples)[0]
+    if numBioSamples > 1:  # one movie, multiple read group, multiple unique SM tags
+        log.warning("Has one movie, but multiple SM tag present in dataset!")
+        return 'Multiple'
 
 
 def get_ds_name(ds, base_name, barcode_label):

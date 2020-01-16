@@ -35,6 +35,7 @@ from pbcoretools.file_utils import (
     mock_update_barcoded_sample_metadata,
     discard_bio_samples,
     set_bio_samples,
+    get_bio_sample_name,
     parse_biosamples_csv,
     add_mock_collection_metadata,
     force_set_all_well_sample_names,
@@ -424,3 +425,23 @@ class TestBarcodeUtils:
         samples_out = {
             s.DNABarcodes[0].name: s.name for s in ds.metadata.bioSamples}
         assert samples_out == dict(samples)
+
+    def test_get_bio_sample_name(self):
+        filename = pbtestdata.get_file("subreads-sequel")
+        ds1 = SubreadSet(filename)
+        get_bio_sample_name(ds1) == "Narwhale"
+
+        filename = pbtestdata.get_file("subreads-biosample-2")
+        ds2 = SubreadSet(filename)
+        get_bio_sample_name(ds2) == "UnnamedSample"
+
+        ds3 = ds1 + ds2
+        get_bio_sample_name(ds3) == "Multiple"
+
+        filename = pbtestdata.get_file("rsii-ccs-multi-cell")
+        ds4 = ConsensusReadSet(filename)
+        get_bio_sample_name(ds4) == "Multiple"
+
+        filename = pbtestdata.get_file("ccs-sequel")
+        ds4 = ConsensusReadSet(filename)
+        get_bio_sample_name(ds4) == "NarwhalCcs"
