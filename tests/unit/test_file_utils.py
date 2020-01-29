@@ -109,7 +109,8 @@ def split_barcoded_dataset(file_name, ext=".subreadset.xml"):
 def validate_barcoded_datastore_files(self, subreads, datastore,
                                       have_collection_metadata=True,
                                       use_barcode_uuids=True,
-                                      number_of_expected_filters=1):
+                                      number_of_expected_filters=1,
+                                      number_of_expected_collections=1):
     """
     This is linked to the PacBioTestData file 'barcoded-subreadset', which
     has been manually edited in support of this test.
@@ -131,19 +132,22 @@ def validate_barcoded_datastore_files(self, subreads, datastore,
             assert len(ds.filters) == number_of_expected_filters
             assert ds.uuid == f.uuid
             bc_label = op.basename(f.path).split(".")[1]
-            bio_name = bio_sample_names[bc_label]
             expected_tags = set(
-                ["TotalLength", "NumRecords", "Provenance", "BioSamples"])
-            assert len(ds.metadata.bioSamples) == 1
-            assert ds.metadata.bioSamples[0].name == bio_name
+                ["TotalLength", "NumRecords", "Provenance"])
             assert ds.metadata.provenance.parentDataSet.uniqueId == ds_in.uuid
-            assert ds.name == "{n} ({s})".format(n=ds_in.name, s=bio_name)
-            if use_barcode_uuids:
-                assert ds.uuid == dna_bc_uuids[bc_label]
-            else:
-                assert ds.uuid != dna_bc_uuids[bc_label]
             md_tags = [r['tag'] for r in ds.metadata.record['children']]
             assert set(md_tags).issuperset(expected_tags)
+            assert len(ds.metadata.collections) == number_of_expected_collections
+            if number_of_expected_collections > 0:
+                bio_name = bio_sample_names[bc_label]
+                bioSamples = ds.metadata.collections[0].wellSample.bioSamples
+                assert len(bioSamples) == 1
+                assert bioSamples[0].name == bio_name
+                assert ds.name == "{n} ({s})".format(n=ds_in.name, s=bio_name)
+                if use_barcode_uuids:
+                    assert ds.uuid == dna_bc_uuids[bc_label]
+                else:
+                    assert ds.uuid != dna_bc_uuids[bc_label]
 
 
 class TestFileUtils:
@@ -205,7 +209,7 @@ class TestSplitLAA:
         with SubreadSet(self._subreads) as ds:
             # just double-checking that the XML defines more samples than are
             # actually present in the BAM
-            assert len(ds.metadata.bioSamples) == 3
+            assert len(ds.metadata.collections[0].wellSample.bioSamples) == 3
         samples = get_barcode_sample_mappings(SubreadSet(self._subreads))
         assert samples == {
             'lbc3--lbc3': 'Charles',
@@ -245,41 +249,42 @@ class TestBarcodeUtils:
         ds = SubreadSet(self.SUBREADS)
         discard_bio_samples(ds, "lbc1--lbc1")
         coll = ds.metadata.collections[0]
-        assert len(ds.metadata.bioSamples) == 1
-        assert ds.metadata.bioSamples[0].name == "Alice"
+        bioSamples = ds.metadata.collections[0].wellSample.bioSamples
+        assert len(bioSamples) == 1
+        assert bioSamples[0].name == "Alice"
         # No matching BioSample records
         ds = SubreadSet(self.SUBREADS)
-        ds.metadata.bioSamples.pop(1)
-        ds.metadata.bioSamples.pop(1)
-        bioSample = ds.metadata.bioSamples[0]
+        ds.metadata.collections[0].wellSample.bioSamples.pop(1)
+        ds.metadata.collections[0].wellSample.bioSamples.pop(1)
+        bioSample = ds.metadata.collections[0].wellSample.bioSamples[0]
         while len(bioSample.DNABarcodes) > 0:
             bioSample.DNABarcodes.pop(0)
-        assert len(ds.metadata.bioSamples) == 1
+        assert len(ds.metadata.collections[0].wellSample.bioSamples) == 1
         discard_bio_samples(ds, "lbc1--lbc1")
-        assert len(ds.metadata.bioSamples) == 1
-        assert ds.metadata.bioSamples[0].name == "lbc1--lbc1"
-        assert ds.metadata.bioSamples[0].DNABarcodes[0].name == "lbc1--lbc1"
+        assert len(ds.metadata.collections[0].wellSample.bioSamples) == 1
+        assert ds.metadata.collections[0].wellSample.bioSamples[0].name == "lbc1--lbc1"
+        assert ds.metadata.collections[0].wellSample.bioSamples[0].DNABarcodes[0].name == "lbc1--lbc1"
         # no BioSample records
         ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))
-        assert len(ds.metadata.bioSamples) == 0
+        assert len(ds.metadata.collections[0].wellSample.bioSamples) == 0
         discard_bio_samples(ds, "lbc1--lbc1")
-        assert len(ds.metadata.bioSamples) == 1
-        assert ds.metadata.bioSamples[0].name == "lbc1--lbc1"
-        assert ds.metadata.bioSamples[0].DNABarcodes[0].name == "lbc1--lbc1"
+        assert len(ds.metadata.collections[0].wellSample.bioSamples) == 1
+        assert ds.metadata.collections[0].wellSample.bioSamples[0].name == "lbc1--lbc1"
+        assert ds.metadata.collections[0].wellSample.bioSamples[0].DNABarcodes[0].name == "lbc1--lbc1"
 
     def test_get_ds_name(self):
         ds = SubreadSet(self.SUBREADS)
         name = get_ds_name(ds, "My Data", "My Barcode")
         assert name == "My Data (multiple samples)"
-        while len(ds.metadata.bioSamples) > 0:
-            ds.metadata.bioSamples.pop(0)
+        while len(ds.metadata.collections[0].wellSample.bioSamples) > 0:
+            ds.metadata.collections[0].wellSample.bioSamples.pop(0)
         name = get_ds_name(ds, "My Data", "My Barcode")
         assert name == "My Data (My Barcode)"
         ds = SubreadSet(self.SUBREADS)
-        while len(ds.metadata.bioSamples) > 1:
-            ds.metadata.bioSamples.pop(1)
+        while len(ds.metadata.collections[0].wellSample.bioSamples) > 1:
+            ds.metadata.collections[0].wellSample.bioSamples.pop(1)
         name = get_ds_name(ds, "My Data", "My Barcode")
-        expected = "My Data ({s})".format(s=ds.metadata.bioSamples[0].name)
+        expected = "My Data ({s})".format(s=ds.metadata.collections[0].wellSample.bioSamples[0].name)
         assert name == expected
         ds = SubreadSet(ds.externalResources[0].bam)
         name = get_ds_name(ds, "My Data", "My Barcode")
@@ -309,7 +314,7 @@ class TestBarcodeUtils:
                                                     use_barcode_uuids=False)
         validate_barcoded_datastore_files(self, self.SUBREADS, datastore,
                                           use_barcode_uuids=False)
-        # test that it works with no collection metadata
+        # test that it doesn't break with no collection metadata
         ss = SubreadSet(self.SUBREADS)
         ss.metadata.collections = None
         ss_tmp = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
@@ -322,7 +327,8 @@ class TestBarcodeUtils:
                                                     self.SUBREADS,
                                                     barcodes)
         validate_barcoded_datastore_files(self, self.SUBREADS, datastore,
-                                          have_collection_metadata=False)
+                                          have_collection_metadata=False,
+                                          number_of_expected_collections=0)
 
     @pytest.mark.xmllint
     def test_mock_update_barcoded_sample_metadata(self):
@@ -343,9 +349,9 @@ class TestBarcodeUtils:
         ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))
 
         def _add_barcoded_sample(sn, bn, id_):
-            ds.metadata.bioSamples.addSample(sn)
-            ds.metadata.bioSamples[-1].DNABarcodes.addBarcode(bn)
-            ds.metadata.bioSamples[-1].DNABarcodes[-1].uniqueId = id_
+            ds.metadata.collections[0].wellSample.bioSamples.addSample(sn)
+            ds.metadata.collections[0].wellSample.bioSamples[-1].DNABarcodes.addBarcode(bn)
+            ds.metadata.collections[0].wellSample.bioSamples[-1].DNABarcodes[-1].uniqueId = id_
         _add_barcoded_sample("Alice", "lbc1--lbc1", bc_uuids[0])
         _add_barcoded_sample("Charles", "lbc3--lbc3", bc_uuids[1])
         tmp_ds = op.join(tmp_dir, "input.subreadset.xml")
@@ -383,7 +389,7 @@ class TestBarcodeUtils:
     def test_force_set_all_bio_sample_names(self):
         ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))
         force_set_all_bio_sample_names(ds, "My Test BioSample")
-        assert ds.metadata.bioSamples[0].name == "My Test BioSample"
+        assert ds.metadata.collections[0].wellSample.bioSamples[0].name == "My Test BioSample"
 
     def test_sanitize_dataset_tags(self):
         ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))
@@ -423,7 +429,7 @@ class TestBarcodeUtils:
         samples = [("lbc1--lbc1", "Alice"), ("lbc2--lbc2", "Bob")]
         set_bio_samples(ds, samples)
         samples_out = {
-            s.DNABarcodes[0].name: s.name for s in ds.metadata.bioSamples}
+            s.DNABarcodes[0].name: s.name for s in ds.metadata.collections[0].wellSample.bioSamples}
         assert samples_out == dict(samples)
 
     def test_get_bio_sample_name(self):
