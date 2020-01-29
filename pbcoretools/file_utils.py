@@ -108,9 +108,10 @@ def iterate_datastore_read_set_files(datastore_file,
 
 def get_barcode_sample_mappings(ds):
     barcoded_samples = []
-    for bioSample in ds.metadata.bioSamples:
-        for dnaBc in bioSample.DNABarcodes:
-            barcoded_samples.append((dnaBc.name, bioSample.name))
+    for collection in ds.metadata.collections:
+        for bioSample in collection.wellSample.bioSamples:
+            for dnaBc in bioSample.DNABarcodes:
+                barcoded_samples.append((dnaBc.name, bioSample.name))
     # recover the original barcode FASTA file so we can map the barcode
     # indices in the BAM file to the labels
     bc_sets = {extRes.barcodes for extRes in ds.externalResources
@@ -689,9 +690,11 @@ def update_consensus_reads(ccs_in, subreads_in, ccs_out, use_run_design_uuid=Fal
                 log.warning("No pre-defined ConsensusReadSetRef UUID found")
             else:
                 log.warning("Multiple ConsensusReadSetRef UUIDs found")
-        if len(ds.metadata.bioSamples) == 0:
-            for bio_sample in ds_subreads.metadata.bioSamples:
-                ds.metadata.bioSamples.append(bio_sample)
+        for collection in ds.metadata.collections:
+            if len(collection.wellSample.bioSamples) == 0:
+                for collection2 in ds_subreads.metadata.collections:
+                    for bio_sample in collection2.wellSample.bioSamples:
+                        collection.bioSamples.append(bio_sample)
         if run_design_uuid is not None:
             ds.uuid = run_design_uuid
         else:
