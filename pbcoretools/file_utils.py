@@ -215,18 +215,20 @@ def consolidate_barcodes(ds, bio_sample):
         bio_sample.DNABarcodes.pop(k)
 
 
-def discard_bio_samples(subreads, barcode_label):
+def discard_bio_samples(ds, barcode_label):
     """
     Remove any BioSample records from a SubreadSet that are not associated
     with the specified barcode.
     """
-    for coll in subreads.metadata.collections:
+    while len(ds.metadata.bioSamples) > 0:
+        ds.metadata.bioSamples.pop(0)
+    for coll in ds.metadata.collections:
         deletions = []
         for k, bio_sample in enumerate(coll.wellSample.bioSamples):
             barcodes = set([bc.name for bc in bio_sample.DNABarcodes])
             if barcode_label in barcodes:
                 if len(bio_sample.DNABarcodes) > 1:
-                    consolidate_barcodes(subreads, bio_sample)
+                    consolidate_barcodes(ds, bio_sample)
                 continue
             if len(barcodes) == 0:
                 log.warning("No barcodes defined for sample %s", bio_sample.name)
@@ -241,6 +243,17 @@ def discard_bio_samples(subreads, barcode_label):
 
 
 def set_bio_samples(ds, barcodes_and_samples):
+    """
+    Given a list of (barcode, bioSample) tuples, apply these to the dataset,
+    deleting any existing BioSample records.
+    """
+    # FIXME lima should just use the CollectionMetadata instead of duplicating
+    # the BioSamples in the DataSetMetadata
+    while len(ds.metadata.bioSamples) > 0:
+        ds.metadata.bioSamples.pop(0)
+    for dna_bc, biosample in barcodes_and_samples:
+        ds.metadata.bioSamples.addSample(biosample)
+        ds.metadata.bioSamples[-1].DNABarcodes.addBarcode(dna_bc)
     for coll in ds.metadata.collections:
         while len(coll.wellSample.bioSamples) > 0:
             coll.wellSample.bioSamples.pop(0)
@@ -353,7 +366,8 @@ def _update_barcoded_dataset(
     else:
         log.warn("Can't find sample name for '{b}'".format(b=barcode_label))
     assert parent_type == dataset.datasetType
-    #dataset.metadata.bioSamples = []
+    while len(dataset.metadata.bioSamples) > 0:
+        dataset.metadata.bioSamples.pop(0)
     dataset.subdatasets = []
     dataset.metadata.addParentDataSet(parent_uuid,
                                       parent_type,
