@@ -23,7 +23,16 @@ def split_filtStr(filtStr):
         return [s.strip() for s in filtStr.split(' AND ')]
 
     if ',' in filtStr and '[' not in filtStr:
-        msg = "You're doing it wrong! You have ',' in the filter-string '{}', but not '['. That means you are probably trying to use a comma to separate conditions, which we do not support. Please use ' AND ' to separate conditions.".format(
+        msg = "You're doing it wrong! You have ',' in the filter-string '{}', but not '['. That means you are probably trying to use a comma to separate conditions, which we do not support. Please use ' AND ' or ';' (semicolon) to separate conditions.".format(
             filtStr)
         raise ValueError(msg)
     return [filtStr]
+
+
+def get_base_parser(description, log_level="INFO"):
+    from pbcommand.cli import get_default_argparser_with_base_opts
+    from pbcoretools import __VERSION__
+    return get_default_argparser_with_base_opts(
+        version=__VERSION__,
+        description=description,
+        default_level=log_level)

@@ -1,23 +1,23 @@
-
 from zipfile import ZipFile
 import tempfile
 import textwrap
 import json
 import os.path as op
+import pytest
 
 from pbcore.io import FastaReader, FastaWriter, FastqReader, FastqWriter
+from pbcommand.testkit import PbIntegrationBase
 
 from test_chunking_gather import create_zip
-from base import IntegrationBase
 
 
-class GatherTextRecordsBase(object):
+class GatherTextRecordsBase:
     RECORDS = []
     RECORD_HEADER = None
     EXTENSION = None
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls.INPUT_FILES = []
         base = tempfile.mkdtemp()
         for i in range(2):
@@ -35,11 +35,11 @@ class GatherTextRecordsBase(object):
 
     def _validate_result(self, gathered_file):
         base, ext = op.splitext(gathered_file)
-        self.assertEqual(ext, "%s" % self.EXTENSION)
+        assert ext == "%s" % self.EXTENSION
         with open(gathered_file) as f:
             lines_ = f.readlines()
             lines = self._get_lines(lines_)
-            self.assertEqual(lines, self.RECORDS)
+            assert lines == self.RECORDS
             self.validate_content(lines_)
 
     def validate_content(self, lines):
@@ -52,7 +52,7 @@ class GatherTextRecordsBase(object):
         self._validate_result(tmp_out)
 
 
-class TestGatherToolCsv(GatherTextRecordsBase, IntegrationBase):
+class TestGatherToolCsv(GatherTextRecordsBase, PbIntegrationBase):
     RECORDS = [
         "contig1,3000000,170",
         "contig2,90000,180",
@@ -74,22 +74,24 @@ MOCK_GFF_RECORDS = [
 ]
 
 
-class TestGatherToolGff(GatherTextRecordsBase, IntegrationBase):
+class TestGatherToolGff(GatherTextRecordsBase, PbIntegrationBase):
     RECORDS = MOCK_GFF_RECORDS
     RECORD_HEADER = "##gff-version 3\n##source-id ipdSummary\n"
     EXTENSION = ".gff"
 
     @classmethod
     def _get_chunk_records(cls, i_chunk):
-        if i_chunk == 0: return cls.RECORDS[2:]
-        else: return cls.RECORDS[0:2]
+        if i_chunk == 0:
+            return cls.RECORDS[2:]
+        else:
+            return cls.RECORDS[0:2]
 
     def _get_lines(self, lines):
         return [l.strip() for l in lines if l[0] != '#']
 
     def validate_content(self, lines):
-        self.assertEqual(len(lines), 6)
-        self.assertEqual(lines[1].strip(), "##source-id ipdSummary")
+        assert len(lines) == 6
+        assert lines[1].strip() == "##source-id ipdSummary"
 
 
 MOCK_VCF_RECORDS = textwrap.dedent('''\
@@ -106,25 +108,28 @@ MOCK_VCF_HEADER = textwrap.dedent('''\
     #CHROM POS ID REF ALT QUAL FILTER INFO
     ''')
 
-class TestGatherToolVcf(GatherTextRecordsBase, IntegrationBase):
+
+class TestGatherToolVcf(GatherTextRecordsBase, PbIntegrationBase):
     RECORDS = MOCK_VCF_RECORDS
     RECORD_HEADER = MOCK_VCF_HEADER
     EXTENSION = ".vcf"
 
     @classmethod
     def _get_chunk_records(cls, i_chunk):
-        if i_chunk == 0: return cls.RECORDS[2:]
-        else: return cls.RECORDS[0:2]
+        if i_chunk == 0:
+            return cls.RECORDS[2:]
+        else:
+            return cls.RECORDS[0:2]
 
     def _get_lines(self, lines):
         return [l.strip() for l in lines if l[0] != '#']
 
     def validate_content(self, lines):
-        self.assertEqual(len(lines), 9)
-        self.assertEqual(lines[3].strip(), "##reference=ecoliK12_pbi_March2013.fasta")
+        assert len(lines) == 9
+        assert lines[3].strip() == "##reference=ecoliK12_pbi_March2013.fasta"
 
 
-class TestGatherToolFasta(IntegrationBase):
+class TestGatherToolFasta(PbIntegrationBase):
     CHUNK_CONTIGS = [
         ("lambda_NEB3011_0_30", "GGGCGGCGACCTCGCGGGTTTTCGCTATTT"),
         ("lambda_NEB3011_60_90", "CACTGAATCATGGCTTTATGACGTAACATC"),
@@ -135,7 +140,7 @@ class TestGatherToolFasta(IntegrationBase):
     EXTRA_ARGS = []
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls.INPUT_FILES = []
         for header, seq in cls.CHUNK_CONTIGS:
             cls.INPUT_FILES.append(cls._write_fastx_file(header, seq))
@@ -157,10 +162,10 @@ class TestGatherToolFasta(IntegrationBase):
     def _validate_result(self, gathered_file):
         with self.READER(gathered_file) as fastx_out:
             records = [rec for rec in fastx_out]
-            self.assertEqual(len(records), 3)
+            assert len(records) == 3
             for (header, seq), rec2 in zip(self.CHUNK_CONTIGS, records):
-                self.assertEqual(header+"|arrow", rec2.header)
-                self.assertEqual(seq, rec2.sequence)
+                assert header+"|arrow" == rec2.header
+                assert seq == rec2.sequence
 
 
 class TestGatherToolFastq(TestGatherToolFasta):
@@ -172,7 +177,8 @@ class TestGatherToolFastq(TestGatherToolFasta):
         fn = tempfile.NamedTemporaryFile(suffix=".fastq").name
         suffix = "|arrow"
         with FastqWriter(fn) as f:
-            f.writeRecord("{h}{s}".format(h=header, s=suffix), seq, [35]*len(seq))
+            f.writeRecord("{h}{s}".format(
+                h=header, s=suffix), seq, [35]*len(seq))
         return fn
 
 
@@ -182,9 +188,9 @@ class TestGatherToolFastaJoinContigs(TestGatherToolFasta):
     def _validate_result(self, gathered_file):
         with self.READER(gathered_file) as fastx_out:
             records = [rec for rec in fastx_out]
-            self.assertEqual(len(records), 1)
+            assert len(records) == 1
             combined_seq = "".join([x[1] for x in self.CHUNK_CONTIGS])
-            self.assertEqual(len(combined_seq), len(records[0].sequence))
+            assert len(combined_seq) == len(records[0].sequence)
 
 
 class TestGatherToolFastqJoinContigs(TestGatherToolFastaJoinContigs):
@@ -196,11 +202,12 @@ class TestGatherToolFastqJoinContigs(TestGatherToolFastaJoinContigs):
         fn = tempfile.NamedTemporaryFile(suffix=".fastq").name
         suffix = "|arrow"
         with FastqWriter(fn) as f:
-            f.writeRecord("{h}{s}".format(h=header, s=suffix), seq, [35]*len(seq))
+            f.writeRecord("{h}{s}".format(
+                h=header, s=suffix), seq, [35]*len(seq))
         return fn
 
 
-class TestGatherToolZip(IntegrationBase):
+class TestGatherToolZip(PbIntegrationBase):
 
     def test_run_tool_and_validate(self):
         inputs = []
@@ -216,9 +223,10 @@ class TestGatherToolZip(IntegrationBase):
             for member in gathered.namelist():
                 d = json.loads(gathered.open(member).read())
                 uuids.add(d["uuid"])
-        self.assertEqual(len(uuids), 4)
+        assert len(uuids) == 4
 
 
+@pytest.mark.internal_data
 def test_gather_datastore_json():
     import subprocess
     from pbcommand.models import DataStore
@@ -226,10 +234,35 @@ def test_gather_datastore_json():
     if1 = op.join(d, '1.aln.datastore.json')
     if2 = op.join(d, '2.aln.datastore.json')
     of = tempfile.NamedTemporaryFile(suffix=".datastore.json").name
-    args = ['python', '-m', 'pbcoretools.tasks2.gather', of, if1, if2]
+    args = ['python', '-m', 'pbcoretools.tasks.gather', of, if1, if2]
     subprocess.check_call(args)
     out_fns = DataStore.load_from_json(of).to_dict()['files']
     expected_bam_1 = op.join(d, '1.bam')
     expected_bam_2 = op.join(d, '2.bam')
     assert out_fns[0]['path'] == expected_bam_1
     assert out_fns[1]['path'] == expected_bam_2
+
+
+class TestGatherToolBed(PbIntegrationBase):
+    def test_gather_bed(self):
+        if1 = "test_gather_bed_1.bed"
+        with open(if1, 'w') as writer:
+            writer.write("#chr\tstart\tend\n")
+            writer.write("1\t2\t3\n")
+            writer.write("2\t3\t4\n")
+            writer.write("")
+        if2 = "test_gather_bed_2.bed"
+        with open(if2, 'w') as writer:
+            writer.write("#chr\tstart\tend\n")
+            writer.write("1\t2\t3\n")
+            writer.write("")
+        of = "test_gather_bed_out.bed"
+        args = [
+            "python", "-m", "pbcoretools.tasks.gather",
+            of, if1, if2
+        ]
+        self._check_call(args)
+        out = open(of, 'r').readlines()
+        expected = ['#chr\tstart\tend\n',
+                    '1\t2\t3\n', '2\t3\t4\n', '1\t2\t3\n']
+        assert out == expected

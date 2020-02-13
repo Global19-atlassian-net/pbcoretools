@@ -12,22 +12,21 @@ import re
 
 import numpy as np
 
-from pbcommand.models import FileTypes, ResourceTypes, get_pbparser, DataStoreFile, DataStore
-from pbcommand.cli import pbparser_runner
+from pbcommand.models import FileTypes, DataStoreFile, DataStore
+from pbcommand.cli import pacbio_args_runner, get_default_argparser_with_base_opts
 from pbcommand.utils import setup_log
 from pbcore.io import ConsensusReadSet
 from pbcore.util.statistics import accuracy_as_phred_qv
 
 from pbcoretools.bam2fastx import run_bam_to_fastq, run_bam_to_fasta
 from pbcoretools.filters import combine_filters
+from pbcoretools.utils import get_base_parser
+from pbcoretools import __VERSION__
 
 log = logging.getLogger(__name__)
 
 
-class Constants(object):
-    TOOL_ID = "pbcoretools.tasks.auto_ccs_outputs"
-    VERSION = "0.2.0"
-    DRIVER = "python -m pbcoretools.tasks.auto_ccs_outputs --resolved-tool-contract"
+class Constants:
     BASE_EXT = ".Q20"
     BAM_EXT = ".ccs.bam"
     BAM_ID = "ccs_bam_out"
@@ -35,24 +34,14 @@ class Constants(object):
     FASTQ_ID = "ccs_fastq_out"
     FASTA2_ID = "ccs_fasta_lq_out"
     FASTQ2_ID = "ccs_fastq_lq_out"
+    FASTA_FILE_IDS = [FASTA_ID, FASTA2_ID]
+    FASTQ_FILE_IDS = [FASTQ_ID, FASTQ2_ID]
 
 
 def _get_parser():
-    p = get_pbparser(Constants.TOOL_ID,
-                     Constants.VERSION,
-                     "Generate primary CCS outputs",
-                     __doc__,
-                     Constants.DRIVER,
-                     is_distributed=True)
-    # resource_types=(ResourceTypes.TMP_DIR,))
-    p.add_input_file_type(FileTypes.DS_CCS, "ccs_dataset",
-                          "ConsensusReadSet XML",
-                          "ConsensusReadSet XML")
-    p.add_output_file_type(FileTypes.DATASTORE,
-                           "datastore_out",
-                           "DataStore JSON",
-                           description="DataStore JSON",
-                           default_name="ccs_outputs")
+    p = get_base_parser(__doc__)
+    p.add_argument("ccs_dataset", help="ConsensusReadSet XML")
+    p.add_argument("datastore_out", help="DataStore JSON output file")
     return p
 
 
@@ -69,9 +58,9 @@ def consolidate_bam(base_dir, file_prefix, dataset):
     bam_file_name = op.join(base_dir, file_prefix + Constants.BAM_EXT)
     dataset.consolidate(bam_file_name)
     return _to_datastore_file(file_name=bam_file_name,
-                             file_id=Constants.BAM_ID,
-                             file_type=FileTypes.BAM_CCS,
-                             description="CCS BAM file")
+                              file_id=Constants.BAM_ID,
+                              file_type=FileTypes.BAM_CCS,
+                              description="CCS BAM file")
 
 
 def _run_bam2fastx(file_type, dataset_file, fastx_file):
@@ -129,7 +118,7 @@ def get_prefix_and_bam_file_name(ds, is_barcoded=False):
         movies = sorted(list({rg.MovieName for rg in ds.readGroupTable}))
         file_prefix = "_".join(movies)
         if len(movies) > 1:
-            log.warn("Multiple movies found: %s", movies)
+            log.warning("Multiple movies found: %s", movies)
             file_prefix = "multiple_movies"
     return bam_file_name, file_prefix
 
@@ -142,7 +131,8 @@ def run_ccs_bam_fastq_exports(ccs_dataset_file, base_dir, is_barcoded=False):
     """
     datastore_files = []
     with ConsensusReadSet(ccs_dataset_file, strict=True) as ds:
-        bam_file_name, file_prefix = get_prefix_and_bam_file_name(ds, is_barcoded)
+        bam_file_name, file_prefix = get_prefix_and_bam_file_name(
+            ds, is_barcoded)
         if bam_file_name is None:
             datastore_files.append(consolidate_bam(base_dir, file_prefix, ds))
         fasta_file_ids = [Constants.FASTA_ID, Constants.FASTA2_ID]
@@ -161,23 +151,46 @@ def _run_auto_ccs_outputs(ccs_dataset, datastore_out):
     return 0
 
 
-def _run_args(args):
-    return _run_auto_ccs_outputs(args.ccs_dataset, args.datastore_out)
+def run_args(args):
+    datastore_out = op.abspath(args.datastore_out)
+    base_dir = op.dirname(datastore_out)
+    datastore_files = []
+    with ConsensusReadSet(args.dataset_file, strict=True) as ds:
+        bam_file_name, file_prefix = get_prefix_and_bam_file_name(
+            ds, is_barcoded=False)
+        if args.mode == "fasta":
+            datastore_files.extend(to_fastx_files(
+                FileTypes.FASTA, ds, args.dataset_file, Constants.FASTA_FILE_IDS, base_dir, file_prefix))
+        elif args.mode == "fastq":
+            datastore_files.extend(to_fastx_files(
+                FileTypes.FASTQ, ds, args.dataset_file, Constants.FASTQ_FILE_IDS, base_dir, file_prefix))
+        elif args.mode == "consolidate":
+            if bam_file_name is None:
+                datastore_files.append(
+                    consolidate_bam(base_dir, file_prefix, ds))
+    DataStore(datastore_files).write_json(datastore_out)
+    return 0
 
 
-def _run_rtc(rtc):
-    return _run_auto_ccs_outputs(rtc.task.input_files[0],
-                                 rtc.task.output_files[0])
+def _get_parser():
+    p = get_default_argparser_with_base_opts(
+        version=__VERSION__,
+        description=__doc__,
+        default_level="INFO")
+    p.add_argument("mode", choices=["consolidate", "fasta", "fastq"])
+    p.add_argument("dataset_file")
+    p.add_argument("datastore_out")
+    return p
 
 
-def _main(argv=sys.argv):
-    return pbparser_runner(argv[1:],
-                           _get_parser(),
-                           _run_args,
-                           _run_rtc,
-                           log,
-                           setup_log)
+def main(argv=sys.argv):
+    return pacbio_args_runner(
+        argv=argv[1:],
+        parser=_get_parser(),
+        args_runner_func=run_args,
+        alog=log,
+        setup_log_func=setup_log)
 
 
 if __name__ == "__main__":
-    sys.exit(_main(sys.argv))
+    sys.exit(main(sys.argv))

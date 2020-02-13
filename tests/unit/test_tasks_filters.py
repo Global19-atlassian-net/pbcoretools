@@ -1,5 +1,3 @@
-
-import unittest
 import tempfile
 import logging
 import uuid
@@ -8,24 +6,26 @@ import os.path as op
 from pbcore.io import (FastaReader, FastqReader, openDataSet,
                        SubreadSet, ConsensusReadSet, TranscriptSet)
 import pbcore.data.datasets as data
+from pbcommand.testkit import PbIntegrationBase
 
 from pbcoretools.filters import combine_filters, run_filter_dataset, sanitize_read_length
 
-from base import get_temp_file, IntegrationBase
+from base import get_temp_file
 
 import pbtestdata
 
 log = logging.getLogger(__name__)
 
-class TestFilterDataSet(IntegrationBase):
+
+class TestFilterDataSet(PbIntegrationBase):
     BASE_ARGS = [
-        "python", "-m", "pbcoretools.tasks2.dataset_filter"
+        "python", "-m", "pbcoretools.tasks.dataset_filter"
     ]
     READER_CLASS = SubreadSet
 
     def _set_up_basic(self):
         input_file = get_temp_file(suffix=".subreadset.xml")
-        ds = SubreadSet(data.getXml(10), strict=True)
+        ds = SubreadSet(data.getXml(9), strict=True)
         ds.metadata.addParentDataSet(uuid.uuid4(),
                                      ds.datasetType,
                                      createdBy="AnalysisJob",
@@ -52,12 +52,12 @@ class TestFilterDataSet(IntegrationBase):
 
     def run_after(self, output_file, n_expected, expected_filter_str):
         n_actual = self._get_counts(output_file)
-        self.assertEqual(self._get_filters(output_file), expected_filter_str)
-        self.assertEqual(n_actual, n_expected)
+        assert self._get_filters(output_file) == expected_filter_str
+        assert n_actual == n_expected
         ds = openDataSet(output_file)
-        self.assertEqual(len(ds.metadata.provenance), 0)
-        self.assertTrue(ds.name.endswith("(filtered)"))
-        self.assertTrue("filtered" in ds.tags)
+        assert len(ds.metadata.provenance) == 0
+        assert ds.name.endswith("(filtered)")
+        assert "filtered" in ds.tags
         return ds
 
     def test_filter_dataset(self):
@@ -103,7 +103,7 @@ class TestFilterDataSet(IntegrationBase):
         n_expected = 54
         expected_filter_str = "( Uint32Cast(zm) % 2 == 0 )"
         ds = self.run_after(ds_out, n_expected, expected_filter_str)
-        self.assertTrue("downsampled" in ds.tags)
+        assert "downsampled" in ds.tags
 
     def test_filter_dataset_combine_filters(self):
         ds_in, n_input = self._set_up_combine_filters()
@@ -120,16 +120,16 @@ class TestFilterDataSet(IntegrationBase):
             filters = {"rq": [(">=", 0.901)]}
             combine_filters(ds, filters)
             ds.reFilter(light=False)
-            self.assertEqual(len(ds), 12)
+            assert len(ds) == 12
             filters = {"rq": [(">=", 0.8)], "length": [(">=", 500)]}
             combine_filters(ds, filters)
             ds.reFilter(light=False)
-            self.assertEqual(len(ds), 48)
+            assert len(ds) == 48
             ds.filters = None
             filters = {"zm": [("==", "0", 2)]}
             combine_filters(ds, filters)
             ds.reFilter(light=False)
-            self.assertEqual(len(ds), 54)
+            assert len(ds) == 54
 
     def test_combine_filters_run_filter_dataset(self):
         ds_in, n_input = self._set_up_combine_filters()
@@ -137,8 +137,8 @@ class TestFilterDataSet(IntegrationBase):
         my_filters = "rq >= 0.901"
         run_filter_dataset(ds_in, ds_out, 0, my_filters)
         with openDataSet(ds_out, strict=True) as ds:
-            self.assertEqual(len(ds), 12)
+            assert len(ds) == 12
         my_filters = "rq >= 0.8"
         run_filter_dataset(ds_in, ds_out, 500, my_filters)
         with openDataSet(ds_out, strict=True) as ds:
-            self.assertEqual(len(ds), 48)
+            assert len(ds) == 48

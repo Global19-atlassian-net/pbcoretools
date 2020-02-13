@@ -60,6 +60,23 @@ gather_gff = merge_gffs_sorted
 gather_vcf = merge_vcfs_sorted
 
 
+def cat_txt_with_header(input_files, output_file):
+    """ Concatenate input files i_fns, to output file.
+    Only copy header lines from the very first input file, and skip others.
+    """
+    with open(output_file, 'w') as writer:
+        for i, input_file in enumerate(input_files):
+            with open(input_file, 'r') as reader:
+                for l in reader:
+                    if len(l.strip()) == 0:
+                        continue
+                    if (i == 0 or not l.startswith('#')):
+                        writer.write(l.strip()+"\n")
+
+
+gather_bed = cat_txt_with_header
+
+
 def _read_header(csv_file):
     with open(csv_file, 'r') as f:
         header = f.readline()
@@ -199,7 +216,7 @@ def gather_fofn(input_files, output_file, skip_empty=True):
 def gather_datastore(input_files, output_file, skip_empty=True):
     ds = DataStore([])
     for i_fn in input_files:
-        for uuid, f in DataStore.load_from_json(i_fn).files.iteritems():
+        for uuid, f in DataStore.load_from_json(i_fn).files.items():
             ds.add(f)
     ds.write_json(output_file)
 
@@ -428,17 +445,12 @@ def __gather_runner(func, chunk_input_json, output_file, chunk_key, **kwargs):
     # Allow looseness
     if not chunk_key.startswith('$chunk.'):
         chunk_key = '$chunk.' + chunk_key
-        log.warn(
+        log.warning(
             "Prepending chunk key with '$chunk.' to '{c}'".format(c=chunk_key))
 
     chunked_files = get_datum_from_chunks_by_chunk_key(chunks, chunk_key)
     _ = func(chunked_files, output_file, **kwargs)
     return 0
-
-
-def __rtc_gather_runner(func, rtc):
-    # Gather Resolved ToolContracts will have a chunk
-    return func(rtc.task.input_files[0], rtc.task.output_files[0], rtc.task.chunk_key)
 
 
 def __args_gather_runner(func, args):

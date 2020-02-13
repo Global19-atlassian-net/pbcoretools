@@ -19,13 +19,15 @@ log = logging.getLogger(__name__)
 __version__ = "0.1"
 
 
-HEADERS = ["idx","file","hole","qstart","qend","qual","offset","flag","ref","tstart","tend","astart","aend","rc","matches","mismatches","mq","inserts","dels"]
+HEADERS = ["idx", "file", "hole", "qstart", "qend", "qual", "offset", "flag", "ref",
+           "tstart", "tend", "astart", "aend", "rc", "matches", "mismatches", "mq", "inserts", "dels"]
 HEADERS_BC = ["bcf", "bcr", "bcqual"]
 HEADERS_SNR = ["snrA", "snrC", "snrG", "snrT"]
 HEADERS_NPASSES = ["np"]
 
+
 def _write_csv(rows, csv_file, headers=HEADERS):
-    with open(csv_file, "wb") as csv_out:
+    with open(csv_file, "wt") as csv_out:
         writer = csv.writer(csv_out,
                             delimiter=",",
                             lineterminator=os.linesep,
@@ -55,7 +57,8 @@ def run_args(args):
             reference = rr.referenceInfo(rr.pbi.tId[i])[2]
             aLen = rr.pbi.aEnd[i] - rr.pbi.aStart[i]
             if aLen <= 0 or identity[i] < 0:
-                log.warn("ZMW %s has negative-length alignment or negative computed identity, skipping", holeNumber)
+                log.warning(
+                    "ZMW %s has negative-length alignment or negative computed identity, skipping", holeNumber)
                 continue
             rc = "FALSE"
             if rr.pbi.isReverseStrand[i]:
@@ -102,7 +105,8 @@ def _get_parser():
         version=__version__,
         description=__doc__,
         default_level="INFO")
-    p.add_argument("dataset", help="PacBio dataset XML (AlignmentSet or ConsensusAlignmentSet)")
+    p.add_argument(
+        "dataset", help="PacBio dataset XML (AlignmentSet or ConsensusAlignmentSet)")
     p.add_argument("csv_out", help="CSV output file")
     p.add_argument("--load-snr", action="store_true", default=False,
                    help="Include per-read SNRs")

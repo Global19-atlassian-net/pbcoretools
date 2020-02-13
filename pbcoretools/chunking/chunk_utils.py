@@ -17,7 +17,7 @@ from pbcoretools.datastore_utils import datastore_to_datastorefile_objs, dataset
 log = logging.getLogger(__name__)
 
 
-class Constants(object):
+class Constants:
     CHUNK_KEY_SUBSET = "$chunk.subreadset_id"
     CHUNK_KEY_CCSSET = "$chunk.ccsset_id"
     CHUNK_KEY_ALNSET = "$chunk.alignmentset_id"
@@ -31,6 +31,23 @@ class Constants(object):
     CHUNK_KEY_FOFN_REPORT = '$chunk.fofn_report_id'
     CHUNK_KEY_CSV = "$chunk.csv_id"
     CHUNK_KEY_DATASTORE_JSON = "$chunk.datastore_id"
+
+    LIMIT_NCHUNKS_MIN = 12
+    LIMIT_NCHUNKS_MAX = 96
+
+
+def guess_optimal_max_nchunks_for_consensus(genome_size, max_nchunks=96):
+    """
+    Given a genome size (and optionally, the user-configured max_nchunks for
+    the entire SMRT Link install), guess an appropriate number of chunks to
+    use for consensus calculation.
+    """
+    absolute_max_nchunks = min(max_nchunks, Constants.LIMIT_NCHUNKS_MAX)
+    absolute_min_nchunks = min(max_nchunks, Constants.LIMIT_NCHUNKS_MIN)
+    genome_scale = math.log(genome_size) / math.log(10)
+    nchunks = int(math.floor(
+        Constants.LIMIT_NCHUNKS_MAX * (genome_scale - 6) / 3))
+    return min(max(nchunks, absolute_min_nchunks), absolute_max_nchunks)
 
 
 def write_chunks_to_json(chunks, chunk_file):
@@ -49,7 +66,7 @@ def _to_grouped_items_by_max_total_chunks(items, max_total_chunks):
     grouped_items = []
 
     n = int(math.ceil(float(nitems)) / max_total_chunks)
-    for i in xrange(max_total_chunks):
+    for i in range(max_total_chunks):
         if i != max_total_chunks - 1:
             cs = items[i * n: (i + 1) * n]
         else:
@@ -70,7 +87,7 @@ def _to_grouped_items_by_max_size_per_item(items, max_chunks_per_item):
             chunks.append(i)
     else:
         n = int(math.ceil(float(nitems) / max_chunks_per_item))
-        for i in xrange(n):
+        for i in range(n):
             if i != max_chunks_per_item - 1:
                 cs = items[i * n:n * (i + 1)]
             else:
@@ -104,7 +121,7 @@ def write_chunked_csv(chunk_key, csv_path, max_total_nchunks, dir_name, base_nam
         reader = csv.DictReader(csv_fh)
 
         it = iter(reader)
-        for i in xrange(max_total_nchunks):
+        for i in range(max_total_nchunks):
 
             chunk_id = "_".join([base_name, str(nchunks)])
             chunk_name = ".".join([chunk_id, ext])
@@ -116,7 +133,7 @@ def write_chunked_csv(chunk_key, csv_path, max_total_nchunks, dir_name, base_nam
                 writer = csv.DictWriter(csv_chunk_fh, field_names)
                 writer.writeheader()
                 if i != max_total_nchunks:
-                    for _ in xrange(n):
+                    for _ in range(n):
                         nchunk_records += 1
                         writer.writerow(next(it))
                 else:
@@ -193,7 +210,7 @@ def __to_chunked_fastx_files(write_records_func, pbcore_reader_class, pbcore_wri
     nchunks = 0
     with pbcore_reader_class(input_file) as r:
         it = iter(r)
-        for i in xrange(max_total_nchunks):
+        for i in range(max_total_nchunks):
             records = []
 
             chunk_id = "_".join([base_name, str(nchunks)])
@@ -205,7 +222,7 @@ def __to_chunked_fastx_files(write_records_func, pbcore_reader_class, pbcore_wri
                 n_left = nrecords - (n_per_chunk * i)
                 if n_left < 0 or (n_left == 0 and nchunks != 1):
                     break
-                for _ in xrange(min(n_per_chunk, n_left)):
+                for _ in range(min(n_per_chunk, n_left)):
                     records.append(next(it))
             else:
                 for x in it:
@@ -372,7 +389,7 @@ def _to_barcode_chunked_dataset_files(dataset_type, dataset_path,
         dset.write(chunk_path)
         d[chunk_key] = os.path.abspath(chunk_path)
         if extra_chunk_keys is not None:
-            for key, value in extra_chunk_keys.iteritems():
+            for key, value in extra_chunk_keys.items():
                 d[key] = value
         c = PipelineChunk(chunk_id, **d)
         yield c

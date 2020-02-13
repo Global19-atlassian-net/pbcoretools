@@ -1,8 +1,5 @@
-
-from __future__ import division, print_function
 from collections import defaultdict
 from xml.dom import minidom
-import unittest
 import logging
 import json
 import sys

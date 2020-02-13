@@ -9,17 +9,19 @@ import os.path as op
 import logging
 import subprocess
 
-from pbcommand.utils import setup_log
-from pbcommand.cli import pbparser_runner
-from pbcommand.models import FileTypes, get_pbparser, ResourceTypes, DataStore, DataStoreFile
 from pysam import AlignmentFile  # pylint: disable=no-member, no-name-in-module
 
+from pbcommand.utils import setup_log
+from pbcommand.cli import pacbio_args_runner
+from pbcommand.models import FileTypes, DataStore, DataStoreFile
 from pbcore.io import ConsensusAlignmentSet, TranscriptAlignmentSet, TranscriptSet, openDataSet
+
 from pbcoretools.file_utils import get_prefixes
 from pbcoretools.datastore_utils import dataset_to_datastore
+from pbcoretools.utils import get_base_parser
 
 
-def get_consolidate_parser(tool_id, file_type, driver_exe, version, description):
+def get_parser():
     """
     Input:
         idx - 0 SubreadSet
@@ -28,61 +30,24 @@ def get_consolidate_parser(tool_id, file_type, driver_exe, version, description)
     Output:
         idx - 0 HQ TranscriptSet, of which read names have biosample_HQ prefix
         idx - 1 LQ TranscriptSet, of which read names have biosample_LQ prefix
-        idx - 2 HQ DataStore of output TranscriptSet
-        idx - 3 LQ DataStore of output TranscriptSet
+        idx - 2 HQ DataStore of output TranscriptSet BAM file
+        idx - 3 LQ DataStore of output TranscriptSet BAM file
     """
-    ds_type = file_type.file_type_id.split(".")[-1]
-    p = get_pbparser(tool_id,
-                     version,
-                     "{t} consolidate".format(t=ds_type),
-                     description,
-                     driver_exe,
-                     is_distributed=True,
-                     resource_types=(ResourceTypes.TMP_DIR,))
-    p.add_input_file_type(FileTypes.DS_SUBREADS,
-                          "subreads",
-                          "Input SubreadSet",
-                          "SubreadSet with biosample metadata.")
-    p.add_input_file_type(file_type,
-                          "hq_ds_in",
-                          "Input High Quality {t}".format(t=ds_type),
-                          "Gathered {t} to consolidate".format(t=ds_type))
-    p.add_input_file_type(file_type,
-                          "lq_ds_in",
-                          "Input Low Quality {t}".format(t=ds_type),
-                          "Gathered {t} to consolidate".format(t=ds_type))
-    p.add_output_file_type(file_type,
-                           "hq_ds_out",
-                           "Output High Quality ",
-                           description="Output {t} of consolidated bam files".format(
-                               t=ds_type),
-                           default_name="combined.hq")
-    p.add_output_file_type(file_type,
-                           "lq_ds_out",
-                           "Output Low Quality ",
-                           description="Output {t} of consolidated bam files".format(
-                               t=ds_type),
-                           default_name="combined.lq")
-    p.add_output_file_type(FileTypes.JSON,
-                           "hq_datastore",
-                           "JSON Datastore",
-                           description="Datastore containing High Quality {t}".format(
-                               t=ds_type),
-                           default_name="resources.hq")
-    p.add_output_file_type(FileTypes.JSON,
-                           "lq_datastore",
-                           "JSON Datastore",
-                           description="Datastore containing Low Quality {t}".format(
-                               t=ds_type),
-                           default_name="resources.lq")
+    p = get_base_parser(__doc__)
+    p.add_argument("subreads", help="SubreadSet with biosample metadata.")
+    p.add_argument("hq_ds_in", help="Gathered HQ transcripts")
+    p.add_argument("lq_ds_in", help="Gathered LQ transcripts")
+    p.add_argument("hq_ds_out", help="Output HQ transcripts")
+    p.add_argument("lq_ds_out", help="Output LQ transcripts")
+    p.add_argument(
+        "hq_datastore", help="Datastore containing HQ transcripts BAM")
+    p.add_argument(
+        "lq_datastore", help="Datastore containing LQ transcripts BAM")
     return p
 
 
-class Constants(object):
-    TOOL_ID = "pbcoretools.tasks.consolidate_transcripts"
-    INPUT_FILE_TYPE = FileTypes.DS_TRANSCRIPT
-    TOOL_DESC = __doc__
-    DRIVER = "python -m {} --resolved-tool-contract ".format(TOOL_ID)
+class Constants:
+    TOOL_ID = "consolidate_transcripts"
     BAI_FILE_TYPES = {
         FileTypes.BAMBAI.file_type_id,
         FileTypes.I_BAI.file_type_id
@@ -126,15 +91,17 @@ def get_reads_name(ds_in):
 
 
 def run_consolidate(dataset_file, output_file, datastore_file,
-                    consolidate, n_files, task_id=Constants.TOOL_ID,
+                    consolidate, n_files,
                     consolidate_f=lambda ds: ds.consolidate):
     datastore_files = []
     with openDataSet(dataset_file) as ds_in:
         if consolidate:
             if len(ds_in.toExternalFiles()) <= 0:
-                raise ValueError("DataSet {} must contain one or more files!".format(dataset_file))
+                raise ValueError(
+                    "DataSet {} must contain one or more files!".format(dataset_file))
             new_resource_file = bam_of_dataset(output_file)
-            consolidate_f(ds_in)(new_resource_file, numFiles=n_files, useTmp=False)
+            consolidate_f(ds_in)(new_resource_file,
+                                 numFiles=n_files, useTmp=False)
             # always display the BAM/BAI if consolidation is enabled
             # XXX there is no uniqueness constraint on the sourceId, but this
             # seems sloppy nonetheless - unfortunately I don't know how else to
@@ -144,7 +111,7 @@ def run_consolidate(dataset_file, output_file, datastore_file,
                 if ext_res.resourceId.endswith(".bam"):
                     ds_file = DataStoreFile(
                         ext_res.uniqueId,
-                        task_id + "-out-2",
+                        Constants.TOOL_ID + "-out-2",
                         ext_res.metaType,
                         ext_res.bam,
                         name=reads_name,
@@ -155,11 +122,11 @@ def run_consolidate(dataset_file, output_file, datastore_file,
                     added_resources = set()
                     for index in ext_res.indices:
                         if (index.metaType in Constants.BAI_FILE_TYPES and
-                            index.resourceId not in added_resources):
+                                index.resourceId not in added_resources):
                             added_resources.add(index.resourceId)
                             ds_file = DataStoreFile(
                                 index.uniqueId,
-                                task_id + "-out-3",
+                                Constants.TOOL_ID + "-out-3",
                                 index.metaType,
                                 index.resourceId,
                                 name="Index of {}".format(reads_name.lower()),
@@ -181,7 +148,6 @@ def __runner(ds_items):
                         datastore_file=datastore,
                         consolidate=True,
                         n_files=1,
-                        task_id=Constants.TOOL_ID,
                         consolidate_f=func)
         # At this piont, ds_out is the same as ds_in, override ds_out with
         # newly created, read name modified TranscriptSet
@@ -207,28 +173,14 @@ def args_runner(args):
     return __runner(ds_items)
 
 
-def rtc_runner(rtc):
-    hq_prefix, lq_prefix = get_prefixes(rtc.task.input_files[0])
-    ds_items = [
-        (rtc.task.input_files[1], rtc.task.output_files[0],
-         rtc.task.output_files[2], hq_prefix),
-        (rtc.task.input_files[2], rtc.task.output_files[1],
-         rtc.task.output_files[3], lq_prefix)
-    ]
-    return __runner(ds_items)
-
-
 def main(argv=sys.argv):
     logging.basicConfig(level=logging.DEBUG)
     log = logging.getLogger()
-    parser = get_consolidate_parser(Constants.TOOL_ID, Constants.INPUT_FILE_TYPE,
-                                    Constants.DRIVER, "0.1", Constants.TOOL_DESC)
-    return pbparser_runner(argv[1:],
-                           parser,
-                           args_runner,
-                           rtc_runner,
-                           log,
-                           setup_log)
+    return pacbio_args_runner(argv[1:],
+                              get_parser(),
+                              args_runner,
+                              log,
+                              setup_log)
 
 
 if __name__ == '__main__':

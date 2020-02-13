@@ -4,8 +4,6 @@ Tool for subsetting a BAM or PacBio DataSet file based on either a whitelist of
 hole numbers or a percentage of reads to be randomly selected.
 """
 
-from __future__ import division
-from __future__ import print_function
 from collections import defaultdict, OrderedDict
 import subprocess
 import warnings
@@ -16,10 +14,7 @@ import os.path as op
 import re
 import sys
 
-try:
-    from pysam.calignmentfile import AlignmentFile  # pylint: disable=no-name-in-module, import-error, fixme, line-too-long
-except ImportError:
-    from pysam.libcalignmentfile import AlignmentFile  # pylint: disable=no-name-in-module, import-error, fixme, line-too-long
+from pysam.libcalignmentfile import AlignmentFile  # pylint: disable=no-name-in-module, import-error, fixme, line-too-long
 
 from pbcommand.common_options import (add_log_quiet_option,
                                       add_log_verbose_option)
@@ -112,7 +107,37 @@ def _anonymize_sequence(rec):
     return rec
 
 
-def _create_whitelist(bam_readers, percentage=None, count=None):
+def _create_n_adapters_whitelist(bam_readers, min_adapters):
+    ADAPTER_BEFORE = 1
+    ADAPTER_AFTER  = 2
+    read_contexts = defaultdict(list)
+    for bam in bam_readers:
+        for rgId, zmw, cx in zip(bam.pbi.qId,
+                                 bam.pbi.holeNumber,
+                                 bam.pbi.contextFlag):
+            read_contexts[(rgId, zmw)].append(cx)
+    whitelist = set()
+    for (rgId, zmw), contexts in read_contexts.items():
+        # XXX this is pretty hacky, need to double-check
+        n_adapters = 0
+        for i, cx in enumerate(contexts):
+            if cx & ADAPTER_AFTER > 0:
+                n_adapters += 1
+            elif ((cx & ADAPTER_BEFORE > 0) and
+                    (contexts[i - 1] & ADAPTER_AFTER == 0)):
+                n_adapters += 1
+        log.debug("ZMW {z} has {n} adapters".format(z=zmw, n=n_adapters))
+        if n_adapters >= min_adapters:
+            whitelist.add(zmw)
+    return whitelist
+
+
+def _create_whitelist(bam_readers,
+                      percentage=None,
+                      count=None,
+                      min_adapters=None):
+    if min_adapters is not None:
+        return _create_n_adapters_whitelist(bam_readers, min_adapters)
     zmws = set()
     movies = set()
     for i_file, bam in enumerate(bam_readers):
@@ -177,6 +202,34 @@ def _process_bam_whitelist(bam_in, bam_out, whitelist, blacklist,
     return len(have_records), have_zmws
 
 
+class UserError(RuntimeError):
+    pass
+
+
+def _validate_settings(output_bam,
+                       whitelist,
+                       blacklist,
+                       percentage,
+                       count,
+                       min_adapters):
+    if output_bam is None:
+        raise UserError("Must specify output file")
+    output_bam = op.abspath(output_bam)
+    if not op.isdir(op.dirname(output_bam)):
+        raise UserError("Output path '{d}' does not exist.".format(
+                        d=op.dirname(output_bam)))
+    n_specified = 5 - [whitelist, blacklist, percentage, count, min_adapters].count(None)
+    if n_specified != 1:
+        raise UserError("You must choose one and only one of the following " +
+                  "options: --whitelist, --blacklist, --count, --percentage," +
+                  "         --min-adapters")
+    if whitelist is None and blacklist is None:
+        if (not (percentage is not None and 0 < percentage < 100) and
+                not (count is not None and count > 0) and
+                not (min_adapters is not None and min_adapters >= 0)):
+            raise UserError("No reads selected for output.")
+
+
 def filter_reads(input_bam,
                  output_bam,
                  whitelist=None,
@@ -190,31 +243,16 @@ def filter_reads(input_bam,
                  use_barcodes=False,
                  sample_scraps=False,
                  keep_original_uuid=False,
-                 use_subreads=False):
-    if output_bam is None:
-        log.error("Must specify output file")
-        return 1
+                 use_subreads=False,
+                 min_adapters=None):
+    _validate_settings(output_bam, whitelist, blacklist, percentage, count, min_adapters)
     output_bam = op.abspath(output_bam)
-    if not op.isdir(op.dirname(output_bam)):
-        log.error("Output path '{d}' does not exist.".format(
-                  d=op.dirname(output_bam)))
-        return 1
-    n_specified = 4 - [whitelist, blacklist, percentage, count].count(None)
-    if n_specified != 1:
-        log.error("You must choose one and only one of the following " +
-                  "options: --whitelist, --blacklist, --count, --percentage")
-        return 1
     if seed is not None:
         random.seed(seed)
-    if whitelist is None and blacklist is None:
-        if not 0 < percentage < 100 and not count > 0:
-            log.error("No reads selected for output.")
-            return 1
     output_ds = base_name = None
     if output_bam.endswith(".xml"):
         if not input_bam.endswith(".xml"):
-            log.warning("DataSet output only supported for DataSet inputs.")
-            return 1
+            raise UserError("DataSet output only supported for DataSet inputs.")
         ds_type = output_bam.split(".")[-2]
         ext2 = OrderedDict([
             ("subreadset", "subreads"),
@@ -231,23 +269,20 @@ def filter_reads(input_bam,
         base_name = ".".join(output_ds.split(".")[:-2])
         output_bam = base_name + "." + ".".join([ext2[ds_type], "bam"])
     if output_bam == input_bam:
-        log.error("Input and output files must not be the same path")
-        return 1
+        raise UserError("Input and output files must not be the same path")
     elif not output_bam.endswith(".bam"):
-        log.error("Output file name must end in either '.bam' or '.xml'")
-        return 1
+        raise UserError("Output file name must end in either '.bam' or '.xml'")
     n_file_reads = 0
     have_zmws = set()
     scraps_bam = barcode_set = sts_xml = None
     with openDataFile(input_bam) as ds_in:
         if not isinstance(ds_in, ReadSet):
-            raise TypeError("{t} is not an allowed dataset type".format(
+            raise UserError("{t} is not an allowed dataset type".format(
                             t=type(ds_in).__name__))
         # TODO(nechols)(2016-03-11): refactor this to enable propagation of
         # filtered scraps
         if not ds_in.isIndexed:
-            log.error("Input BAM must have accompanying .pbi index")
-            return 1
+            raise UserError("Input BAM must have accompanying .pbi index")
         for ext_res in ds_in.externalResources:
             if ext_res.barcodes is not None:
                 assert barcode_set is None or barcode_set == ext_res.barcodes
@@ -256,16 +291,16 @@ def filter_reads(input_bam,
                 if sts_xml is None:
                     sts_xml = ext_res.sts
                 else:
-                    log.warn("Multiple sts.xml files, will not propagate")
+                    log.warning("Multiple sts.xml files, will not propagate")
         f1 = ds_in.resourceReaders()[0]
-        if percentage is not None or count is not None:
+        if percentage is not None or count is not None or min_adapters is not None:
             bam_readers = list(ds_in.resourceReaders())
             if sample_scraps:
                 for ext_res in ds_in.externalResources:
                     if ext_res.scraps is not None:
                         scraps_in = IndexedBamReader(ext_res.scraps)
                         bam_readers.append(scraps_in)
-            whitelist = _create_whitelist(bam_readers, percentage, count)
+            whitelist = _create_whitelist(bam_readers, percentage, count, min_adapters)
         # convert these to Python sets
         if use_subreads:
             _whitelist = _process_subread_list(whitelist)
@@ -278,9 +313,9 @@ def filter_reads(input_bam,
             for ext_res in ds_in.externalResources:
                 if ext_res.scraps is not None:
                     if use_barcodes:
-                        log.warn("Scraps BAM is present but lacks " +
-                                 "barcodes - will not be propagated " +
-                                 "to output SubreadSet")
+                        log.warning("Scraps BAM is present but lacks " +
+                                    "barcodes - will not be propagated " +
+                                    "to output SubreadSet")
                     else:
                         scraps_in = IndexedBamReader(ext_res.scraps)
                     break
@@ -311,17 +346,17 @@ def filter_reads(input_bam,
                             use_subreads=use_subreads)
                         have_zmws.update(have_zmws_)
     if n_file_reads == 0:
-        log.error("No reads written")
-        return 1
-    log.info("{n} records from {z} ZMWs written".format(
-        n=n_file_reads, z=len(have_zmws)))
+        log.warn("No reads written")
+    else:
+        log.info("{n} records from {z} ZMWs written".format(
+            n=n_file_reads, z=len(have_zmws)))
 
     def _run_pbindex(bam_file):
         try:
             rc = subprocess.call(["pbindex", bam_file])
         except OSError as e:
             if e.errno == 2:
-                log.warn("pbindex not present, will not create .pbi file")
+                log.warning("pbindex not present, will not create .pbi file")
             else:
                 raise
     _run_pbindex(output_bam)
@@ -347,7 +382,7 @@ def filter_reads(input_bam,
             if relative:
                 ds_out.makePathsRelative(op.dirname(output_ds))
             if keep_original_uuid:
-                log.warn("Keeping input UUID {u}".format(u=ds_in.uuid))
+                log.warning("Keeping input UUID {u}".format(u=ds_in.uuid))
                 ds_out.objMetadata["UniqueId"] = ds_in.uuid
             ds_out.write(output_ds)
             log.info("wrote {t} XML to {x}".format(
@@ -391,21 +426,26 @@ def run(args):
             log.warning("Ignoring unused filtering arguments")
         show_zmws(args.input_bam)
         return 0
-    return filter_reads(
-        input_bam=args.input_bam,
-        output_bam=args.output_bam,
-        whitelist=args.whitelist,
-        blacklist=args.blacklist,
-        percentage=args.percentage,
-        count=args.count,
-        seed=args.seed,
-        ignore_metadata=args.ignore_metadata,
-        relative=args.relative,
-        anonymize=args.anonymize,
-        use_barcodes=args.barcodes,
-        sample_scraps=args.sample_scraps,
-        keep_original_uuid=args.keep_uuid,
-        use_subreads=args.subreads)
+    try:
+        return filter_reads(
+            input_bam=args.input_bam,
+            output_bam=args.output_bam,
+            whitelist=args.whitelist,
+            blacklist=args.blacklist,
+            percentage=args.percentage,
+            count=args.count,
+            seed=args.seed,
+            ignore_metadata=args.ignore_metadata,
+            relative=args.relative,
+            anonymize=args.anonymize,
+            use_barcodes=args.barcodes,
+            sample_scraps=args.sample_scraps,
+            keep_original_uuid=args.keep_uuid,
+            use_subreads=args.subreads,
+            min_adapters=args.min_adapters)
+    except UserError as e:
+        log.error(str(e))
+        return 1
 
 
 def get_parser():
@@ -455,6 +495,8 @@ def get_parser():
     p.add_argument("--keep-uuid", action="store_true",
                    help="If enabled, the UUID from the input dataset will " +
                         "be used for the output as well.")
+    p.add_argument("--min-adapters", action="store", type=int, default=None,
+                   help="Minimum number of adapters to filter for")
     return p
 
 

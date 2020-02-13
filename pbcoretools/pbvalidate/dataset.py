@@ -4,8 +4,7 @@ Validation of PacBio dataset XML (and referenced files)
 """
 
 import xml.etree.ElementTree as ET
-from cStringIO import StringIO
-from urlparse import urlparse
+from io import StringIO
 import xml.parsers.expat
 import traceback
 import itertools
@@ -14,10 +13,12 @@ import logging
 import os.path
 import sys
 
+from urllib.parse import urlparse
+
 try:
     from pyxb import exceptions_ as pyxbexceptions
 except ImportError:
-    class pyxbexceptions(object):
+    class pyxbexceptions:
 
         class PyXBException(Exception):
             pass
@@ -42,17 +43,16 @@ from pbcoretools.pbvalidate import bam
 log = logging.getLogger(__name__)
 
 
-class Constants(object):
+class Constants:
     XML_NAMESPACE = "http://pacificbiosciences.com/PacBioBaseDataModel.xsd"
 
 
-class DatasetTypes(object):
+class DatasetTypes:
     BAM_DATASET = ["AlignmentSet", "ConsensusSet", "ConsensusAlignmentSet",
                    "SubreadSet", "TranscriptSet"]
     FASTA_DATASET = ["BarcodeSet", "ContigSet", "ReferenceSet",
                      "GmapReferenceSet"]
-    HDF5_DATASET = ["HdfSubreadSet"]
-    ALL = BAM_DATASET + FASTA_DATASET + HDF5_DATASET
+    ALL = BAM_DATASET + FASTA_DATASET
 
 
 def _validate_read_groups(ctx, validators, reader):
@@ -65,7 +65,7 @@ def _validate_read_groups(ctx, validators, reader):
         bam_readers = reader.resourceReaders()
         for bam_reader in reader.resourceReaders():
             if bam_reader is None:
-                log.warn("Skipping unopenable file")
+                log.warning("Skipping unopenable file")
                 continue
             log.debug("Opened file: " + str(bam_reader))
             bam.validate_read_groups(ctx, validators, bam_reader)
@@ -155,7 +155,7 @@ class ValidateXML(ValidateFile):
             emsg = "{t}: {m}".format(
                 t=type(e).__name__, m=e.details())  # pylint: disable=no-member
         except pyxbexceptions.PyXBException as e:
-            emsg = "{t}: {m})".format(t=type(e).__name__, m=str(e.message))
+            emsg = "{t}: {m})".format(t=type(e).__name__, m=str(e))
         except Exception as e:
             emsg = str(e)
         if emsg is not None:
@@ -177,8 +177,6 @@ class ValidateRootTag(ValidateXML):
         xml_rt = xmlRootType(path)
         ds_name = _dsIdToName(ds_id)
         if ds_name != xml_rt:
-            if ds_name == "SubreadSet" and xml_rt == "HdfSubreadSet":
-                return []
             return [RootTagError.from_args(path, xml_rt, _dsIdToName(ds_id))]
         return []
 
@@ -243,8 +241,8 @@ class ValidateResourcesOpen (ValidateResources):
     def _get_errors(self, file_obj):
         errors = []
         try:
-            for r, f in itertools.izip(file_obj.externalResources,
-                                       file_obj.resourceReaders()):
+            for r, f in zip(file_obj.externalResources,
+                            file_obj.resourceReaders()):
                 if f is None:
                     errors.append(ResourceOpenError.from_args(file_obj,
                                                               urlparse(r.resourceId).path))
@@ -252,7 +250,7 @@ class ValidateResourcesOpen (ValidateResources):
             if e.filename is None or not os.path.exists(e.filename):
                 log.info("File %s doesn't exist, skipping" % e.filename)
                 return []
-            log.warn("Encountered IOError opening %s" % e.filename)
+            log.warning("Encountered IOError opening %s" % e.filename)
             return [ResourceOpenError.from_args(file_obj, e.filename)]
         else:
             return errors
@@ -303,11 +301,6 @@ class ValidateDatasetType (ValidateResources):
         if self.dataset_type is None or self.dataset_type == "any":
             return []
         elif self.dataset_type != ds_type:
-            # XXX see pbcore.io.dataset.DataSetIO:HdfSubreadSet - not sure
-            # I understand what's going on here but I think it is a patch for
-            # bug 27976
-            if self.dataset_type == "HdfSubreadSet" and ds_type == "SubreadSet":
-                return []
             return [DatasetTypeError.from_args(
                 DatasetReader.get_dataset_object(file_obj),
                 self.dataset_type, ds_type)]
@@ -387,7 +380,7 @@ class ValidateFileProxy (ValidateFileObject):
                     errors_ = self._validator.to_errors(_reader)
                     self._errors.update(set(errors_))
         except IOError as e:
-            #log.warn("Can't open file %s" % e.filename)
+            #log.warning("Can't open file %s" % e.filename)
             return True
         else:
             return len(self._errors) == 0
@@ -446,7 +439,7 @@ class ValidateNumRecords(ValidateResources):
         return []
 
 
-class DatasetReader (object):
+class DatasetReader:
 
     """
     Proxy for opening a dataset and iterating over records while avoiding an
@@ -524,7 +517,8 @@ def validate_dataset(
         # XXX suppressing logging errors temporarily
         # logging.disable(logging.CRITICAL)
         try:
-            ds = ReaderClass(file_name, strict=True)
+            ds = ReaderClass(  # pylint: disable=not-callable
+                file_name, strict=True)
         finally:
             pass  # logging.disable(logging.NOTSET)
     except Exception as e:
@@ -561,14 +555,11 @@ def validate_dataset(
         ValidateMetadata(),
         ValidateNamespace(),
         ValidateRandomAccess(),
+        ValidateResourcesOpen(),
+        ValidateNumRecords(),
     ]
-    if not actual_dataset_type in DatasetTypes.HDF5_DATASET:
-        validators.extend([
-            ValidateResourcesOpen(),
-            ValidateNumRecords(),
-        ])
-        if validate_index:
-            validators.append(ValidateIndex())
+    if validate_index:
+        validators.append(ValidateIndex())
     if strict:
         validators.extend([
             ValidateXML(),

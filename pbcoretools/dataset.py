@@ -26,6 +26,7 @@ def get_subparsers():
            ('copyto', EntryPoints.copyTo_options),
            ('absolutize', EntryPoints.absolutize_options),
            ('relativize', EntryPoints.relativize_options),
+           ('export', EntryPoints.export_datasets_options),
            ]
     return sps
 

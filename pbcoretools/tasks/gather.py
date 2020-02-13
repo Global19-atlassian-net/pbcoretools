@@ -22,6 +22,7 @@ from pbcoretools.chunking.gather import (
     gather_vcf,
     gather_zip,
     gather_fofn,
+    gather_bed,
     gather_datastore)
 
 log = logging.getLogger(__name__)
@@ -39,6 +40,7 @@ def run_args(args):
     MODES = {
         ".gff": gather_gff,
         ".vcf": gather_vcf,
+        ".bed": gather_bed,
         ".csv": gather_csv,
         ".fasta": fasta_gather,
         ".fastq": fastq_gather,

@@ -24,7 +24,7 @@ from pbcommand.models import FileTypes, DataStore
 log = logging.getLogger(__name__)
 
 
-class Constants(object):
+class Constants:
     # default filter applied to output of 'lima'
     BARCODE_QUALITY_GREATER_THAN = 26
     ALLOWED_BC_TYPES = set([f.file_type_id for f in
@@ -66,7 +66,7 @@ def split_laa_fastq(input_file_name, output_file_base, subreads_file_name,
     if bio_samples_by_bc is None:
         bio_samples_by_bc = {}
         with SubreadSet(subreads_file_name, strict=True) as ds:
-            if ds.isBarcoded:
+            if ds.isBarcoded:  # pylint: disable=no-member
                 bio_samples_by_bc = get_barcode_sample_mappings(ds)
     outputs = []
     for bc_id in sorted(records.keys()):
@@ -108,17 +108,20 @@ def iterate_datastore_read_set_files(datastore_file,
 
 def get_barcode_sample_mappings(ds):
     barcoded_samples = []
-    for bioSample in ds.metadata.bioSamples:
-        for dnaBc in bioSample.DNABarcodes:
-            barcoded_samples.append((dnaBc.name, bioSample.name))
+    for collection in ds.metadata.collections:
+        for bioSample in collection.wellSample.bioSamples:
+            for dnaBc in bioSample.DNABarcodes:
+                barcoded_samples.append((dnaBc.name, bioSample.name))
     # recover the original barcode FASTA file so we can map the barcode
     # indices in the BAM file to the labels
     bc_sets = {extRes.barcodes for extRes in ds.externalResources
                if extRes.barcodes is not None}
     if len(bc_sets) > 1:
-        log.warn("Multiple BarcodeSets detected - further processing skipped.")
+        log.warning(
+            "Multiple BarcodeSets detected - further processing skipped.")
     elif len(bc_sets) == 0:
-        log.warn("Can't find original BarcodeSet - further processing skipped.")
+        log.warning(
+            "Can't find original BarcodeSet - further processing skipped.")
     else:
         with BarcodeSet(list(bc_sets)[0]) as bcs:
             labels = [rec.id for rec in bcs]
@@ -153,7 +156,7 @@ def make_barcode_sample_csv(subreads, csv_file):
     headers = ["Barcode Name", "Bio Sample Name"]
     barcoded_samples = {}
     with SubreadSet(subreads, strict=True) as ds:
-        if ds.isBarcoded:
+        if ds.isBarcoded:  # pylint: disable=no-member
             barcoded_samples = get_barcode_sample_mappings(ds)
     with open(csv_file, "w") as csv_out:
         writer = csv.writer(csv_out, delimiter=',', lineterminator="\n")
@@ -162,6 +165,24 @@ def make_barcode_sample_csv(subreads, csv_file):
             writer.writerow(
                 [bc_label, barcoded_samples.get(bc_label, "UnnamedSample")])
     return barcoded_samples
+
+
+def parse_biosamples_csv(csv_file):
+    records = []
+    with open(csv_file, "r") as csv_in:
+        reader = csv.reader(csv_in, delimiter=',')
+        for k, row in enumerate(reader):
+            if len(row) != 2:
+                raise ValueError("Expected two fields, got %s" % row)
+            try:
+                for field in row:
+                    x = field.encode("ascii")
+            except UnicodeDecodeError as e:
+                raise ValueError(
+                    "Non-ASCII characters are not allowed in BioSamples CSV.  Please make sure you use a plain-text editor to generate the CSV file and use only alphanumeric characters in your sample names.")
+            if k > 0:
+                records.append(tuple(row))
+    return records
 
 
 def make_combined_laa_zip(fastq_file, summary_csv, input_subreads, output_file_name):
@@ -194,40 +215,92 @@ def consolidate_barcodes(ds, bio_sample):
         bio_sample.DNABarcodes.pop(k)
 
 
-def discard_bio_samples(subreads, barcode_label):
+def discard_bio_samples(ds, barcode_label):
     """
     Remove any BioSample records from a SubreadSet that are not associated
     with the specified barcode.
     """
-    deletions = []
-    for k, bio_sample in enumerate(subreads.metadata.bioSamples):
-        barcodes = set([bc.name for bc in bio_sample.DNABarcodes])
-        if barcode_label in barcodes:
-            if len(bio_sample.DNABarcodes) > 1:
-                consolidate_barcodes(subreads, bio_sample)
-            continue
-        if len(barcodes) == 0:
-            log.warn("No barcodes defined for sample %s", bio_sample.name)
-        deletions.append(k)
-    for k in reversed(deletions):
-        subreads.metadata.bioSamples.pop(k)
-    if len(subreads.metadata.bioSamples) == 0:
-        log.warn("Dataset has no BioSamples")
-        log.warn("Will create new BioSample and DNABarcode records")
-        subreads.metadata.bioSamples.addSample(barcode_label)
-        subreads.metadata.bioSamples[0].DNABarcodes.addBarcode(barcode_label)
+    while len(ds.metadata.bioSamples) > 0:
+        ds.metadata.bioSamples.pop(0)
+    for coll in ds.metadata.collections:
+        deletions = []
+        for k, bio_sample in enumerate(coll.wellSample.bioSamples):
+            barcodes = set([bc.name for bc in bio_sample.DNABarcodes])
+            if barcode_label in barcodes:
+                if len(bio_sample.DNABarcodes) > 1:
+                    consolidate_barcodes(ds, bio_sample)
+                continue
+            if len(barcodes) == 0:
+                log.warning("No barcodes defined for sample %s", bio_sample.name)
+            deletions.append(k)
+        for k in reversed(deletions):
+            coll.wellSample.bioSamples.pop(k)
+        if len(coll.wellSample.bioSamples) == 0:
+            log.warning("Dataset has no BioSamples")
+            log.warning("Will create new BioSample and DNABarcode records")
+            coll.wellSample.bioSamples.addSample(barcode_label)
+            coll.wellSample.bioSamples[0].DNABarcodes.addBarcode(barcode_label)
+
+
+def set_bio_samples(ds, barcodes_and_samples):
+    """
+    Given a list of (barcode, bioSample) tuples, apply these to the dataset,
+    deleting any existing BioSample records.
+    """
+    # FIXME lima should just use the CollectionMetadata instead of duplicating
+    # the BioSamples in the DataSetMetadata
+    while len(ds.metadata.bioSamples) > 0:
+        ds.metadata.bioSamples.pop(0)
+    for dna_bc, biosample in barcodes_and_samples:
+        ds.metadata.bioSamples.addSample(biosample)
+        ds.metadata.bioSamples[-1].DNABarcodes.addBarcode(dna_bc)
+    for coll in ds.metadata.collections:
+        while len(coll.wellSample.bioSamples) > 0:
+            coll.wellSample.bioSamples.pop(0)
+        for dna_bc, biosample in barcodes_and_samples:
+            coll.wellSample.bioSamples.addSample(biosample)
+            coll.wellSample.bioSamples[-1].DNABarcodes.addBarcode(dna_bc)
+    return ds
 
 
 def get_bio_sample_name(ds):
-    bio_samples = {s.name for s in ds.metadata.bioSamples}
-    if len(bio_samples) == 0:
-        log.warn("No BioSample records present")
+    """
+    TAG-4488: Biosample name processing special for IsoSeq application in Narwhal.
+
+    Return exactly one biosample name string to represent the dataset
+    0) if dataset has NO movie (empty dataset), return 'UnnamedSample'.
+    1) if dataset has multiple movies, return 'Multiple'.
+    2) if dataset has exactly one movie
+       2.1) if it has NO SM tag, return 'UnnamedSample'
+       2.2) if it has exactly one SM tag, return that SM tag
+       2.3) if it has multiple SM tags, return 'Multiple'
+    """
+    readers = ds.resourceReaders()
+    bioSamples = set()
+    movies = set()
+    for reader in readers:
+        bioSamples.update(list(reader.readGroupTable.SampleName))
+        movies.update(list(reader.readGroupTable.MovieName))
+
+    numBioSamples = len(bioSamples)
+    numMovies = len(movies)
+
+    if numMovies == 0:  # Input dataset is empty, return something
+        log.warning("No movie present in dataset!")
         return "UnnamedSample"
-    elif len(bio_samples) > 1:
-        log.warn("Multiple unique BioSample records present")
-        return "multiple_samples"
-    else:
-        return list(bio_samples)[0]
+    if numMovies > 1:  # Multiple movies, return 'Multiple'
+        log.warning("Multiple movies present in dataset!")
+        return "Multiple"
+
+    # assert numMovies == 1, exactly one movie
+    if numBioSamples == 0:
+        log.warning("Has one movie, but NO SM tag present in dataset!")
+        return "UnnamedSample"
+    if numBioSamples == 1:
+        return list(bioSamples)[0]
+    if numBioSamples > 1:  # one movie, multiple read group, multiple unique SM tags
+        log.warning("Has one movie, but multiple SM tag present in dataset!")
+        return 'Multiple'
 
 
 def get_ds_name(ds, base_name, barcode_label):
@@ -236,9 +309,10 @@ def get_ds_name(ds, base_name, barcode_label):
     """
     suffix = "(unknown sample)"
     try:
-        n_samples = len(ds.metadata.bioSamples)
+        coll = ds.metadata.collections[0]
+        n_samples = len(coll.wellSample.bioSamples)
         if n_samples == 1:
-            suffix = "(%s)" % ds.metadata.bioSamples[0].name
+            suffix = "(%s)" % coll.wellSample.bioSamples[0].name
         elif n_samples > 1:
             suffix = "(multiple samples)"
         else:
@@ -250,10 +324,11 @@ def get_ds_name(ds, base_name, barcode_label):
 
 
 def _get_uuid(ds, barcode_label):
-    for bio_sample in ds.metadata.bioSamples:
-        for dna_bc in bio_sample.DNABarcodes:
-            if dna_bc.name == barcode_label and dna_bc.uniqueId:
-                return dna_bc.uniqueId
+    for collection in ds.metadata.collections:
+        for bio_sample in collection.wellSample.bioSamples:
+            for dna_bc in bio_sample.DNABarcodes:
+                if dna_bc.name == barcode_label and dna_bc.uniqueId:
+                    return dna_bc.uniqueId
 
 
 def uniqueify_collections(metadata):
@@ -288,7 +363,11 @@ def _update_barcoded_dataset(
     sample_name = bio_samples_d.get(barcode_label, None)
     if sample_name is not None:
         force_set_all_bio_sample_names(dataset, sample_name)
+    else:
+        log.warn("Can't find sample name for '{b}'".format(b=barcode_label))
     assert parent_type == dataset.datasetType
+    while len(dataset.metadata.bioSamples) > 0:
+        dataset.metadata.bioSamples.pop(0)
     dataset.subdatasets = []
     dataset.metadata.addParentDataSet(parent_uuid,
                                       parent_type,
@@ -303,7 +382,7 @@ def _update_barcoded_dataset(
             dataset.objMetadata["UniqueId"] = uuid
             log.info("Set dataset UUID to %s", dataset.uuid)
         else:
-            log.warn("No UUID defined for this barcoded dataset.")
+            log.warning("No UUID defined for this barcoded dataset.")
             dataset.newUuid()
     else:
         dataset.newUuid()
@@ -381,10 +460,12 @@ def _load_files_for_update(
             update_files.append(f)
     bio_samples_d = {}
     barcode_uuids_d = {}
-    for bio_sample in parent_ds.metadata.bioSamples:
-        for dnabc in bio_sample.DNABarcodes:
-            bio_samples_d[dnabc.name] = bio_sample.name
-            barcode_uuids_d[dnabc.name] = dnabc.uniqueId
+    for collection in parent_ds.metadata.collections:
+        for bio_sample in collection.wellSample.bioSamples:
+            for dnabc in bio_sample.DNABarcodes:
+                bio_samples_d[dnabc.name] = bio_sample.name
+                barcode_uuids_d[dnabc.name] = dnabc.uniqueId
+        break
     return barcode_names, bio_samples_d, barcode_uuids_d, update_files, parent_info
 
 
@@ -506,27 +587,28 @@ def force_set_all_bio_sample_names(ds, sample_name):
     :return: the number of BioSamples modified (including new samples)
     """
     n_total = 0
-    bioSamples = ds.metadata.bioSamples
-    n_samples = len(bioSamples)
-    n_total += max(1, n_samples)
-    if n_samples == 0:
-        log.debug("Adding new BioSample '%s' to dataset", sample_name)
-        bioSamples.addSample(sample_name)
-    elif n_samples == 1:
-        bioSamples[0].name = sample_name
-    else:
-        log.warn("Multiple BioSamples found: '%s'",
-                 "', '".join([s.name for s in bioSamples]))
-        log.warn("These will be overwritten with '%s'", sample_name)
-        for sample in bioSamples:
-            sample.name = sample_name
+    for collection in ds.metadata.collections:
+        bioSamples = collection.wellSample.bioSamples
+        n_samples = len(bioSamples)
+        n_total += max(1, n_samples)
+        if n_samples == 0:
+            log.debug("Adding new BioSample '%s' to dataset", sample_name)
+            bioSamples.addSample(sample_name)
+        elif n_samples == 1:
+            bioSamples[0].name = sample_name
+        else:
+            log.warning("Multiple BioSamples found: '%s'",
+                        "', '".join([s.name for s in bioSamples]))
+            log.warning("These will be overwritten with '%s'", sample_name)
+            for sample in bioSamples:
+                sample.name = sample_name
     return n_total
 
 
 # Regular expression pattern of sample strings: must be a string
 # of length >= 1, the leading character must be a letter or number,
 # the remaining characters must be in [a-zA-Z0-9\_\-]
-SAMPLE_CHARSET_RE_STR = '[a-zA-Z0-9\-\_]'
+SAMPLE_CHARSET_RE_STR = r'[a-zA-Z0-9\-\_]'
 SAMPLE_CHARSET_RE = re.compile(r"{}".format(SAMPLE_CHARSET_RE_STR))
 
 
@@ -587,15 +669,21 @@ def sanitize_dataset_tags(dset, remove_hidden=False):
     dset.name = " ".join(name_fields)
 
 
-def reparent_dataset(input_file, dataset_name, output_file):
+def reparent_dataset(input_file,
+                     dataset_name,
+                     output_file,
+                     biosamples_csv=None):
     with openDataSet(input_file, strict=True) as ds_in:
         if len(ds_in.metadata.provenance) > 0:
-            log.warn("Removing existing provenance record: %s",
-                     ds_in.metadata.provenance)
+            log.warning("Removing existing provenance record: %s",
+                        ds_in.metadata.provenance)
             ds_in.metadata.provenance = None
         ds_in.name = dataset_name
         ds_in.newUuid(random=True)
         sanitize_dataset_tags(ds_in, remove_hidden=True)
+        if (biosamples_csv is not None):
+            sample_records = parse_biosamples_csv(biosamples_csv)
+            set_bio_samples(ds_in, sample_records)
         ds_in.write(output_file)
     return 0
 
@@ -613,12 +701,14 @@ def update_consensus_reads(ccs_in, subreads_in, ccs_out, use_run_design_uuid=Fal
             if len(uuids) == 1:
                 run_design_uuid = list(uuids)[0]
             elif len(uuids) == 0:
-                log.warn("No pre-defined ConsensusReadSetRef UUID found")
+                log.warning("No pre-defined ConsensusReadSetRef UUID found")
             else:
-                log.warn("Multiple ConsensusReadSetRef UUIDs found")
-        if len(ds.metadata.bioSamples) == 0:
-            for bio_sample in ds_subreads.metadata.bioSamples:
-                ds.metadata.bioSamples.append(bio_sample)
+                log.warning("Multiple ConsensusReadSetRef UUIDs found")
+        for collection in ds.metadata.collections:
+            if len(collection.wellSample.bioSamples) == 0:
+                for collection2 in ds_subreads.metadata.collections:
+                    for bio_sample in collection2.wellSample.bioSamples:
+                        collection.bioSamples.append(bio_sample)
         if run_design_uuid is not None:
             ds.uuid = run_design_uuid
         else:
@@ -626,3 +716,18 @@ def update_consensus_reads(ccs_in, subreads_in, ccs_out, use_run_design_uuid=Fal
         sanitize_dataset_tags(ds, remove_hidden=True)
         ds.write(ccs_out)
     return 0
+
+
+def collect_all_dataset_paths(ds_file):
+    paths = [op.abspath(ds_file)]
+    with openDataSet(ds_file) as ds_in:
+        ds_in.makePathsAbsolute()
+        for ext_res in ds_in.externalResources:
+            paths.append(ext_res.resourceId)
+            for index in ext_res.indices:
+                paths.append(index.resourceId)
+            for ext_res2 in ext_res.externalResources:
+                paths.append(ext_res2.resourceId)
+                for index in ext_res2.indices:
+                    paths.append(index.resourceId)
+    return paths

@@ -4,9 +4,6 @@ Utility for validating files produced by PacBio software against our own
 internal specifications.
 """
 
-from __future__ import absolute_import
-
-from cStringIO import StringIO
 from xml.dom import minidom
 import warnings
 import argparse
@@ -16,12 +13,18 @@ import time
 import re
 import sys
 
-from pbcommand.cli import (pbparser_runner,
-                           get_default_argparser_with_base_opts)
-from pbcommand.models.parser import get_pbparser
+try:
+    # Python 2
+    from cStringIO import StringIO
+except ImportError:
+    # Python 3
+    from io import StringIO
+
+from pbcommand.cli import pacbio_args_runner
 from pbcommand.models import FileTypes
 from pbcommand.utils import setup_log
 
+from pbcoretools.utils import get_base_parser
 from . import bam
 from . import fasta
 from . import dataset
@@ -32,12 +35,8 @@ __version__ = "0.6"
 FASTA_EXTENSIONS = {".fasta", ".fa", ".fna", ".fsa"}
 
 
-def get_parser(parser=None):
-    if parser is None:
-        parser = get_default_argparser_with_base_opts(
-            version=__version__,
-            description=__doc__,
-            default_level="CRITICAL")
+def get_parser():
+    parser = get_base_parser(__doc__, log_level="CRITICAL")
     parser.add_argument('file', help="BAM, FASTA, or DataSet XML file")
     parser.add_argument("--quick", dest="quick", action="store_true",
                         help="Limits validation to the first 100 records " +
@@ -69,23 +68,7 @@ def get_parser(parser=None):
     return parser
 
 
-def get_parser_tc():
-    p = get_pbparser("pbcoretools.tasks.pbvalidate", "0.1.0", "pbvalidate",
-                     "Run pbvalidate on SubreadSet",
-                     "python -m pbcoretools.pbvalidate.main --resolved-tool-contract",
-                     is_distributed=True, nproc=1, default_level="WARN")
-    p.tool_contract_parser.add_input_file_type(FileTypes.DS_SUBREADS,
-                                               "subreads",
-                                               name="SubreadSet",
-                                               description="PacBio Subread DataSet XML")
-    p.tool_contract_parser.add_output_file_type(FileTypes.XML, "junit_report",
-                                                name="JUnit Report", description="JUnit Report",
-                                                default_name="tests_junit")
-    get_parser(p.arg_parser.parser)
-    return p
-
-
-class run_validator (object):
+class run_validator:
 
     def __init__(self, args, out=sys.stdout, save_exit_code=False):
         if not os.path.isfile(args.file):
@@ -193,29 +176,15 @@ class run_validator (object):
         return doc
 
 
-def run(*args, **kwds):
-    return run_validator(*args, **kwds).return_code
-
-
-def run_rtc(rtc):
-    argv = [
-        rtc.task.input_files[0],
-        "--type", "SubreadSet",
-        "--index", "--quick",
-        # FIXME we should use --strict, but pyxb is a pain
-        "--xunit-out", rtc.task.output_files[0]
-    ]
-    p = get_parser()
-    args = p.parse_args(argv)
-    return run_validator(args, save_exit_code=True).return_code
+def run_args(args):
+    return run_validator(args).return_code
 
 
 def main(argv=sys.argv):
-    return pbparser_runner(
+    return pacbio_args_runner(
         argv=argv[1:],
-        parser=get_parser_tc(),
-        args_runner_func=run,
-        contract_runner_func=run_rtc,
+        parser=get_parser(),
+        args_runner_func=run_args,
         alog=logging.getLogger(),
         setup_log_func=setup_log)
 

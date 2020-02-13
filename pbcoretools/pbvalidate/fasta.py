@@ -5,7 +5,6 @@ assumption that the input file will at least be processed by the parser in
 pbcore.io without raising an exception.
 """
 
-from __future__ import division, print_function
 import argparse
 import logging
 import gzip
@@ -20,12 +19,12 @@ from pbcoretools.pbvalidate.core import *
 log = logging.getLogger()
 
 
-class Constants (object):
-    OUTER_WHITESPACE = "^(\s)|(\s)$"
+class Constants:
+    OUTER_WHITESPACE = r"^(\s)|(\s)$"
     # IUPAC nucleotide characters, minus '-' and '.'
-    ILLEGAL_NUCLEOTIDES = "([^gatcuryswkmbdhvnGATCURYSWKMBDHVN]+)"
-    ILLEGAL_NUC_STRICT = "([^gatcnGATCN]+)"
-    ILLEGAL_IDENTIFIER = "([\,\:\"]+)"
+    ILLEGAL_NUCLEOTIDES = r"([^gatcuryswkmbdhvnGATCURYSWKMBDHVN]+)"
+    ILLEGAL_NUC_STRICT = r"([^gatcnGATCN]+)"
+    ILLEGAL_IDENTIFIER = r"([\,\:\"]+)"
 
 
 class FastaError (ValidatorError):
@@ -244,9 +243,9 @@ class ValidateFastaRaw (ValidateFile):
 
         def _open(file_name):
             if file_name.endswith(".gz"):
-                return gzip.open(file_name)
+                return gzip.open(file_name, mode="rt")
             else:
-                return open(file_name, "r")
+                return open(file_name, mode="rt")
         is_dos = is_unix = False
         with _open(path) as f:
             prev_line_was_header = False
@@ -284,7 +283,7 @@ class ValidateFastaRaw (ValidateFile):
         check_current_sequence_lines(current_seq_line_lengths,
                                      label=prev_header)
         # XXX disabled as this is no longer relevant
-        #if len(all_seq_line_lengths) > 1:
+        # if len(all_seq_line_lengths) > 1:
         #    self._errors.append(GlobalWrappingError.from_args(path))
         if is_dos and is_unix:
             self._errors.append(LineEndingsError.from_args(path))

@@ -18,8 +18,11 @@ __version__ = "0.1"
 
 
 def run_args(args):
+    base_dir = args.outdir
+    if base_dir is None:
+        base_dir = op.dirname(args.lima_datastore)
     datastore = update_barcoded_sample_metadata(
-        base_dir=op.dirname(args.lima_datastore),
+        base_dir=base_dir,
         datastore_file=op.realpath(args.lima_datastore),
         input_reads=args.input_reads,
         barcode_set=args.barcodes,
@@ -52,6 +55,8 @@ def _get_parser():
                    help="Minimum barcode quality encoded in dataset filter")
     p.add_argument("-j", "--nproc", dest="nproc", action="store", type=int,
                    default=1, help="Number of processors to use")
+    p.add_argument("--outdir", action="store", default=None,
+                   help="Output directory for update datasets")
     return p
 
 

@@ -5,12 +5,10 @@ that files can be read by the pbcore.io module, which will do some checking
 implicitly.
 """
 
-from __future__ import division, print_function
 from collections import defaultdict
 from functools import wraps
 import warnings
 import argparse
-import unittest
 import hashlib
 import logging
 import os.path
@@ -32,7 +30,7 @@ from pbcoretools.pbvalidate.core import (
 #log = logging.getLogger()
 
 
-class Constants (object):
+class Constants:
     PYSAM_VERSION = [int(x) for x in pysam.__version__.split(".")]
     # first some global definitions
     FLAG_SEGMENT_UNMAPPED = 4
@@ -82,17 +80,6 @@ class Constants (object):
     READ_TYPE_SCRAP = "SCRAP"
     READ_TYPE_MIXED = "mixed"
     SORT_ORDER_UNKNOWN = "unknown"
-
-
-def _check_pysam_version():  # XXX unused, see below
-    import pysam.version
-    version = pysam.version.__version__.split(".")
-    if (version < ["0", "15", "1"]):
-        raise ImportError("pysam >= 0.15.1 required")
-
-# workaround for lack of has_tag() in pysam < 0.8.2
-# FIXME it would be nice if we could just require a newer version, but one of
-# the other PacBio modules forces me to use 0.8.1
 
 
 def _has_tag(aln, tag):
@@ -367,7 +354,7 @@ class ValidateFileName (ValidateFileObject):
                 if all(readTypes == otherType):
                     readType = otherType
                     break
-        for rtype, suffix in Constants.EXPECTED_SUFFIX.iteritems():
+        for rtype, suffix in Constants.EXPECTED_SUFFIX.items():
             if file_name.endswith(suffix + ".bam") and readType != rtype:
                 error = FileContentMismatchError.from_args(file_obj,
                                                            rtype, readType)
@@ -521,7 +508,8 @@ def _rg_id_string(rg):
     ds_dict = _get_key_value_pairs_dict(rg.get("DS", ""))
     movieName = rg.get("PU")
     readType = ds_dict.get(Constants.READ_TYPE_TAG)
-    return hashlib.md5(movieName + "//" + readType).hexdigest()[:8]
+    rg_id = movieName + "//" + readType
+    return hashlib.md5(rg_id.encode("utf-8")).hexdigest()[:8]
 
 
 def _get_read_type(rg):
@@ -630,7 +618,7 @@ class ValidateReadBase (ValidateRecord):
         return self._get_errors(aln)
 
     def to_error(self, aln):
-        return self.to_errors()[0]
+        return self.to_errors(aln)[0]
 
 
 class ValidateReadUnique (ValidateReadBase):

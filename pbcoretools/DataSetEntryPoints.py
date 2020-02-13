@@ -1,13 +1,13 @@
 # /usr/bin/env python
 
-from __future__ import print_function
-
-from collections import defaultdict
+from collections import OrderedDict
 from functools import reduce
 import argparse
+import tarfile
 import logging
 import string
 import re
+import os.path as op
 import os
 
 from pbcore.io import DataSet, ContigSet, openDataSet, openDataFile
@@ -20,17 +20,20 @@ from pbcommand.validators import validate_output_dir
 from pbcoretools.file_utils import (add_mock_collection_metadata,
                                     force_set_all_well_sample_names,
                                     force_set_all_bio_sample_names,
-                                    uniqueify_collections)
+                                    uniqueify_collections,
+                                    collect_all_dataset_paths)
 import pbcoretools.utils
 
 log = logging.getLogger(__name__)
 
 
 def show_sample_names_if_defined(ds):
-    bio_samples = {s.name for s in ds.metadata.bioSamples}
+    bio_samples = set()
     well_samples = set()
     for coll in ds.metadata.collections:
         well_samples.add(coll.wellSample.name)
+        for bioSample in coll.wellSample.bioSamples:
+            bio_samples.add(bioSample.name)
     well_samples = sorted(list(well_samples))
     bio_samples = sorted(list(bio_samples))
     if not bio_samples:
@@ -101,11 +104,11 @@ def createXml(args):
         dset.loadMetadata(args.metadata)
     if args.well_sample_name or args.bio_sample_name:
         if args.metadata:
-            log.warn(
+            log.warning(
                 "Setting the WellSample or BioSample name will overwrite fields pulled from %s", args.metadata)
         n_new_collections = add_mock_collection_metadata(dset)
         if n_new_collections > 0:
-            log.warn(
+            log.warning(
                 "Created new CollectionMetadata from blank template for %d movies", n_new_collections)
         if args.well_sample_name:
             force_set_all_well_sample_names(dset, args.well_sample_name)
@@ -191,11 +194,11 @@ def pad_separators(base_set):
 
 
 def parse_filter_list(filtStrs):
-    filters = defaultdict(list)
+    filters = OrderedDict()
     # pull them from the filter parser:
     separators = OPMAP.keys()
     # pad the ones that start and end with letters
-    separators = pad_separators(separators)
+    separators = sorted(pad_separators(separators), key=lambda o: -1*len(o))
     for filtStr in filtStrs:
         for filt in pbcoretools.utils.split_filtStr(filtStr):
             for sep in separators:
@@ -206,9 +209,13 @@ def parse_filter_list(filtStrs):
                         log.exception('{!r}.split({!r})'.format(filt, sep))
                         raise
                     condition = (sep.strip(), condition.strip())
+                    param = param.strip()
                     log.debug('filt={!r} param={!r} condition={!r}'.format(
                         filt, param, condition))
-                    filters[param.strip()].append(condition)
+                    if param in filters:
+                        filters[param].append(condition)
+                    else:
+                        filters[param] = [condition]
                     break
     return filters
 
@@ -251,6 +258,10 @@ def splitXml(args):
     log.debug("Starting split")
     dataSet = openDataSet(args.infile, strict=args.strict)
     chunks = len(args.outfiles)
+    nSuf = -2 if re.search(r".+\.\w+set\.xml", args.infile.lower()) else -1
+    default_prefix = '.'.join(args.infile.split('.')[:nSuf])
+    ext = '.'.join(args.infile.split('.')[nSuf:])
+    prefix = args.prefix if args.prefix is not None else default_prefix
     if args.chunks:
         chunks = args.chunks
     if isinstance(dataSet, ContigSet):
@@ -266,38 +277,20 @@ def splitXml(args):
                             barcodes=args.barcodes,
                             byRecords=(not args.byRefLength),
                             updateCounts=(not args.noCounts))
-    log.debug("Splitting into {i} chunks".format(i=len(dss)))
-    infix = 'chunk{i}'
-    chNums = range(len(dss))
-    if args.barcodes and not args.simple_chunk_ids:
-        infix = '{i}'
-        chNums = ['_'.join(ds.barcodes).replace(
-            '[', '').replace(']', '').replace(', ', '-') for ds in dss]
-    nSuf = -2 if re.search(r".+\.\w+set\.xml", args.infile.lower()) else -1
-    default_prefix = '.'.join(args.infile.split('.')[:nSuf])
-    ext = '.'.join(args.infile.split('.')[nSuf:])
-    prefix = args.prefix if args.prefix is not None else default_prefix
-    if not args.outfiles:
-        if not args.outdir:
-            args.outfiles = ['.'.join([prefix, infix.format(i=chNum), ext])
-                             for chNum in chNums]
+    for i, ds in enumerate(dss):
+        infix = 'chunk{i}'
+        chNum = str(i)
+        if args.barcodes and not args.simple_chunk_ids:
+            infix = '{i}'
+            chNum = '_'.join(ds.barcodes).replace(
+                '[', '').replace(']', '').replace(', ', '-')
+        if args.outfiles:
+            out_fn = args.outfiles[i]
         else:
-            args.outfiles = ['.'.join([prefix, infix.format(i=chNum), ext])
-                             for chNum in chNums]
-            args.outfiles = [os.path.join(args.outdir,
-                                          os.path.basename(outfn))
-                             for outfn in args.outfiles]
-            num = len(dss)
-            end = ''
-            if num > 5:
-                num = 5
-                end = '...'
-            log.debug("Emitting {f} {e}".format(
-                f=', '.join(args.outfiles[:num]),
-                e=end))
-    log.debug("Finished splitting, now writing")
-    for out_fn, dset in zip(args.outfiles, dss):
-        dset.write(out_fn)
+            out_fn = '.'.join([prefix, infix.format(i=chNum), ext])
+            if args.outdir:
+                out_fn = op.join(args.outdir, op.basename(out_fn))
+        ds.write(out_fn)
     log.debug("Done writing files")
     return 0
 
@@ -349,7 +342,8 @@ def mergeXml(args):
             allds.metadata.provenance = None
         if args.name:
             allds.name = args.name
-        allds.updateCounts()
+        if not args.skipCounts:
+            allds.updateCounts()
         if args.no_sub_datasets:
             allds.subdatasets = []
         if args.unique_collections:
@@ -568,3 +562,34 @@ def consolidate_options(parser):
     parser.add_argument("xmlfile", type=str,
                         help="The resulting DataSet XML file")
     parser.set_defaults(func=consolidateXml)
+
+
+def export_datasets(args):
+    if not args.outfile.endswith(".tar.gz"):
+        raise ValueError("Output file name must end in .tar.gz")
+    paths = []
+    for file_name in args.infiles:
+        paths.extend(collect_all_dataset_paths(file_name))
+    paths = list(OrderedDict.fromkeys(paths).keys())
+    with tarfile.open(args.outfile, "w:gz") as tar:
+        for file_name in paths:
+            log.info("Archiving %s", file_name)
+            archive_file_name = file_name
+            if args.relative_to is not None:
+                archive_file_name = op.relpath(file_name, args.relative_to)
+            tar.add(file_name, arcname=archive_file_name)
+    log.info("Wrote %d dataset and resource files to %s", len(paths), args.outfile)
+    return 0
+
+
+def export_datasets_options(parser):
+    parser.description = ("Export one or more DataSet XML files and all "
+                          "external resources to a tar.gz archive")
+    parser.add_argument("--relative-to", action="store", default=None,
+                        help="Make all filenames relative to this path")
+    parser.add_argument("outfile", type=str,
+                        help="The resulting tar.gz file")
+    # parser.add_argument("infiles", type=validate_file, nargs='+',
+    parser.add_argument("infiles", type=str, nargs='+',
+                        help="The XML files to export")
+    parser.set_defaults(func=export_datasets)

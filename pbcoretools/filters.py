@@ -18,7 +18,7 @@ __version__ = "0.1"
 
 def sanitize_read_length(read_length):
     if read_length:
-        if not re.search('^-?\d*(\.\d*)?$', str(read_length).strip()):
+        if not re.search(r'^-?\d*(\.\d*)?$', str(read_length).strip()):
             raise ValueError('read_length filter value "{v}" is not a '
                              'number'.format(v=read_length))
         try:
@@ -78,8 +78,8 @@ def run_filter_dataset(in_file, out_file, read_length, other_filters,
     if not "(filtered)" in dataSet.name:
         dataSet.name = dataSet.name + " (filtered)"
     if len(dataSet.metadata.provenance) > 0:
-        log.warn("Removing existing provenance record: %s",
-                 dataSet.metadata.provenance)
+        log.warning("Removing existing provenance record: %s",
+                    dataSet.metadata.provenance)
         dataSet.metadata.provenance = None
     dataSet.newUuid()
     dataSet.write(out_file)
