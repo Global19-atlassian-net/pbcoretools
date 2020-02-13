@@ -523,8 +523,8 @@ class TestDataSet:
         with SubreadSet(outfile) as ds:
             assert len(ds.metadata.collections) == 1
             assert ds.metadata.collections[0].wellSample.name == "WELLSAMPLE"
-            assert ds.metadata.bioSamples[0].name == "BIOSAMPLE"
-            assert len(ds.metadata.bioSamples) == 1
+            assert ds.metadata.collections[0].wellSample.bioSamples[0].name == "BIOSAMPLE"
+            assert len(ds.metadata.collections[0].wellSample.bioSamples) == 1
         # now with existing samples
         outfile = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
         cmd = " ".join(["dataset", "create", "--force", outfile,
@@ -533,7 +533,7 @@ class TestDataSet:
         with SubreadSet(outfile) as ds:
             assert len(ds.metadata.collections) == 1
             assert ds.metadata.collections[0].wellSample.name == "WELLSAMPLE"
-            biosamples = {s.name for s in ds.metadata.bioSamples}
+            biosamples = {s.name for s in ds.metadata.collections[0].wellSample.bioSamples}
             assert biosamples == {"BIOSAMPLE"}
 
     def _run_export_and_check_outputs(self, ifn, expected_paths):

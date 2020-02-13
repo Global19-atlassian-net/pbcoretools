@@ -110,5 +110,5 @@ class TestReparent(PbIntegrationBase):
         with openDataSet(output_file) as ds_out:
             samples = [("lbc1--lbc1", "Alice"), ("lbc2--lbc2", "Bob")]
             samples_out = {
-                s.DNABarcodes[0].name: s.name for s in ds_out.metadata.bioSamples}
+                s.DNABarcodes[0].name: s.name for s in ds_out.metadata.collections[0].wellSample.bioSamples}
             assert samples_out == dict(samples)

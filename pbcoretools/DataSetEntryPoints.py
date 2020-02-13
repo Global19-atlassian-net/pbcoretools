@@ -28,10 +28,12 @@ log = logging.getLogger(__name__)
 
 
 def show_sample_names_if_defined(ds):
-    bio_samples = {s.name for s in ds.metadata.bioSamples}
+    bio_samples = set()
     well_samples = set()
     for coll in ds.metadata.collections:
         well_samples.add(coll.wellSample.name)
+        for bioSample in coll.wellSample.bioSamples:
+            bio_samples.add(bioSample.name)
     well_samples = sorted(list(well_samples))
     bio_samples = sorted(list(bio_samples))
     if not bio_samples:

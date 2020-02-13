@@ -108,9 +108,10 @@ def iterate_datastore_read_set_files(datastore_file,
 
 def get_barcode_sample_mappings(ds):
     barcoded_samples = []
-    for bioSample in ds.metadata.bioSamples:
-        for dnaBc in bioSample.DNABarcodes:
-            barcoded_samples.append((dnaBc.name, bioSample.name))
+    for collection in ds.metadata.collections:
+        for bioSample in collection.wellSample.bioSamples:
+            for dnaBc in bioSample.DNABarcodes:
+                barcoded_samples.append((dnaBc.name, bioSample.name))
     # recover the original barcode FASTA file so we can map the barcode
     # indices in the BAM file to the labels
     bc_sets = {extRes.barcodes for extRes in ds.externalResources
@@ -214,36 +215,51 @@ def consolidate_barcodes(ds, bio_sample):
         bio_sample.DNABarcodes.pop(k)
 
 
-def discard_bio_samples(subreads, barcode_label):
+def discard_bio_samples(ds, barcode_label):
     """
     Remove any BioSample records from a SubreadSet that are not associated
     with the specified barcode.
     """
-    deletions = []
-    for k, bio_sample in enumerate(subreads.metadata.bioSamples):
-        barcodes = set([bc.name for bc in bio_sample.DNABarcodes])
-        if barcode_label in barcodes:
-            if len(bio_sample.DNABarcodes) > 1:
-                consolidate_barcodes(subreads, bio_sample)
-            continue
-        if len(barcodes) == 0:
-            log.warning("No barcodes defined for sample %s", bio_sample.name)
-        deletions.append(k)
-    for k in reversed(deletions):
-        subreads.metadata.bioSamples.pop(k)
-    if len(subreads.metadata.bioSamples) == 0:
-        log.warning("Dataset has no BioSamples")
-        log.warning("Will create new BioSample and DNABarcode records")
-        subreads.metadata.bioSamples.addSample(barcode_label)
-        subreads.metadata.bioSamples[0].DNABarcodes.addBarcode(barcode_label)
+    while len(ds.metadata.bioSamples) > 0:
+        ds.metadata.bioSamples.pop(0)
+    for coll in ds.metadata.collections:
+        deletions = []
+        for k, bio_sample in enumerate(coll.wellSample.bioSamples):
+            barcodes = set([bc.name for bc in bio_sample.DNABarcodes])
+            if barcode_label in barcodes:
+                if len(bio_sample.DNABarcodes) > 1:
+                    consolidate_barcodes(ds, bio_sample)
+                continue
+            if len(barcodes) == 0:
+                log.warning("No barcodes defined for sample %s", bio_sample.name)
+            deletions.append(k)
+        for k in reversed(deletions):
+            coll.wellSample.bioSamples.pop(k)
+        if len(coll.wellSample.bioSamples) == 0:
+            log.warning("Dataset has no BioSamples")
+            log.warning("Will create new BioSample and DNABarcode records")
+            coll.wellSample.bioSamples.addSample(barcode_label)
+            coll.wellSample.bioSamples[0].DNABarcodes.addBarcode(barcode_label)
 
 
 def set_bio_samples(ds, barcodes_and_samples):
+    """
+    Given a list of (barcode, bioSample) tuples, apply these to the dataset,
+    deleting any existing BioSample records.
+    """
+    # FIXME lima should just use the CollectionMetadata instead of duplicating
+    # the BioSamples in the DataSetMetadata
     while len(ds.metadata.bioSamples) > 0:
         ds.metadata.bioSamples.pop(0)
     for dna_bc, biosample in barcodes_and_samples:
         ds.metadata.bioSamples.addSample(biosample)
         ds.metadata.bioSamples[-1].DNABarcodes.addBarcode(dna_bc)
+    for coll in ds.metadata.collections:
+        while len(coll.wellSample.bioSamples) > 0:
+            coll.wellSample.bioSamples.pop(0)
+        for dna_bc, biosample in barcodes_and_samples:
+            coll.wellSample.bioSamples.addSample(biosample)
+            coll.wellSample.bioSamples[-1].DNABarcodes.addBarcode(dna_bc)
     return ds
 
 
@@ -293,9 +309,10 @@ def get_ds_name(ds, base_name, barcode_label):
     """
     suffix = "(unknown sample)"
     try:
-        n_samples = len(ds.metadata.bioSamples)
+        coll = ds.metadata.collections[0]
+        n_samples = len(coll.wellSample.bioSamples)
         if n_samples == 1:
-            suffix = "(%s)" % ds.metadata.bioSamples[0].name
+            suffix = "(%s)" % coll.wellSample.bioSamples[0].name
         elif n_samples > 1:
             suffix = "(multiple samples)"
         else:
@@ -307,10 +324,11 @@ def get_ds_name(ds, base_name, barcode_label):
 
 
 def _get_uuid(ds, barcode_label):
-    for bio_sample in ds.metadata.bioSamples:
-        for dna_bc in bio_sample.DNABarcodes:
-            if dna_bc.name == barcode_label and dna_bc.uniqueId:
-                return dna_bc.uniqueId
+    for collection in ds.metadata.collections:
+        for bio_sample in collection.wellSample.bioSamples:
+            for dna_bc in bio_sample.DNABarcodes:
+                if dna_bc.name == barcode_label and dna_bc.uniqueId:
+                    return dna_bc.uniqueId
 
 
 def uniqueify_collections(metadata):
@@ -345,7 +363,11 @@ def _update_barcoded_dataset(
     sample_name = bio_samples_d.get(barcode_label, None)
     if sample_name is not None:
         force_set_all_bio_sample_names(dataset, sample_name)
+    else:
+        log.warn("Can't find sample name for '{b}'".format(b=barcode_label))
     assert parent_type == dataset.datasetType
+    while len(dataset.metadata.bioSamples) > 0:
+        dataset.metadata.bioSamples.pop(0)
     dataset.subdatasets = []
     dataset.metadata.addParentDataSet(parent_uuid,
                                       parent_type,
@@ -438,10 +460,12 @@ def _load_files_for_update(
             update_files.append(f)
     bio_samples_d = {}
     barcode_uuids_d = {}
-    for bio_sample in parent_ds.metadata.bioSamples:
-        for dnabc in bio_sample.DNABarcodes:
-            bio_samples_d[dnabc.name] = bio_sample.name
-            barcode_uuids_d[dnabc.name] = dnabc.uniqueId
+    for collection in parent_ds.metadata.collections:
+        for bio_sample in collection.wellSample.bioSamples:
+            for dnabc in bio_sample.DNABarcodes:
+                bio_samples_d[dnabc.name] = bio_sample.name
+                barcode_uuids_d[dnabc.name] = dnabc.uniqueId
+        break
     return barcode_names, bio_samples_d, barcode_uuids_d, update_files, parent_info
 
 
@@ -563,20 +587,21 @@ def force_set_all_bio_sample_names(ds, sample_name):
     :return: the number of BioSamples modified (including new samples)
     """
     n_total = 0
-    bioSamples = ds.metadata.bioSamples
-    n_samples = len(bioSamples)
-    n_total += max(1, n_samples)
-    if n_samples == 0:
-        log.debug("Adding new BioSample '%s' to dataset", sample_name)
-        bioSamples.addSample(sample_name)
-    elif n_samples == 1:
-        bioSamples[0].name = sample_name
-    else:
-        log.warning("Multiple BioSamples found: '%s'",
-                    "', '".join([s.name for s in bioSamples]))
-        log.warning("These will be overwritten with '%s'", sample_name)
-        for sample in bioSamples:
-            sample.name = sample_name
+    for collection in ds.metadata.collections:
+        bioSamples = collection.wellSample.bioSamples
+        n_samples = len(bioSamples)
+        n_total += max(1, n_samples)
+        if n_samples == 0:
+            log.debug("Adding new BioSample '%s' to dataset", sample_name)
+            bioSamples.addSample(sample_name)
+        elif n_samples == 1:
+            bioSamples[0].name = sample_name
+        else:
+            log.warning("Multiple BioSamples found: '%s'",
+                        "', '".join([s.name for s in bioSamples]))
+            log.warning("These will be overwritten with '%s'", sample_name)
+            for sample in bioSamples:
+                sample.name = sample_name
     return n_total
 
 
@@ -679,9 +704,11 @@ def update_consensus_reads(ccs_in, subreads_in, ccs_out, use_run_design_uuid=Fal
                 log.warning("No pre-defined ConsensusReadSetRef UUID found")
             else:
                 log.warning("Multiple ConsensusReadSetRef UUIDs found")
-        if len(ds.metadata.bioSamples) == 0:
-            for bio_sample in ds_subreads.metadata.bioSamples:
-                ds.metadata.bioSamples.append(bio_sample)
+        for collection in ds.metadata.collections:
+            if len(collection.wellSample.bioSamples) == 0:
+                for collection2 in ds_subreads.metadata.collections:
+                    for bio_sample in collection2.wellSample.bioSamples:
+                        collection.bioSamples.append(bio_sample)
         if run_design_uuid is not None:
             ds.uuid = run_design_uuid
         else:
