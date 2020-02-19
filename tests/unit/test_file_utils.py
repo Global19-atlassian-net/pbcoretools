@@ -421,8 +421,10 @@ class TestBarcodeUtils:
         csv_tmp = tempfile.NamedTemporaryFile(suffix=".csv").name
         with open(csv_tmp, "w") as csv_out:
             csv_out.write(csv)
-        with pytest.raises(ValueError):
-            parse_biosamples_csv(csv_tmp)
+        records = parse_biosamples_csv(csv_tmp)
+        assert records == [
+            ("lbc1--lbc1", "Alice"),
+            ("lbc2--lbc2", "Bob")]
 
     def test_set_bio_samples(self):
         ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))

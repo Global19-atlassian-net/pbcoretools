@@ -1,0 +1,16 @@
+﻿Barcode,Bio Sample (delete entire rows of barcodes not used; allowed characters: alphanumeric space dot underscore hyphen. Other characters will be automatically removed.)
+bc1001_BAK8A_OA--bc1001_BAK8A_OA,Achromobacter xylosoxidans
+bc1002_BAK8A_OA--bc1002_BAK8A_OA,Neisseria gonorrhoeae
+bc1003_BAK8A_OA--bc1003_BAK8A_OA,Yersinia enterocolitica
+bc1008_BAK8A_OA--bc1008_BAK8A_OA,Stenotrophomonas maltophilia
+bc1009_BAK8A_OA--bc1009_BAK8A_OA,Staphylococcus aureus
+bc1010_BAK8A_OA--bc1010_BAK8A_OA,Serratia marcescens
+bc1011_BAK8A_OA--bc1011_BAK8A_OA,Salmonella Group B
+bc1012_BAK8A_OA--bc1012_BAK8A_OA,Mycobacterium sp
+bc1016_BAK8B_OA--bc1016_BAK8B_OA,Klebsiella oxytoca
+bc1017_BAK8B_OA--bc1017_BAK8B_OA,Enterobacter cloacae 
+bc1018_BAK8B_OA--bc1018_BAK8B_OA,Citrobacter freundii
+bc1019_BAK8B_OA--bc1019_BAK8B_OA,Aeromonas hydrophila
+bc1020_BAK8B_OA--bc1020_BAK8B_OA,Oligella urethralis
+bc1021_BAK8B_OA--bc1021_BAK8B_OA,Salmonella enterica
+bc1022_BAK8B_OA--bc1022_BAK8B_OA,Vibrio cholerae
