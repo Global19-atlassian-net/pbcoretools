@@ -40,8 +40,7 @@ def _process_zmw_list(zmw_list):
         base, ext = op.splitext(zmw_list)
         if ext in [".bam", ".xml"]:
             with openDataFile(zmw_list) as ds_zmw:
-                for f in ds_zmw.resourceReaders():
-                    zmws.update(set(list(f.holeNumber)))
+                zmws.update(ds_zmw.index.holeNumber)
         else:
             with open(zmw_list) as f:
                 lines = f.read().splitlines()

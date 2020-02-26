@@ -169,17 +169,12 @@ def make_barcode_sample_csv(subreads, csv_file):
 
 def parse_biosamples_csv(csv_file):
     records = []
-    with open(csv_file, "r") as csv_in:
+    with open(csv_file, "rt") as csv_in:
         reader = csv.reader(csv_in, delimiter=',')
         for k, row in enumerate(reader):
             if len(row) != 2:
                 raise ValueError("Expected two fields, got %s" % row)
-            try:
-                for field in row:
-                    x = field.encode("ascii")
-            except UnicodeDecodeError as e:
-                raise ValueError(
-                    "Non-ASCII characters are not allowed in BioSamples CSV.  Please make sure you use a plain-text editor to generate the CSV file and use only alphanumeric characters in your sample names.")
+            row = [item.encode("ascii", errors="ignore").decode() for item in row]
             if k > 0:
                 records.append(tuple(row))
     return records
