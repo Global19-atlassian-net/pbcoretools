@@ -112,3 +112,13 @@ class TestReparent(PbIntegrationBase):
             samples_out = {
                 s.DNABarcodes[0].name: s.name for s in ds_out.metadata.collections[0].wellSample.bioSamples}
             assert samples_out == dict(samples)
+
+    def test_reparent_with_non_ascii_biosamples(self):
+        args = self._to_args(pbtestdata.get_file("subreads-sequel"),
+                             "new_parent_with_samples.subreadset.xml")
+        input_file = args[-3]
+        output_file = args[-1]
+        csv_file = op.join(op.dirname(op.dirname(__file__)), "data", "samples_from_excel.csv")
+        args.extend(["--biosamples-csv", csv_file])
+        self._check_call(args)
+        self._validate_files(input_file, output_file)
