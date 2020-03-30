@@ -23,7 +23,8 @@ from pbcoretools.chunking.gather import (
     gather_zip,
     gather_fofn,
     gather_bed,
-    gather_datastore)
+    gather_datastore,
+    gather_report)
 
 log = logging.getLogger(__name__)
 __version__ = "0.1"
@@ -32,6 +33,10 @@ __version__ = "0.1"
 def run_args(args):
     if args.output_file.endswith('.datastore.json'):
         gather_datastore(args.chunked_files, args.output_file)
+        log.info("Wrote %s", args.output_file)
+        return 0
+    elif args.output_file.endswith(".report.json"):
+        gather_report(args.chunked_files, args.output_file)
         log.info("Wrote %s", args.output_file)
         return 0
 
