@@ -1,8 +1,7 @@
 """
-Gather gzipped JSON per-ZMW metrics from CCS, output as zipped JSON
+Gather gzipped JSON per-ZMW metrics from CCS
 """
 
-from zipfile import ZipFile
 import logging
 import gzip
 import json
@@ -24,10 +23,8 @@ def gather_chunks(chunks, output_file):
         with gzip.open(file_name, mode="rt") as gz_in:
             d = json.loads(gz_in.read())
             ccs_zmws.extend(d["zmws"])
-    # gzip is more C++ friendly, but zip is more SMRTLink-friendly
-    with ZipFile(output_file, mode="w") as zip_out:
-        base_name = op.basename(re.sub(".zip$", "", output_file))
-        zip_out.writestr(base_name, json.dumps({"zmws": ccs_zmws}))
+    with gzip.open(output_file, mode="wt") as gz_out:
+        gz_out.write(json.dumps({"zmws": ccs_zmws}))
     return 0
 
 
@@ -36,7 +33,7 @@ def _get_parser():
         version=__version__,
         description=__doc__,
         default_level="INFO")
-    p.add_argument("merged", help="Name of merged json.zip")
+    p.add_argument("merged", help="Name of merged json.gz")
     p.add_argument("chunks", nargs="+", help="Chunk outputs")
     return p
 
