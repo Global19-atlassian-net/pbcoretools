@@ -256,7 +256,7 @@ def filter_options(parser):
 
 def _get_auto_split_mode(ds, args):
     if args.auto:
-        if ds.isBarcoded:
+        if ds.isBarcoded and ds.numBarcodes > 1:
             return (False, True)  # (zmws, barcodes)
         else:
             return (True, False)

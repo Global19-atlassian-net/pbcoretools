@@ -39,7 +39,7 @@ setup(
     install_requires=[
         'numpy >= 1.17',
         'pysam >= 0.15.1',
-        'pbcore >= 2.0.0',
+        'pbcore >= 2.0.3',
         'pbcommand >= 2.0.0',
     ],
     test_requires=test_deps,
