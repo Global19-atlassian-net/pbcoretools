@@ -254,6 +254,16 @@ def filter_options(parser):
     parser.set_defaults(func=filterXml)
 
 
+def _get_auto_split_mode(ds, args):
+    if args.auto:
+        if ds.isBarcoded and ds.numBarcodes > 1:
+            return (False, True)  # (zmws, barcodes)
+        else:
+            return (True, False)
+    else:
+        return (args.zmws, args.barcodes)
+
+
 def splitXml(args):
     log.debug("Starting split")
     dataSet = openDataSet(args.infile, strict=args.strict)
@@ -262,6 +272,7 @@ def splitXml(args):
     default_prefix = '.'.join(args.infile.split('.')[:nSuf])
     ext = '.'.join(args.infile.split('.')[nSuf:])
     prefix = args.prefix if args.prefix is not None else default_prefix
+    split_zmws, split_barcodes = _get_auto_split_mode(dataSet, args)
     if args.chunks:
         chunks = args.chunks
     if isinstance(dataSet, ContigSet):
@@ -273,14 +284,14 @@ def splitXml(args):
                             maxChunks=args.maxChunks,
                             breakContigs=args.breakContigs,
                             targetSize=args.targetSize,
-                            zmws=args.zmws,
-                            barcodes=args.barcodes,
+                            zmws=split_zmws,
+                            barcodes=split_barcodes,
                             byRecords=(not args.byRefLength),
                             updateCounts=(not args.noCounts))
     for i, ds in enumerate(dss):
         infix = 'chunk{i}'
         chNum = str(i)
-        if args.barcodes and not args.simple_chunk_ids:
+        if split_barcodes and not args.simple_chunk_ids:
             infix = '{i}'
             chNum = '_'.join(ds.barcodes).replace(
                 '[', '').replace(']', '').replace(', ', '-')
@@ -308,6 +319,8 @@ def split_options(parser):
         help="Split on barcodes")
     pad("--zmws", default=False, action='store_true',
         help="Split on ZMWs, keeping ZMWs together")
+    pad("--auto", default=False, action="store_true",
+        help="Split on barcodes if present, fall back on ZMWs")
     pad("--byRefLength", default=True, action='store_true',
         help="Split contigs by contig length")
     pad("--noCounts", default=False, action='store_true',
