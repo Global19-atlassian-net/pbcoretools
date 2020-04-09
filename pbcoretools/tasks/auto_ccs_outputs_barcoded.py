@@ -44,8 +44,14 @@ def __create_zipped_fastx(file_type_id, source_id, ds_files, output_file):
     fastx_files = [f.path for f in ds_files if f.file_type_id == file_type_id]
     with ZipFile(output_file, "w", allowZip64=True) as zip_out:
         for file_name in fastx_files:
-            with open(file_name, "r") as fastx_in:
-                zip_out.writestr(op.basename(file_name), fastx_in.read())
+            if file_name.endswith(".zip"):
+                with ZipFile(file_name, "r") as zip_in:
+                    for fn in zip_in.namelist():
+                        with zip_in.open(fn, mode="r") as fastx_in:
+                            zip_out.writestr(fn, fastx_in.read())
+            else:
+                with open(file_name, "r") as fastx_in:
+                    zip_out.writestr(op.basename(file_name), fastx_in.read())
     file_type_label = file_type_id.split(".")[-1].upper()
     return DataStoreFile(uuid.uuid4(),
                          source_id,

@@ -16,7 +16,7 @@ from pbcommand.models import FileTypes, DataStoreFile, DataStore
 from pbcommand.cli import pacbio_args_runner, get_default_argparser_with_base_opts
 from pbcommand.utils import setup_log
 from pbcore.io import ConsensusReadSet
-from pbcore.util.statistics import accuracy_as_phred_qv
+from pbcore.util.statistics import accuracy_as_phred_qv, phred_qv_as_accuracy
 
 from pbcoretools.bam2fastx import run_bam_to_fastq, run_bam_to_fasta
 from pbcoretools.filters import combine_filters
@@ -70,34 +70,49 @@ def _run_bam2fastx(file_type, dataset_file, fastx_file):
         return run_bam_to_fasta(dataset_file, fastx_file)
 
 
-def to_fastx_files(file_type, ds, ccs_dataset_file, file_ids, base_dir, file_prefix):
-    fastx_file = op.join(base_dir, file_prefix +
-                         Constants.BASE_EXT + "." + file_type.ext)
-    ccs_q20 = ccs_dataset_file
-    is_all_q20_or_better = np.all(ds.index.readQual >= 0.99)
-    if not is_all_q20_or_better:
-        ccs_hq = ds.copy()
-        ccs_q20 = tempfile.NamedTemporaryFile(
-            suffix=".consensusreadset.xml").name
-        combine_filters(ccs_hq, {"rq": [('>=', 0.99)]})
-        ccs_hq.write(ccs_q20)
-    _run_bam2fastx(file_type, ccs_q20, fastx_file)
-    datastore_files = [
-        _to_datastore_file(fastx_file, file_ids[0], file_type, "Q20 Reads")
-    ]
-    if not is_all_q20_or_better:
-        min_accuracy = float(np.min(ds.index.readQual))
-        if min_accuracy <= 0:
-            min_qv = 0
-        else:
-            min_qv = int(math.floor(accuracy_as_phred_qv(min_accuracy)))
-        custom_ext = ".Q" + str(min_qv)
-        fastx2_file = op.join(
-            base_dir, file_prefix + custom_ext + "." + file_type.ext)
-        _run_bam2fastx(file_type, ccs_dataset_file, fastx2_file)
+def to_fastx_files(file_type,
+                   ds,
+                   ccs_dataset_file,
+                   file_ids,
+                   base_dir,
+                   file_prefix,
+                   min_rq=0.99,
+                   no_zip=False,
+                   include_all_reads_in_lofi=True):
+
+    def run_to_output(ccs_file, file_id, rq):
+        min_qv = int(np.round(accuracy_as_phred_qv(rq)))
         desc = "Q{q} Reads".format(q=min_qv)
-        datastore_files.append(
-            _to_datastore_file(fastx2_file, file_ids[1], file_type, desc))
+        ext = "Q" + str(min_qv)
+        fastx_file = op.join(base_dir,
+                             ".".join([file_prefix, ext, file_type.ext]))
+        if not no_zip:
+            fastx_file += ".zip"
+        _run_bam2fastx(file_type, ccs_file, fastx_file)
+        return _to_datastore_file(fastx_file, file_id, file_type, desc)
+
+    ccs_hifi = ccs_lofi = ccs_dataset_file
+    is_all_hifi = np.all(ds.index.readQual >= min_rq)
+    if not is_all_hifi:
+        ccs_hq, ccs_lq = ds.copy(), ds.copy()
+        ccs_hifi = tempfile.NamedTemporaryFile(
+            suffix=".consensusreadset.xml").name
+        ccs_lofi = tempfile.NamedTemporaryFile(
+            suffix=".consensusreadset.xml").name
+        combine_filters(ccs_hq, {"rq": [('>=', min_rq)]})
+        combine_filters(ccs_lq, {"rq": [('<', min_rq)]})
+        ccs_hq.write(ccs_hifi)
+        ccs_lq.write(ccs_lofi)
+    datastore_files = [run_to_output(ccs_hifi, file_ids[0], min_rq)]
+    if not is_all_hifi:
+        min_accuracy = float(np.min(ds.index.readQual))
+        if min_accuracy < 0:
+            min_accuracy = 0
+        ds_file = ccs_dataset_file
+        # the CCS app behaves differently from bam2fastx
+        if not include_all_reads_in_lofi:
+            ds_file = ccs_lofi
+        datastore_files.append(run_to_output(ds_file, file_ids[1], min_accuracy))
     return datastore_files
 
 
@@ -123,11 +138,15 @@ def get_prefix_and_bam_file_name(ds, is_barcoded=False):
     return bam_file_name, file_prefix
 
 
-def run_ccs_bam_fastq_exports(ccs_dataset_file, base_dir, is_barcoded=False):
+def run_ccs_bam_fastq_exports(ccs_dataset_file, base_dir, is_barcoded=False,
+                              min_rq=0.99, no_zip=False):
     """
     Take a ConsensusReadSet and write BAM/FASTQ files to the output
     directory.  If this is a demultiplexed dataset, it is assumed to have
     a single BAM file within a dataset that is already imported in SMRT Link.
+    Note that this function runs the exports serially, and is therefore no
+    longer used in this specific task, but rather in the barcoded version that
+    runs in parallel.
     """
     datastore_files = []
     with ConsensusReadSet(ccs_dataset_file, strict=True) as ds:
@@ -138,17 +157,10 @@ def run_ccs_bam_fastq_exports(ccs_dataset_file, base_dir, is_barcoded=False):
         fasta_file_ids = [Constants.FASTA_ID, Constants.FASTA2_ID]
         fastq_file_ids = [Constants.FASTQ_ID, Constants.FASTQ2_ID]
         datastore_files.extend(
-            to_fastx_files(FileTypes.FASTA, ds, ccs_dataset_file, fasta_file_ids, base_dir, file_prefix))
+            to_fastx_files(FileTypes.FASTA, ds, ccs_dataset_file, fasta_file_ids, base_dir, file_prefix, min_rq=min_rq, no_zip=no_zip))
         datastore_files.extend(
-            to_fastx_files(FileTypes.FASTQ, ds, ccs_dataset_file, fastq_file_ids, base_dir, file_prefix))
+            to_fastx_files(FileTypes.FASTQ, ds, ccs_dataset_file, fastq_file_ids, base_dir, file_prefix, min_rq=min_rq, no_zip=no_zip))
     return datastore_files
-
-
-def _run_auto_ccs_outputs(ccs_dataset, datastore_out):
-    base_dir = op.dirname(datastore_out)
-    DataStore(run_ccs_bam_fastq_exports(ccs_dataset,
-                                        base_dir)).write_json(datastore_out)
-    return 0
 
 
 def run_args(args):
@@ -160,10 +172,10 @@ def run_args(args):
             ds, is_barcoded=False)
         if args.mode == "fasta":
             datastore_files.extend(to_fastx_files(
-                FileTypes.FASTA, ds, args.dataset_file, Constants.FASTA_FILE_IDS, base_dir, file_prefix))
+                FileTypes.FASTA, ds, args.dataset_file, Constants.FASTA_FILE_IDS, base_dir, file_prefix, args.min_rq, no_zip=args.no_zip))
         elif args.mode == "fastq":
             datastore_files.extend(to_fastx_files(
-                FileTypes.FASTQ, ds, args.dataset_file, Constants.FASTQ_FILE_IDS, base_dir, file_prefix))
+                FileTypes.FASTQ, ds, args.dataset_file, Constants.FASTQ_FILE_IDS, base_dir, file_prefix, args.min_rq, no_zip=args.no_zip))
         elif args.mode == "consolidate":
             if bam_file_name is None:
                 datastore_files.append(
@@ -180,6 +192,15 @@ def _get_parser():
     p.add_argument("mode", choices=["consolidate", "fasta", "fastq"])
     p.add_argument("dataset_file")
     p.add_argument("datastore_out")
+    p.add_argument("--min-rq", dest="min_rq", type=float, default=0.99,
+                   help="Sets RQ cutoff for splitting output")
+    p.add_argument("--min-qv",
+                   dest="min_rq",
+                   type=lambda arg: phred_qv_as_accuracy(int(arg)),
+                   help="Alternative to --min-rq, on Phred scale (0-60)")
+    p.add_argument("--no-zip",
+                   action="store_true",
+                   help="Disable ZIP output")
     return p
 
 
