@@ -85,8 +85,7 @@ class TestAutoCCSOutputs(PbIntegrationBase):
         assert files[4].description == "Q0 Reads"
         with FastaReader(_get_file("ccs_fasta_lq_out")) as fasta_lq:
             records = [rec.id for rec in fasta_lq]
-            assert records == ["m150404_101626_42267_c100807920800000001823174110291514_s1_p0/480/ccs",
-                               "m150803_002149_42161_c100745121910000001823165807071563_s1_p0/137/ccs"]
+            assert records == ["m150803_002149_42161_c100745121910000001823165807071563_s1_p0/137/ccs"]
         # now with a lower cutoff
         tmp_dir = tempfile.mkdtemp()
         files = run_ccs_bam_fastq_exports(ds_file, tmp_dir, min_rq=0)
@@ -134,8 +133,10 @@ class TestAutoCCSOutputs(PbIntegrationBase):
         ]
         self._check_call(args)
         ds = DataStore.load_from_json("output.datastore.json")
-        assert len(ds.files) == 2
+        assert sorted([op.basename(f.path) for f in ds.files.values()]) == [
+            "multiple_movies.Q0.fasta.zip", "multiple_movies.Q20.fasta.zip"]
         args.extend(["--min-qv", "0"])
         self._check_call(args)
         ds = DataStore.load_from_json("output.datastore.json")
-        assert len(ds.files) == 1
+        assert sorted([op.basename(f.path) for f in ds.files.values()]) == [
+            "multiple_movies.Q0.fasta.zip"]
