@@ -78,7 +78,7 @@ def to_fastx_files(file_type,
                    file_prefix,
                    min_rq=0.99,
                    no_zip=False,
-                   include_all_reads_in_lofi=True):
+                   include_all_reads_in_lofi=False):
 
     def run_to_output(ccs_file, file_id, rq):
         min_qv = int(np.round(accuracy_as_phred_qv(rq)))
