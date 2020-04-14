@@ -5,7 +5,6 @@ Generate single-file CCS BAM and FASTQ outputs from a ConsensusReadSet.
 import tempfile
 import logging
 import uuid
-import math
 import sys
 import os.path as op
 import re
@@ -78,14 +77,14 @@ def to_fastx_files(file_type,
                    file_prefix,
                    min_rq=0.99,
                    no_zip=False,
-                   include_all_reads_in_lofi=False):
+                   include_lowq=False):
 
-    def run_to_output(ccs_file, file_id, rq):
+    def run_to_output(ccs_file, file_id, rq, suffix="hifi", desc=None):
         min_qv = int(np.round(accuracy_as_phred_qv(rq)))
-        desc = "Q{q} Reads".format(q=min_qv)
-        ext = "Q" + str(min_qv)
+        if desc is None:
+            desc = "High-Fidelity Reads ({t})".format(t=file_type.ext.upper())
         fastx_file = op.join(base_dir,
-                             ".".join([file_prefix, ext, file_type.ext]))
+                             ".".join([file_prefix, suffix, file_type.ext]))
         if not no_zip:
             fastx_file += ".zip"
         _run_bam2fastx(file_type, ccs_file, fastx_file)
@@ -103,16 +102,12 @@ def to_fastx_files(file_type,
         combine_filters(ccs_lq, {"rq": [('<', min_rq)]})
         ccs_hq.write(ccs_hifi)
         ccs_lq.write(ccs_lofi)
-    datastore_files = [run_to_output(ccs_hifi, file_ids[0], min_rq)]
-    if not is_all_hifi:
+    datastore_files = [run_to_output(ccs_hifi, file_ids[0], min_rq, "hifi")]
+    if not is_all_hifi and include_lowq:
         min_accuracy = float(np.min(ds.index.readQual))
         if min_accuracy < 0:
             min_accuracy = 0
-        ds_file = ccs_dataset_file
-        # the CCS app behaves differently from bam2fastx
-        if not include_all_reads_in_lofi:
-            ds_file = ccs_lofi
-        datastore_files.append(run_to_output(ds_file, file_ids[1], min_accuracy))
+        datastore_files.append(run_to_output(ccs_lofi, file_ids[1], min_accuracy, "other_reads", "Non-High Fidelity Reads ({t})".format(t=file_type.ext.upper())))
     return datastore_files
 
 
@@ -139,7 +134,7 @@ def get_prefix_and_bam_file_name(ds, is_barcoded=False):
 
 
 def run_ccs_bam_fastq_exports(ccs_dataset_file, base_dir, is_barcoded=False,
-                              min_rq=0.99, no_zip=False):
+                              min_rq=0.99, no_zip=False, include_lowq=False):
     """
     Take a ConsensusReadSet and write BAM/FASTQ files to the output
     directory.  If this is a demultiplexed dataset, it is assumed to have
@@ -157,9 +152,25 @@ def run_ccs_bam_fastq_exports(ccs_dataset_file, base_dir, is_barcoded=False,
         fasta_file_ids = [Constants.FASTA_ID, Constants.FASTA2_ID]
         fastq_file_ids = [Constants.FASTQ_ID, Constants.FASTQ2_ID]
         datastore_files.extend(
-            to_fastx_files(FileTypes.FASTA, ds, ccs_dataset_file, fasta_file_ids, base_dir, file_prefix, min_rq=min_rq, no_zip=no_zip))
+            to_fastx_files(FileTypes.FASTA,
+                           ds,
+                           ccs_dataset_file,
+                           fasta_file_ids,
+                           base_dir,
+                           file_prefix,
+                           min_rq=min_rq,
+                           no_zip=no_zip,
+                           include_lowq=include_lowq))
         datastore_files.extend(
-            to_fastx_files(FileTypes.FASTQ, ds, ccs_dataset_file, fastq_file_ids, base_dir, file_prefix, min_rq=min_rq, no_zip=no_zip))
+            to_fastx_files(FileTypes.FASTQ,
+                           ds,
+                           ccs_dataset_file,
+                           fastq_file_ids,
+                           base_dir,
+                           file_prefix,
+                           min_rq=min_rq,
+                           no_zip=no_zip,
+                           include_lowq=include_lowq))
     return datastore_files
 
 
