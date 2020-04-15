@@ -6,7 +6,9 @@ import os
 import pytest
 import sys
 
-from pbcore.io import FastaReader
+import numpy as np
+
+from pbcore.io import FastaReader, IndexedBamReader
 from pbcommand.models import DataStore
 from pbcommand.utils import which
 from pbcommand.testkit import PbIntegrationBase
@@ -25,9 +27,9 @@ class TestAutoCCSOutputs(PbIntegrationBase):
     INPUT_FILE = op.join(
         TESTDATA, "auto_ccs_outputs/m54006_180707_211919.consensusreadset.xml")
     OUTPUT_FILES = [
-        "m54006_180707_211919.ccs.bam",
-        "m54006_180707_211919.hifi.fasta.zip",
-        "m54006_180707_211919.hifi.fastq.zip"
+        "m54006_180707_211919.hifi_reads.bam",
+        "m54006_180707_211919.hifi_reads.fasta.zip",
+        "m54006_180707_211919.hifi_reads.fastq.zip"
     ]
 
     def setup_method(self, method):
@@ -69,11 +71,12 @@ class TestAutoCCSOutputs(PbIntegrationBase):
     def test_export_sub_q20(self):
         ds_file = pbtestdata.get_file("rsii-ccs-multi-cell")
         tmp_dir = tempfile.mkdtemp()
-        files = run_ccs_bam_fastq_exports(ds_file, tmp_dir, no_zip=True,
-                                          include_lowq=True)
-        assert len(files) == 5
+        files = run_ccs_bam_fastq_exports(ds_file, tmp_dir, no_zip=True)
+        assert len(files) == 3
         bam_file = op.basename(files[0].path)
-        assert bam_file == "multiple_movies.ccs.bam"
+        assert bam_file == "multiple_movies.hifi_reads.bam"
+        with IndexedBamReader(files[0].path) as bam_out:
+            assert np.all(bam_out.pbi.readQual >= 0.99)
 
         def _get_file(id_):
             for ds_file in files:
@@ -83,10 +86,6 @@ class TestAutoCCSOutputs(PbIntegrationBase):
             records = [rec.id for rec in fasta_q20]
             assert records == [
                              "m150404_101626_42267_c100807920800000001823174110291514_s1_p0/480/ccs"]
-        assert files[4].description == "Non-High Fidelity Reads (FASTQ)"
-        with FastaReader(_get_file("ccs_fasta_lq_out")) as fasta_lq:
-            records = [rec.id for rec in fasta_lq]
-            assert records == ["m150803_002149_42161_c100745121910000001823165807071563_s1_p0/137/ccs"]
         # now with a lower cutoff
         tmp_dir = tempfile.mkdtemp()
         files = run_ccs_bam_fastq_exports(ds_file, tmp_dir, min_rq=0)
@@ -121,7 +120,7 @@ class TestAutoCCSOutputs(PbIntegrationBase):
         self._check_call(args)
         ds = DataStore.load_from_json("output.datastore.json")
         self._check_datastore_files(ds.files.values(),
-                                    ["m54006_180707_211919.hifi.fastq.zip"])
+                                    ["m54006_180707_211919.q10_reads.fastq.zip"])
 
     def test_auto_ccs_outputs_min_qv_2(self):
         ds_file = pbtestdata.get_file("rsii-ccs-multi-cell")
@@ -135,9 +134,9 @@ class TestAutoCCSOutputs(PbIntegrationBase):
         self._check_call(args)
         ds = DataStore.load_from_json("output.datastore.json")
         assert sorted([op.basename(f.path) for f in ds.files.values()]) == [
-            "multiple_movies.hifi.fasta.zip"]
+            "multiple_movies.hifi_reads.fasta.zip"]
         args.extend(["--min-qv", "0"])
         self._check_call(args)
         ds = DataStore.load_from_json("output.datastore.json")
         assert sorted([op.basename(f.path) for f in ds.files.values()]) == [
-            "multiple_movies.hifi.fasta.zip"]
+            "multiple_movies.q0_reads.fasta.zip"]

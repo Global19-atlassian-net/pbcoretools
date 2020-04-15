@@ -26,8 +26,7 @@ log = logging.getLogger(__name__)
 
 
 class Constants:
-    BASE_EXT = ".Q20"
-    BAM_EXT = ".ccs.bam"
+    HIFI_RQ = 0.99
     BAM_ID = "ccs_bam_out"
     FASTA_ID = "ccs_fasta_out"
     FASTQ_ID = "ccs_fastq_out"
@@ -37,11 +36,14 @@ class Constants:
     FASTQ_FILE_IDS = [FASTQ_ID, FASTQ2_ID]
 
 
-def _get_parser():
-    p = get_base_parser(__doc__)
-    p.add_argument("ccs_dataset", help="ConsensusReadSet XML")
-    p.add_argument("datastore_out", help="DataStore JSON output file")
-    return p
+# SL-5606: if it's really HiFi we should label it accordingly, otherwise
+# indicate QV in file name
+def _get_suffix_and_label(min_rq):
+    if min_rq >= Constants.HIFI_RQ:
+        return ("hifi_reads", "HiFi Reads")
+    else:
+        qv = "Q{q}".format(q=int(np.round(accuracy_as_phred_qv(min_rq))))
+        return ("{q}_reads".format(q=qv.lower()), "≥{q} Reads".format(q=qv))
 
 
 def _to_datastore_file(file_name, file_id, file_type, description):
@@ -53,13 +55,17 @@ def _to_datastore_file(file_name, file_id, file_type, description):
                          description=description)
 
 
-def consolidate_bam(base_dir, file_prefix, dataset):
-    bam_file_name = op.join(base_dir, file_prefix + Constants.BAM_EXT)
-    dataset.consolidate(bam_file_name)
+def consolidate_bam(base_dir, file_prefix, dataset,
+                    min_rq=Constants.HIFI_RQ):
+    ds_out = dataset.copy()
+    suffix, label = _get_suffix_and_label(min_rq)
+    bam_file_name = op.join(base_dir, ".".join([file_prefix, suffix, "bam"]))
+    combine_filters(ds_out, {"rq": [('>=', min_rq)]})
+    ds_out.consolidate(bam_file_name)
     return _to_datastore_file(file_name=bam_file_name,
                               file_id=Constants.BAM_ID,
                               file_type=FileTypes.BAM_CCS,
-                              description="CCS BAM file")
+                              description="{l} BAM file".format(l=label))
 
 
 def _run_bam2fastx(file_type, dataset_file, fastx_file):
@@ -75,40 +81,28 @@ def to_fastx_files(file_type,
                    file_ids,
                    base_dir,
                    file_prefix,
-                   min_rq=0.99,
-                   no_zip=False,
-                   include_lowq=False):
+                   min_rq=Constants.HIFI_RQ,
+                   no_zip=False):
 
-    def run_to_output(ccs_file, file_id, rq, suffix="hifi", desc=None):
-        min_qv = int(np.round(accuracy_as_phred_qv(rq)))
-        if desc is None:
-            desc = "High-Fidelity Reads ({t})".format(t=file_type.ext.upper())
-        fastx_file = op.join(base_dir,
-                             ".".join([file_prefix, suffix, file_type.ext]))
+    def run_to_output(ccs_file, file_id, rq):
+        suffix, label = _get_suffix_and_label(rq)
+        base_name = ".".join([file_prefix, suffix, file_type.ext])
+        fastx_file = op.join(base_dir, base_name)
         if not no_zip:
             fastx_file += ".zip"
         _run_bam2fastx(file_type, ccs_file, fastx_file)
+        desc = "{l} ({t})".format(l=label, t=file_type.ext.upper())
         return _to_datastore_file(fastx_file, file_id, file_type, desc)
 
-    ccs_hifi = ccs_lofi = ccs_dataset_file
+    ccs_hifi = ccs_dataset_file
     is_all_hifi = np.all(ds.index.readQual >= min_rq)
     if not is_all_hifi:
         ccs_hq, ccs_lq = ds.copy(), ds.copy()
         ccs_hifi = tempfile.NamedTemporaryFile(
             suffix=".consensusreadset.xml").name
-        ccs_lofi = tempfile.NamedTemporaryFile(
-            suffix=".consensusreadset.xml").name
         combine_filters(ccs_hq, {"rq": [('>=', min_rq)]})
-        combine_filters(ccs_lq, {"rq": [('<', min_rq)]})
         ccs_hq.write(ccs_hifi)
-        ccs_lq.write(ccs_lofi)
-    datastore_files = [run_to_output(ccs_hifi, file_ids[0], min_rq, "hifi")]
-    if not is_all_hifi and include_lowq:
-        min_accuracy = float(np.min(ds.index.readQual))
-        if min_accuracy < 0:
-            min_accuracy = 0
-        datastore_files.append(run_to_output(ccs_lofi, file_ids[1], min_accuracy, "other_reads", "Non-High Fidelity Reads ({t})".format(t=file_type.ext.upper())))
-    return datastore_files
+    return [run_to_output(ccs_hifi, file_ids[0], min_rq)]
 
 
 def get_prefix_and_bam_file_name(ds, is_barcoded=False):
@@ -134,7 +128,7 @@ def get_prefix_and_bam_file_name(ds, is_barcoded=False):
 
 
 def run_ccs_bam_fastq_exports(ccs_dataset_file, base_dir, is_barcoded=False,
-                              min_rq=0.99, no_zip=False, include_lowq=False):
+                              min_rq=Constants.HIFI_RQ, no_zip=False):
     """
     Take a ConsensusReadSet and write BAM/FASTQ files to the output
     directory.  If this is a demultiplexed dataset, it is assumed to have
@@ -148,7 +142,7 @@ def run_ccs_bam_fastq_exports(ccs_dataset_file, base_dir, is_barcoded=False,
         bam_file_name, file_prefix = get_prefix_and_bam_file_name(
             ds, is_barcoded)
         if bam_file_name is None:
-            datastore_files.append(consolidate_bam(base_dir, file_prefix, ds))
+            datastore_files.append(consolidate_bam(base_dir, file_prefix, ds, min_rq))
         fasta_file_ids = [Constants.FASTA_ID, Constants.FASTA2_ID]
         fastq_file_ids = [Constants.FASTQ_ID, Constants.FASTQ2_ID]
         datastore_files.extend(
@@ -159,8 +153,7 @@ def run_ccs_bam_fastq_exports(ccs_dataset_file, base_dir, is_barcoded=False,
                            base_dir,
                            file_prefix,
                            min_rq=min_rq,
-                           no_zip=no_zip,
-                           include_lowq=include_lowq))
+                           no_zip=no_zip))
         datastore_files.extend(
             to_fastx_files(FileTypes.FASTQ,
                            ds,
@@ -169,8 +162,7 @@ def run_ccs_bam_fastq_exports(ccs_dataset_file, base_dir, is_barcoded=False,
                            base_dir,
                            file_prefix,
                            min_rq=min_rq,
-                           no_zip=no_zip,
-                           include_lowq=include_lowq))
+                           no_zip=no_zip))
     return datastore_files
 
 
@@ -203,7 +195,10 @@ def _get_parser():
     p.add_argument("mode", choices=["consolidate", "fasta", "fastq"])
     p.add_argument("dataset_file")
     p.add_argument("datastore_out")
-    p.add_argument("--min-rq", dest="min_rq", type=float, default=0.99,
+    p.add_argument("--min-rq",
+                   dest="min_rq",
+                   type=float,
+                   default=Constants.HIFI_RQ,
                    help="Sets RQ cutoff for splitting output")
     p.add_argument("--min-qv",
                    dest="min_rq",
