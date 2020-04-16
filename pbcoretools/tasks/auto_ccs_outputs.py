@@ -61,7 +61,7 @@ def consolidate_bam(base_dir, file_prefix, dataset,
     suffix, label = _get_suffix_and_label(min_rq)
     bam_file_name = op.join(base_dir, ".".join([file_prefix, suffix, "bam"]))
     combine_filters(ds_out, {"rq": [('>=', min_rq)]})
-    ds_out.consolidate(bam_file_name)
+    ds_out.consolidate(bam_file_name, useTmp=False)
     return _to_datastore_file(file_name=bam_file_name,
                               file_id=Constants.BAM_ID,
                               file_type=FileTypes.BAM_CCS,
