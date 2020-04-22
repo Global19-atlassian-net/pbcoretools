@@ -52,20 +52,23 @@ def combine_filters(ds, filters):
 
 
 def run_filter_dataset(in_file, out_file, read_length, other_filters,
-                       downsample_factor=0):
+                       downsample_factor=0,
+                       min_rq=None):
     rlen = sanitize_read_length(read_length)
     filters = {}
     if other_filters and other_filters != "None":
         filters = parse_filter_list([str(other_filters)])
         log.info("{i} other filters will be added".format(i=len(filters)))
     tags = set()
-    if rlen or len(filters) > 0 or not downsample_factor in [0, 1]:
+    if rlen or min_rq is not None or len(filters) > 0 or not downsample_factor in [0, 1]:
         dataSet = openDataSet(in_file)
         dataSet.updateCounts()  # just in case
         combine_filters(dataSet, filters)
         tags.update({t.strip() for t in dataSet.tags.strip().split(",")})
         if rlen:
             combine_filters(dataSet, {'length': [('>=', rlen)]})
+        if min_rq is not None and min_rq > 0:
+            combine_filters(dataSet, {'rq': [('>=', min_rq)]})
         if not downsample_factor in [0, 1]:
             combine_filters(dataSet, {'zm': [("==", "0", downsample_factor)]})
             tags.add("downsampled")

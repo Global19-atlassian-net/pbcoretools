@@ -582,7 +582,7 @@ class TestDataSet:
         ifn2 = "/pbi/dept/secondary/siv/testdata/SA3-Sequel/phi29/315/3150101/r54008_20160219_002905/1_A01_tiny/m54008_160219_003234_tiny.subreadset.xml"
         args = base_args + ["--prefix", "zmws", ifn2]
         self._check_cmd(" ".join(args))
-        assert os.listdir(outdir) == [
+        assert sorted(os.listdir(outdir)) == [
             'barcodes.0-0.subreadset.xml',
             'barcodes.1-1.subreadset.xml',
             'barcodes.2-2.subreadset.xml',

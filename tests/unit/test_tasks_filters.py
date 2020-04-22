@@ -114,6 +114,24 @@ class TestFilterDataSet(PbIntegrationBase):
         expected_filter_str = "( length >= 1000 AND rq >= 0.901 )"
         self.run_after(ds_out, 12, expected_filter_str)
 
+    def test_filter_dataset_min_rq(self):
+        ds_in, n_input = self._set_up_combine_filters()
+        ds_out = get_temp_file(suffix=".subreadset.xml")
+        args = self.BASE_ARGS + [ds_in, ds_out, "", "--min-rq", "0.901"]
+        self._check_call(args)
+        n_expected = 18
+        expected_filter_str = "( length >= 1000 AND rq >= 0.901 )"
+        self.run_after(ds_out, 12, expected_filter_str)
+
+    def test_filter_dataset_min_qv(self):
+        ds_in, n_input = self._set_up_combine_filters()
+        ds_out = get_temp_file(suffix=".subreadset.xml")
+        args = self.BASE_ARGS + [ds_in, ds_out, "", "--min-qv", "10"]
+        self._check_call(args)
+        n_expected = 13
+        expected_filter_str = "( length >= 1000 AND rq >= 0.9 )"
+        self.run_after(ds_out, n_expected, expected_filter_str)
+
     def test_combine_filters(self):
         ds_in, n_input = self._set_up_combine_filters()
         with openDataSet(ds_in, strict=True) as ds:
