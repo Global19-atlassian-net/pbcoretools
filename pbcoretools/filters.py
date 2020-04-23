@@ -84,6 +84,8 @@ def run_filter_dataset(in_file, out_file, read_length, other_filters,
         log.warning("Removing existing provenance record: %s",
                     dataSet.metadata.provenance)
         dataSet.metadata.provenance = None
-    dataSet.newUuid()
+    # XXX note we do *not* set a new UUID in case we want to keep a parent-
+    # child relationship to the input dataset.  since the filtered dataset will
+    # not be imported back into SMRT Link it is ok to keep the original UUID
     dataSet.write(out_file)
     return 0
