@@ -368,8 +368,8 @@ def _update_barcoded_dataset(
                                       parent_type,
                                       createdBy="AnalysisJob",
                                       timeStampedName="")
-    sanitize_dataset_tags(dataset, remove_hidden=True)
     dataset.name = get_ds_name(dataset, parent_name, barcode_label)
+    sanitize_dataset_tags(dataset, remove_hidden=True)
     if min_score_filter is not None:
         dataset.filters.addRequirement(bq=[('>', min_score_filter)])
     if use_barcode_uuids:
