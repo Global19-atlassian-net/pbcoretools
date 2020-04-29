@@ -6,6 +6,7 @@ Wrapper function for running bam2fasta/bam2fastq, with zipfile support.
 import functools
 import tempfile
 import logging
+import zipfile
 import gzip
 import time
 import re
@@ -14,14 +15,66 @@ import pipes
 import os
 import sys
 
-from pbcore.io import (openDataSet, BarcodeSet, FastaReader, FastaWriter,
-                       FastqReader, FastqWriter, SubreadSet)
+from pbcore.io import (openDataSet, BarcodeSet, SubreadSet,
+                       FastaReader, FastaWriter, FastaRecord,
+                       FastqReader, FastqWriter, FastqRecord)
 from pbcommand.engine import run_cmd
 from pbcommand.utils import walker
 
 from pbcoretools.file_utils import archive_files, get_barcode_sample_mappings
 
 log = logging.getLogger(__name__)
+
+
+class IOStrWrapper:
+    """
+    Proxy class to handle the conversion of string to bytes, a workaround for
+    annoying zipfile behavior on Python 3.
+    """
+    def __init__(self, fh):
+        self._fh = fh
+
+    def write(self, s):
+        self._fh.write(s.encode("utf-8"))
+
+    def __getattr__(self, name):
+        return getattr(self._fh, name)
+
+
+def _bam2fastx_zipped(get_writer, write_record, ds, output_file_name):
+    assert output_file_name.endswith(".zip"), output_file_name
+    base_file_name = re.sub(".zip", "", op.basename(output_file_name))
+    n_records = 0
+    with zipfile.ZipFile(output_file_name, "w", zipfile.ZIP_DEFLATED,
+                         allowZip64=True) as zip_out:
+        with zip_out.open(base_file_name, "w", force_zip64=True) as fastx_out:
+            writer = get_writer(IOStrWrapper(fastx_out))
+            for record in ds:
+                write_record(writer, record)
+                n_records += 1
+    return n_records
+
+
+def _get_fasta_writer(fh):
+    return FastaWriter(fh)
+
+
+def _get_fastq_writer(fh):
+    return FastqWriter(fh)
+
+
+def _write_fasta(writer, bam_record):
+    rec = FastaRecord(bam_record.qName, bam_record.peer.query_sequence)
+    return writer.writeRecord(rec)
+
+
+def _write_fastq(writer, bam_record):
+    rec = FastqRecord(bam_record.qName, bam_record.peer.query_sequence, bam_record.peer.query_qualities)
+    return writer.writeRecord(rec)
+
+
+bam2fasta_zipped = functools.partial(_bam2fastx_zipped, _get_fasta_writer, _write_fasta)
+bam2fastq_zipped = functools.partial(_bam2fastx_zipped, _get_fastq_writer, _write_fastq)
 
 
 def _filesize(fn):
