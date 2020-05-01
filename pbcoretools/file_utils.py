@@ -705,6 +705,7 @@ def update_consensus_reads(ccs_in, subreads_in, ccs_out, use_run_design_uuid=Fal
                 for collection2 in ds_subreads.metadata.collections:
                     for bio_sample in collection2.wellSample.bioSamples:
                         collection.bioSamples.append(bio_sample)
+        ds.updateCounts()
         if run_design_uuid is not None:
             ds.uuid = run_design_uuid
         else:
