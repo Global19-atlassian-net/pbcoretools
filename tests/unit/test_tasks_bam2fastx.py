@@ -5,6 +5,7 @@ Tool contract wrapper tests of pbcoretools.tasks.bam2fast*.
 from zipfile import ZipFile
 import subprocess
 import tempfile
+import tarfile
 import logging
 import shutil
 import uuid
@@ -34,11 +35,12 @@ log = logging.getLogger(__name__)
 
 
 def _get_zipped_fastx_file(zip_file):
-    with ZipFile(zip_file, "r") as zip_in:
-        file_name = zip_in.namelist()[0]
-        dir_name = op.dirname(zip_file)
-        zip_in.extractall(dir_name)
-        return op.join(dir_name, file_name)
+    tmp_dir = tempfile.mkdtemp()
+    if zip_file.endswith(".zip"):
+        ZipFile(zip_file, "r").extractall(tmp_dir)
+    else:
+        tarfile.open(zip_file, mode="r:gz").extractall(tmp_dir)
+    return op.join(tmp_dir, list(os.listdir(tmp_dir))[0])
 
 
 @pytest.mark.bam2fastx
@@ -109,6 +111,18 @@ class TestBam2Fasta(PbIntegrationBase):
         output_file = _get_zipped_fastx_file(output_file)
         self.run_after(input_file, output_file, nrecords_expected)
 
+    def test_bam2fastx_archive_tgz(self):
+        input_file = pbtestdata.get_file("subreads-xml")
+        nrecords_expected = 117
+        output_file = "exported.{e}.tar.gz".format(e=self.EXTENSION)
+        args = args = [
+            "python", "-m",
+            "pbcoretools.tasks.bam2{e}_archive".format(e=self.EXTENSION),
+            input_file, output_file
+        ]
+        self._check_call(args)
+        output_file = _get_zipped_fastx_file(output_file)
+
 
 class TestBam2Fastq(TestBam2Fasta):
     READER_CLASS = FastqReader
@@ -132,7 +146,10 @@ class TestBam2FastxBarcoded(PbIntegrationBase):
         _cwd = os.getcwd()
         try:
             os.chdir(tmp_dir)
-            ZipFile(output_file, "r").extractall()
+            if output_file.endswith(".zip"):
+                ZipFile(output_file, "r").extractall()
+            else:
+                tarfile.open(output_file, mode="r:gz").extractall()
             file_names = sorted(os.listdir(tmp_dir))
             assert file_names == self._get_expected_file_names(extension)
             fastx_ids = ["m54008_160219_003234/74056024/3985_5421",  # bc 0
@@ -146,8 +163,8 @@ class TestBam2FastxBarcoded(PbIntegrationBase):
         finally:
             os.chdir(_cwd)
 
-    def _run_test_bam2fastx_barcoded(self, input_file, ext, reader_class):
-        output_file = "subreads.{e}.zip".format(e=ext)
+    def _run_test_bam2fastx_barcoded(self, input_file, ext, reader_class, ext2="zip"):
+        output_file = "subreads.{e}.{e2}".format(e=ext, e2=ext2)
         args = args = [
             "python", "-m", "pbcoretools.tasks.bam2{e}_archive".format(e=ext),
             input_file, output_file
@@ -162,6 +179,14 @@ class TestBam2FastxBarcoded(PbIntegrationBase):
     def test_bam2fastq_barcoded(self):
         self._run_test_bam2fastx_barcoded(
             self.INPUT_FILE, "fastq", FastqReader)
+
+    def test_bam2fasta_barcoded_tgz(self):
+        self._run_test_bam2fastx_barcoded(
+            self.INPUT_FILE, "fasta", FastaReader, "tar.gz")
+
+    def test_bam2fastq_barcoded_tgz(self):
+        self._run_test_bam2fastx_barcoded(
+            self.INPUT_FILE, "fastq", FastqReader, "tar.gz")
 
 
 @pytest.mark.bam2fastx

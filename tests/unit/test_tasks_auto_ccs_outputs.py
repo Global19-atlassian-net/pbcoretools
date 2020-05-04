@@ -102,7 +102,7 @@ class TestAutoCCSOutputs(PbIntegrationBase):
         ]
         self._check_call(args)
         ds = DataStore.load_from_json("output.datastore.json")
-        # 1 FASTQ, 1 FASTA, 2 ZIP
+        # 1 FASTQ, 1 FASTA, 2 TGZ
         assert len(ds.files) == 4
         self._check_datastore_files_exist("output.datastore.json")
 

@@ -79,7 +79,10 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
     assert isinstance(program_name, str)
     barcode_mode = False
     barcode_sets = set()
-    if output_file_name.endswith(".zip"):
+    output_is_archive = (output_file_name.endswith(".zip") or
+                         output_file_name.endswith(".tar.gz") or
+                         output_file_name.endswith(".tgz"))
+    if output_is_archive:
         with openDataSet(input_file_name) as ds_in:
             barcode_mode = ds_in.isBarcoded
             if barcode_mode:
@@ -137,7 +140,7 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
     try:
         assert result.exit_code == 0, "{p} exited with code {c}".format(
             p=program_name, c=result.exit_code)
-        if output_file_name.endswith(".zip"):
+        if output_is_archive:
             tc_out_dir = op.dirname(output_file_name)
             fastx_file_names = []
             # find the barcoded FASTX files and un-gzip them to the same
@@ -172,7 +175,10 @@ def _run_bam_to_fastx(program_name, fastx_reader, fastx_writer,
                         suffix2 = ".{}".format(sample) + suffix2
                 else:
                     suffix2 = base_ext
-                base, ext = op.splitext(op.basename(output_file_name))
+                base = re.sub(".zip$", "",
+                              re.sub(".tar.gz", "",
+                                     re.sub(".tgz", "",
+                                            op.basename(output_file_name))))
                 fn_out = base
                 if not fn_out.endswith(suffix2):
                     fn_out = re.sub(base_ext, suffix2, fn_out)
