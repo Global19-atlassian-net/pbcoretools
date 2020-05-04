@@ -2,6 +2,7 @@
 Generate single-file CCS BAM and FASTQ outputs from a ConsensusReadSet.
 """
 
+import subprocess
 import tempfile
 import logging
 import uuid
@@ -17,7 +18,7 @@ from pbcommand.utils import setup_log
 from pbcore.io import ConsensusReadSet
 from pbcore.util.statistics import accuracy_as_phred_qv, phred_qv_as_accuracy
 
-from pbcoretools.bam2fastx import bam2fasta_zipped, bam2fastq_zipped, run_bam_to_fasta, run_bam_to_fastq
+from pbcoretools.bam2fastx import run_bam_to_fasta, run_bam_to_fastq
 from pbcoretools.filters import combine_filters
 from pbcoretools.utils import get_base_parser
 from pbcoretools import __VERSION__
@@ -68,19 +69,22 @@ def consolidate_bam(base_dir, file_prefix, dataset,
                               description="{l} BAM file".format(l=label))
 
 
-def _run_bam2fastx(file_type, dataset, fastx_file):
-    if fastx_file.endswith(".zip"):
-        if file_type == FileTypes.FASTQ:
-            return bam2fastq_zipped(dataset, fastx_file)
-        else:
-            return bam2fasta_zipped(dataset, fastx_file)
+def _run_bam2fastx_gz(file_type, reads, prefix):
+    program_name = "bam2{e}".format(e=file_type.ext)
+    cmd = [program_name, "-o", prefix, reads]
+    subprocess.check_call(cmd)
+    assert op.isfile(prefix + ".{e}.gz".format(e=file_type.ext))
+
+
+def _run_bam2fastx(file_type, ds_file, fastx_file):
+    if fastx_file.endswith(".gz"):
+        prefix = re.sub("\.fast[aq]{1}\.gz", "", fastx_file)
+        return _run_bam2fastx_gz(file_type, ds_file, prefix)
     else:
-        ds_tmp = tempfile.NamedTemporaryFile(suffix=".consensusreadset.xml").name
-        dataset.write(ds_tmp)
         if file_type == FileTypes.FASTQ:
-            return run_bam_to_fastq(ds_tmp, fastx_file)
+            return run_bam_to_fastq(ds_file, fastx_file)
         else:
-            return run_bam_to_fasta(ds_tmp, fastx_file)
+            return run_bam_to_fasta(ds_file, fastx_file)
 
 
 def to_fastx_files(file_type,
@@ -97,8 +101,10 @@ def to_fastx_files(file_type,
         base_name = ".".join([file_prefix, suffix, file_type.ext])
         fastx_file = op.join(base_dir, base_name)
         if not no_zip:
-            fastx_file += ".zip"
-        _run_bam2fastx(file_type, ds_final, fastx_file)
+            fastx_file += ".gz"
+        ds_tmp = tempfile.NamedTemporaryFile(suffix=".consensusreadset.xml").name
+        ds_final.write(ds_tmp)
+        _run_bam2fastx(file_type, ds_tmp, fastx_file)
         desc = "{l} ({t})".format(l=label, t=file_type.ext.upper())
         return _to_datastore_file(fastx_file, file_id, file_type, desc)
 
