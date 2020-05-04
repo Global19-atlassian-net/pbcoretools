@@ -7,6 +7,7 @@ from zipfile import ZipFile
 import itertools
 import functools
 import logging
+import gzip
 import uuid
 import sys
 import os.path as op
@@ -49,6 +50,9 @@ def __create_zipped_fastx(file_type_id, source_id, ds_files, output_file):
                     for fn in zip_in.namelist():
                         with zip_in.open(fn, mode="r") as fastx_in:
                             zip_out.writestr(fn, fastx_in.read())
+            elif file_name.endswith(".gz"):
+                with gzip.open(file_name, "r") as fastx_in:
+                    zip_out.writestr(op.basename(file_name), fastx_in.read())
             else:
                 with open(file_name, "r") as fastx_in:
                     zip_out.writestr(op.basename(file_name), fastx_in.read())

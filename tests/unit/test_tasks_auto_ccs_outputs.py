@@ -28,8 +28,8 @@ class TestAutoCCSOutputs(PbIntegrationBase):
         TESTDATA, "auto_ccs_outputs/m54006_180707_211919.consensusreadset.xml")
     OUTPUT_FILES = [
         "m54006_180707_211919.hifi_reads.bam",
-        "m54006_180707_211919.hifi_reads.fasta.zip",
-        "m54006_180707_211919.hifi_reads.fastq.zip"
+        "m54006_180707_211919.hifi_reads.fasta.gz",
+        "m54006_180707_211919.hifi_reads.fastq.gz"
     ]
 
     def setup_method(self, method):
@@ -120,7 +120,7 @@ class TestAutoCCSOutputs(PbIntegrationBase):
         self._check_call(args)
         ds = DataStore.load_from_json("output.datastore.json")
         self._check_datastore_files(ds.files.values(),
-                                    ["m54006_180707_211919.q10_reads.fastq.zip"])
+                                    ["m54006_180707_211919.q10_reads.fastq.gz"])
 
     def test_auto_ccs_outputs_min_qv_2(self):
         ds_file = pbtestdata.get_file("rsii-ccs-multi-cell")
@@ -134,9 +134,9 @@ class TestAutoCCSOutputs(PbIntegrationBase):
         self._check_call(args)
         ds = DataStore.load_from_json("output.datastore.json")
         assert sorted([op.basename(f.path) for f in ds.files.values()]) == [
-            "multiple_movies.hifi_reads.fasta.zip"]
+            "multiple_movies.hifi_reads.fasta.gz"]
         args.extend(["--min-qv", "0"])
         self._check_call(args)
         ds = DataStore.load_from_json("output.datastore.json")
         assert sorted([op.basename(f.path) for f in ds.files.values()]) == [
-            "multiple_movies.q0_reads.fasta.zip"]
+            "multiple_movies.q0_reads.fasta.gz"]
