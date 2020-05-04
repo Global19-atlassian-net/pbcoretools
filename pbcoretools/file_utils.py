@@ -7,6 +7,7 @@ from collections import defaultdict
 import multiprocessing
 import tempfile
 import zipfile
+import tarfile
 import logging
 import shutil
 import uuid
@@ -31,9 +32,25 @@ class Constants:
                             [FileTypes.DS_SUBREADS, FileTypes.DS_CCS]])
 
 
+def _archive_files_zip(input_file_names, output_file_name, archive_file_names):
+    with zipfile.ZipFile(output_file_name, "w", zipfile.ZIP_DEFLATED,
+                         allowZip64=True) as zip_out:
+        for file_name, archive_file_name in zip(input_file_names,
+                                                archive_file_names):
+            zip_out.write(file_name, archive_file_name)
+
+
+def _archive_files_tgz(input_file_names, output_file_name, archive_file_names):
+    with tarfile.open(output_file_name, mode="w:gz") as tgz_out:
+        for file_name, archive_file_name in zip(input_file_names,
+                                                archive_file_names):
+            tgz_out.add(file_name, archive_file_name)
+    return 0
+
+
 def archive_files(input_file_names, output_file_name, remove_path=True):
     """
-    Create a zipfile from a list of input files.
+    Create a zipfile or tar.gz archive from a list of input files.
 
     :param remove_path: if True, the directory will be removed from the input
                         file names before archiving.  All inputs and the output
@@ -42,12 +59,13 @@ def archive_files(input_file_names, output_file_name, remove_path=True):
     archive_file_names = input_file_names
     if remove_path:
         archive_file_names = [op.basename(fn) for fn in archive_file_names]
-    log.info("Creating zip file %s", output_file_name)
-    with zipfile.ZipFile(output_file_name, "w", zipfile.ZIP_DEFLATED,
-                         allowZip64=True) as zip_out:
-        for file_name, archive_file_name in zip(input_file_names,
-                                                archive_file_names):
-            zip_out.write(file_name, archive_file_name)
+    log.info("Creating archive file %s", output_file_name)
+    if output_file_name.endswith(".zip"):
+        _archive_files_zip(input_file_names, output_file_name, archive_file_names)
+    elif output_file_name.endswith(".gz"):
+        _archive_files_tgz(input_file_names, output_file_name, archive_file_names)
+    else:
+        raise ValueError("Couldn't determine type for %s" % output_file_name)
     return 0
 
 
