@@ -49,6 +49,7 @@ def reheader_dataset_bams(ds,
                           output_dir,
                           biosample_name=None,
                           library_name=None):
+    ds = ds.copy()
     have_files = set(os.listdir(output_dir))
 
     def _get_ofn(fn):
