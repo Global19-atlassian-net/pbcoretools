@@ -6,7 +6,9 @@ ConsensusReadSets.  Will run individual exports in parallel.
 from zipfile import ZipFile
 import itertools
 import functools
+import tarfile
 import logging
+import gzip
 import uuid
 import sys
 import os.path as op
@@ -42,31 +44,40 @@ def __run_ccs_bam_fastq_exports(args):
 
 def __create_zipped_fastx(file_type_id, source_id, ds_files, output_file):
     fastx_files = [f.path for f in ds_files if f.file_type_id == file_type_id]
-    with ZipFile(output_file, "w", allowZip64=True) as zip_out:
+    with tarfile.open(output_file, mode="w:gz") as tgz_out:
+
+        def _write_fastx(fh):
+            arcname = re.sub(".gz", "", op.basename(fh.name))
+            fastx_in_info = tgz_out.gettarinfo(fileobj=fh, arcname=arcname)
+            tgz_out.addfile(fastx_in_info, fileobj=fh)
+
         for file_name in fastx_files:
             if file_name.endswith(".zip"):
                 with ZipFile(file_name, "r") as zip_in:
                     for fn in zip_in.namelist():
                         with zip_in.open(fn, mode="r") as fastx_in:
-                            zip_out.writestr(fn, fastx_in.read())
+                            _write_fastx(fastx_in)
+            elif file_name.endswith(".gz"):
+                with gzip.open(file_name, "r") as fastx_in:
+                    _write_fastx(fastx_in)
             else:
                 with open(file_name, "r") as fastx_in:
-                    zip_out.writestr(op.basename(file_name), fastx_in.read())
+                    _write_fastx(fastx_in)
     file_type_label = file_type_id.split(".")[-1].upper()
     return DataStoreFile(uuid.uuid4(),
                          source_id,
-                         FileTypes.ZIP.file_type_id,
+                         FileTypes.TGZ.file_type_id,
                          op.abspath(output_file),
                          name="All Barcodes ({l})".format(l=file_type_label))
 
 
 _create_zipped_fasta = functools.partial(__create_zipped_fastx,
                                          FileTypes.FASTA.file_type_id,
-                                         "pbcoretools.bc_fasta_zip")
+                                         "pbcoretools.bc_fasta_tgz")
 
 _create_zipped_fastq = functools.partial(__create_zipped_fastx,
                                          FileTypes.FASTQ.file_type_id,
-                                         "pbcoretools.bc_fastq_zip")
+                                         "pbcoretools.bc_fastq_tgz")
 
 
 def _run_auto_ccs_outputs_barcoded(datastore_in, datastore_out, nproc=Constants.MAX_NPROC):
@@ -83,8 +94,8 @@ def _run_auto_ccs_outputs_barcoded(datastore_in, datastore_out, nproc=Constants.
     output_files = list(itertools.chain.from_iterable(
         pool_map(__run_ccs_bam_fastq_exports, args, nproc)))
     output_files.extend([
-        _create_zipped_fastq(output_files, "all_barcodes.fastq.zip"),
-        _create_zipped_fasta(output_files, "all_barcodes.fasta.zip")
+        _create_zipped_fastq(output_files, "all_barcodes.fastq.tar.gz"),
+        _create_zipped_fasta(output_files, "all_barcodes.fasta.tar.gz")
     ])
     DataStore(output_files).write_json(datastore_out)
     return 0

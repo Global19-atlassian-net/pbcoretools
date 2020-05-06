@@ -2,6 +2,7 @@
 Generate single-file CCS BAM and FASTQ outputs from a ConsensusReadSet.
 """
 
+import subprocess
 import tempfile
 import logging
 import uuid
@@ -17,7 +18,7 @@ from pbcommand.utils import setup_log
 from pbcore.io import ConsensusReadSet
 from pbcore.util.statistics import accuracy_as_phred_qv, phred_qv_as_accuracy
 
-from pbcoretools.bam2fastx import run_bam_to_fastq, run_bam_to_fasta
+from pbcoretools.bam2fastx import run_bam_to_fasta, run_bam_to_fastq
 from pbcoretools.filters import combine_filters
 from pbcoretools.utils import get_base_parser
 from pbcoretools import __VERSION__
@@ -68,11 +69,22 @@ def consolidate_bam(base_dir, file_prefix, dataset,
                               description="{l} BAM file".format(l=label))
 
 
-def _run_bam2fastx(file_type, dataset_file, fastx_file):
-    if file_type == FileTypes.FASTQ:
-        return run_bam_to_fastq(dataset_file, fastx_file)
+def _run_bam2fastx_gz(file_type, reads, prefix):
+    program_name = "bam2{e}".format(e=file_type.ext)
+    cmd = [program_name, "-o", prefix, reads]
+    subprocess.check_call(cmd)
+    assert op.isfile(prefix + ".{e}.gz".format(e=file_type.ext))
+
+
+def _run_bam2fastx(file_type, ds_file, fastx_file):
+    if fastx_file.endswith(".gz"):
+        prefix = re.sub("\.fast[aq]{1}\.gz", "", fastx_file)
+        return _run_bam2fastx_gz(file_type, ds_file, prefix)
     else:
-        return run_bam_to_fasta(dataset_file, fastx_file)
+        if file_type == FileTypes.FASTQ:
+            return run_bam_to_fastq(ds_file, fastx_file)
+        else:
+            return run_bam_to_fasta(ds_file, fastx_file)
 
 
 def to_fastx_files(file_type,
@@ -84,24 +96,22 @@ def to_fastx_files(file_type,
                    min_rq=Constants.HIFI_RQ,
                    no_zip=False):
 
-    def run_to_output(ccs_file, file_id, rq):
+    def run_to_output(ds_final, file_id, rq):
         suffix, label = _get_suffix_and_label(rq)
         base_name = ".".join([file_prefix, suffix, file_type.ext])
         fastx_file = op.join(base_dir, base_name)
         if not no_zip:
-            fastx_file += ".zip"
-        _run_bam2fastx(file_type, ccs_file, fastx_file)
+            fastx_file += ".gz"
+        ds_tmp = tempfile.NamedTemporaryFile(suffix=".consensusreadset.xml").name
+        ds_final.write(ds_tmp)
+        _run_bam2fastx(file_type, ds_tmp, fastx_file)
         desc = "{l} ({t})".format(l=label, t=file_type.ext.upper())
         return _to_datastore_file(fastx_file, file_id, file_type, desc)
 
-    ccs_hifi = ccs_dataset_file
+    ccs_hifi = ds
     is_all_hifi = np.all(ds.index.readQual >= min_rq)
     if not is_all_hifi:
-        ccs_hq, ccs_lq = ds.copy(), ds.copy()
-        ccs_hifi = tempfile.NamedTemporaryFile(
-            suffix=".consensusreadset.xml").name
-        combine_filters(ccs_hq, {"rq": [('>=', min_rq)]})
-        ccs_hq.write(ccs_hifi)
+        combine_filters(ccs_hifi, {"rq": [('>=', min_rq)]})
     return [run_to_output(ccs_hifi, file_ids[0], min_rq)]
 
 
