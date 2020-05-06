@@ -33,16 +33,13 @@ setup(
             'bamsieve = pbcoretools.bamsieve:main',
             'pbtools-gather = pbcoretools.tasks.gather:main',
         ]},
-    setup_requires=[
-        'pytest-runner',
-    ],
     install_requires=[
         'numpy >= 1.17',
         'pysam >= 0.15.1',
         'pbcore >= 2.0.3',
         'pbcommand >= 2.0.0',
     ],
-    test_requires=test_deps,
+    tests_require=test_deps,
     extras_require={
         'test': test_deps},
     python_requires='>=3.7',
