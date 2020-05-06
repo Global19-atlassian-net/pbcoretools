@@ -60,6 +60,7 @@ def reheader_dataset_bams(ds,
             k += 1
         have_files.add(ofn)
         return op.join(output_dir, ofn)
+
     ds.close()
     for ext_res in ds.externalResources:
         if ext_res.bam:
@@ -70,14 +71,13 @@ def reheader_dataset_bams(ds,
                                               library_name=library_name)
             ext_res.pbi = ext_res.bam + ".pbi"
             ext_res.bai = ext_res.bam + ".bai"
-    ds.makePathsRelative(output_dir)
     ds.updateCounts()
     ds.newUuid(random=True)
     return ds
 
 
 def _run_args(args):
-    if [args.biosample_name, args.library_name] == [None, None]:
+    if not args.biosample_name and not args.library_name:
         log.error("No biosample or library name specified")
         return 1
     ds_out_file = op.abspath(args.output_file)
