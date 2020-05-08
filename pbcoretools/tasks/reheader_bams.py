@@ -26,13 +26,27 @@ def reheader_bam(bam_file_in,
                  bam_file_out,
                  biosample_name=None,
                  library_name=None):
+    """
+    Write a new BAM file identical to the input except for substitution or
+    addition of SM and/or LB tags in the @RG header.  If the tags are already
+    present and current no file will be written.
+
+    :return: True if header was changed, False if header is already current
+    """
+    was_changed = False
     with pysam.AlignmentFile(bam_file_in, "rb", check_sq=False) as bam_in:  # pylint: disable=no-member
         header = dict(bam_in.header)
         for rg in header["RG"]:
             if biosample_name:
+                if rg.get("SM", None) != biosample_name:
+                    was_changed = True
                 rg["SM"] = biosample_name
             if library_name:
+                if rg.get("LB", None) != library_name:
+                    was_changed = True
                 rg["LB"] = library_name
+        if not was_changed:
+            return False
         log.debug("Writing modified header and records to %s", bam_file_out)
         with pysam.AlignmentFile(bam_file_out,  # pylint: disable=no-member
                                  "wb",
@@ -42,7 +56,7 @@ def reheader_bam(bam_file_in,
         log.debug("Running pbindex")
         subprocess.check_call(["samtools", "index", bam_file_out])
         subprocess.check_call(["pbindex", bam_file_out])
-    return bam_file_out
+    return True
 
 
 def reheader_dataset_bams(ds,
@@ -66,11 +80,15 @@ def reheader_dataset_bams(ds,
         if ext_res.bam:
             ofn = _get_ofn(ext_res.bam)
             log.info("Updating BAM file %s to %s", ext_res.bam, ofn)
-            ext_res.resourceId = reheader_bam(ext_res.bam, ofn,
-                                              biosample_name=biosample_name,
-                                              library_name=library_name)
-            ext_res.pbi = ext_res.bam + ".pbi"
-            ext_res.bai = ext_res.bam + ".bai"
+            was_changed = reheader_bam(ext_res.bam, ofn,
+                                       biosample_name=biosample_name,
+                                       library_name=library_name)
+            if was_changed:
+                ext_res.resourceId = ofn
+                ext_res.pbi = ext_res.bam + ".pbi"
+                ext_res.bai = ext_res.bam + ".bai"
+            else:
+                log.warn("Skipped update because headers are already current")
     ds.updateCounts()
     ds.newUuid(random=True)
     return ds

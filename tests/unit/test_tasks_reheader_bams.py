@@ -2,6 +2,7 @@
 Unit and integration tests for pbcoretools.tasks.reheader_bams
 """
 
+import tempfile
 import random
 import os.path as op
 import os
@@ -60,12 +61,22 @@ class TestReheaderBams(PbIntegrationBase):
                                            self.LIBRARY_NAME)
             self._validate_dataset(ds_out)
             self._validate_records(ds, ds_out)
+            return ds_out
 
     def test_reheader_dataset_bams_subreads(self):
         self._run_reheader_dataset_bams(pbtestdata.get_file("subreads-xml"))
 
     def test_reheader_dataset_bams_ccs(self):
-        self._run_reheader_dataset_bams(pbtestdata.get_file("ccs-sequel"))
+        ds_out = self._run_reheader_dataset_bams(pbtestdata.get_file("ccs-sequel"))
+        # test that reheadering a second time does not write new files
+        tmp_out = tempfile.NamedTemporaryFile(suffix=".consensusreadset.xml").name
+        ds_out.write(tmp_out)
+        ds_out2 = self._run_reheader_dataset_bams(tmp_out)
+        self._validate_dataset(ds_out2)
+        for ext1, ext2 in zip(ds_out.externalResources,
+                              ds_out2.externalResources):
+            assert ext1.bam == ext2.bam
+            assert ext1.pbi == ext2.pbi
 
     def test_reheader_dataset_bams_ccs_barcoded(self):
         self._run_reheader_dataset_bams(pbtestdata.get_file("ccs-barcoded"))
