@@ -12,6 +12,7 @@ import gzip
 import uuid
 import sys
 import os.path as op
+import io
 import re
 
 from pbcommand.models import FileTypes, DataStoreFile, DataStore
@@ -49,6 +50,10 @@ def __create_zipped_fastx(file_type_id, source_id, ds_files, output_file):
         def _write_fastx(fh):
             arcname = re.sub(".gz", "", op.basename(fh.name))
             fastx_in_info = tgz_out.gettarinfo(fileobj=fh, arcname=arcname)
+            # XXX This is very slow but necessary
+            if fh.name.endswith(".gz"):
+                fastx_in_info.size = fh.seek(0, io.SEEK_END)
+                fh.seek(0)
             tgz_out.addfile(fastx_in_info, fileobj=fh)
 
         for file_name in fastx_files:
@@ -63,6 +68,7 @@ def __create_zipped_fastx(file_type_id, source_id, ds_files, output_file):
             else:
                 with open(file_name, "r") as fastx_in:
                     _write_fastx(fastx_in)
+
     file_type_label = file_type_id.split(".")[-1].upper()
     return DataStoreFile(uuid.uuid4(),
                          source_id,
