@@ -36,7 +36,8 @@ def run_args(args):
         log.info("Wrote %s", args.output_file)
         return 0
     elif args.output_file.endswith(".report.json"):
-        gather_report(args.chunked_files, args.output_file)
+        gather_report(args.chunked_files, args.output_file,
+                      dataset_xml=args.dataset)
         log.info("Wrote %s", args.output_file)
         return 0
 
@@ -71,6 +72,7 @@ def _get_parser():
     p.add_argument("chunked_files", nargs="+", help="Chunked input files")
     p.add_argument("--join-contigs", action="store_true", default=False,
                    help="Merge split contigs")
+    p.add_argument("--dataset", help="Dataset XML for populating metadata")
     return p
 
 
