@@ -20,6 +20,7 @@ from pbcommand.cli.utils import main_runner_default, subparser_builder
 from pbcommand.cli import get_default_argparser
 from pbcommand.models.report import Report
 from pbcommand.models import DataStore
+from pbcommand.utils import get_dataset_metadata
 
 from pbcore.io import (SubreadSet, ContigSet, AlignmentSet, ConsensusReadSet,
                        ConsensusAlignmentSet, TranscriptSet, TranscriptAlignmentSet)
@@ -163,13 +164,16 @@ def gather_csv(csv_files, output_file, skip_empty=True):
     return output_file
 
 
-def gather_report(json_files, output_file):
+def gather_report(json_files, output_file, dataset_xml=None):
     """
     Combines statistics (usually raw counts) stored as JSON files.
     Data models: pbcommand.models.report
     """
     reports = [load_report_from_json(fn) for fn in json_files]
     merged = Report.merge(reports)
+    if dataset_xml is not None:
+        ds_md = get_dataset_metadata(dataset_xml)
+        merged._dataset_uuids = [ds_md.uuid]
     with open(output_file, "w") as writer:
         writer.write(merged.to_json())
     return output_file
