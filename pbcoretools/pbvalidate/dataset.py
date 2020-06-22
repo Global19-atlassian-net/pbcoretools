@@ -54,6 +54,12 @@ class DatasetTypes:
                      "GmapReferenceSet"]
     ALL = BAM_DATASET + FASTA_DATASET
 
+    SUBREAD_TYPES = (pbcore.io.SubreadSet, pbcore.io.AlignmentSet)
+    CCS_TYPES = (pbcore.io.ConsensusReadSet, pbcore.io.ConsensusAlignmentSet)
+    INSTRUMENT_TYPES = (pbcore.io.SubreadSet, pbcore.io.ConsensusReadSet)
+    TRANSCRIPT_TYPES = (pbcore.io.TranscriptSet, pbcore.io.TranscriptAlignmentSet)
+    MAPPED_TYPES = (pbcore.io.AlignmentSet, pbcore.io.ConsensusAlignmentSet)
+
 
 def _validate_read_groups(ctx, validators, reader):
     """
@@ -77,6 +83,14 @@ def _validate_read_groups(ctx, validators, reader):
 class MissingIndexError(ValidatorError):
     MESSAGE_FORMAT = "Missing corresponding index files for the underlying " +\
         "raw data files."
+
+
+class MissingSamtoolsIndexError(ValidatorError):
+    MESSAGE_FORMAT = "Missing .bai index for BAM file %s; this is required for fast access in SMRT Tools."
+
+
+class MissingPacBioIndexError(ValidatorError):
+    MESSAGE_FORMAT = "Missing .pbi index for BAM file %s; this is required for fast access in SMRT Tools."
 
 
 class ReaderError(ValidatorError):
@@ -140,6 +154,22 @@ class RootTagError(ValidatorError):
 class NumRecordsError(ValidatorError):
     MESSAGE_FORMAT = "The number of records specified in the metadata (%s) " +\
         "is greater than the number of records in the data file(s) (%s)."
+
+
+class MissingCollectionMetadataError(ValidatorError):
+    MESSAGE_FORMAT = "The dataset does not contain any CollectionMetadata "+\
+        "from sequencing results; this is required to populate fields such "+\
+        "as Bio Sample Name in SMRT Link."
+
+
+class MultipleCollectionMetadataError(ValidatorError):
+    MESSAGE_FORMAT = "The dataset contains %s CollectionMetadata elements "+\
+        "but only one is expected from instrument output."
+
+
+class WrongUniqueIdError(ValidatorError):
+    MESSAGE_FORMAT = "The dataset UniqueId %s is different than the " +\
+        "expected UUID %s from the %s tag."
 
 
 class ValidateXML(ValidateFile):
@@ -261,6 +291,14 @@ class ValidateIndex (ValidateResources):
     def _get_errors(self, file_obj):
         if not file_obj.isIndexed:
             return [MissingIndexError.from_args(file_obj)]
+        if isinstance(file_obj, DatasetTypes.MAPPED_TYPES):
+            for ext_res in file_obj.resourceReaders():
+                if ext_res.bai is None:
+                    return [MissingSamtoolsIndexError.from_args(file_obj, ext_res.bam)]
+        if isinstance(file_obj, pbcore.io.ReadSet):
+            for ext_res in file_obj.resourceReaders():
+                if ext_res.pbi is None:
+                    return [MissingPacBioIndexError.from_args(file_obj, ext_res.bam)]
         return []
 
 
@@ -439,6 +477,57 @@ class ValidateNumRecords(ValidateResources):
         return []
 
 
+class ValidateCollectionMetadataExists(ValidateResources):
+
+    def _get_errors(self, file_obj):
+        ds = DatasetReader.get_dataset_object(file_obj)
+        if len(ds.metadata.collections) == 0:
+            return [MissingCollectionMetadataError.from_args(file_obj)]
+        return []
+
+
+class ValidateSingleCollectionMetadata(ValidateResources):
+
+    def _get_errors(self, file_obj):
+        ds = DatasetReader.get_dataset_object(file_obj)
+        n_collections = len(ds.metadata.collections)
+        if n_collections > 1:
+            return [MultipleCollectionMetadataError.from_args(file_obj, n_collections)]
+        return []
+
+
+class ValidateCollectionUuid(ValidateResources):
+    """
+    Verify that the dataset UUID is what Run Design specified.  This should
+    only be run on datasets directly off the instrument (or equivalent).
+    """
+
+    def _get_errors(self, file_obj):
+        ds = DatasetReader.get_dataset_object(file_obj)
+        # this will be handled by previous validators
+        if len(ds.metadata.collections) != 1:
+            return []
+        expected_uuid = expected_uuid_tag = None
+        if isinstance(ds, pbcore.io.SubreadSet):
+            expected_uuid = ds.metadata.collections[0].uniqueId
+            expected_uuid_tag = "CollectionMetadata"
+        elif isinstance(ds, pbcore.io.ConsensusReadSet):
+            ccs_ref = ds.metadata.collections[0].consensusReadSetRef
+            if ccs_ref is not None:
+                expected_uuid = ccs_ref.uuid
+                expected_uuid_tag = "ConsensusReadSetRef"
+        else:
+            raise TypeError("This validator cannot be used on {t}".format(
+                            t=type(ds).__name__))
+        # XXX allowing expected_uuid to be None here because of quick runs
+        if expected_uuid is not None and expected_uuid != file_obj.uuid:
+            return [WrongUniqueIdError.from_args(file_obj,
+                                                 file_obj.uuid,
+                                                 expected_uuid,
+                                                 expected_uuid_tag)]
+        return []
+
+
 class DatasetReader:
 
     """
@@ -508,7 +597,8 @@ def validate_dataset(
         contents=None,
         aligned=None,
         validate_index=False,
-        strict=False):
+        strict=False,
+        instrument_mode=False):
     assert os.path.isfile(os.path.realpath(file_name))
     ds = None
     ReaderClass = getattr(pbcore.io, str(dataset_type), pbcore.io.openDataSet)
@@ -538,14 +628,11 @@ def validate_dataset(
     log.debug("Dataset type: %s" % ds.__class__.__name__)
     actual_dataset_type = _dataset_type(ds)
     log.debug("Actual type:  %s" % actual_dataset_type)
-    subread_types = (pbcore.io.SubreadSet, pbcore.io.AlignmentSet)
-    ccs_types = (pbcore.io.ConsensusReadSet, pbcore.io.ConsensusAlignmentSet)
-    transcript_types = (pbcore.io.TranscriptSet)
-    if isinstance(ds, ccs_types) and contents is None:
+    if isinstance(ds, DatasetTypes.CCS_TYPES) and contents is None:
         contents = "CCS"
-    elif isinstance(ds, subread_types) and contents is None:
+    elif isinstance(ds, DatasetTypes.SUBREAD_TYPES) and contents is None:
         contents = "SUBREAD"
-    elif isinstance(ds, transcript_types) and contents is None:
+    elif isinstance(ds, DatasetTypes.TRANSCRIPT_TYPES) and contents is None:
         contents = "TRANSCRIPT"
     validators = [
         ValidateEncoding(),
@@ -558,8 +645,17 @@ def validate_dataset(
         ValidateResourcesOpen(),
         ValidateNumRecords(),
     ]
-    if validate_index:
+    if isinstance(ds, DatasetTypes.INSTRUMENT_TYPES):
+        validators.extend([
+            ValidateCollectionMetadataExists()
+        ])
+    if validate_index or instrument_mode:
         validators.append(ValidateIndex())
+    if instrument_mode:
+        validators.extend([
+            ValidateSingleCollectionMetadata(),
+            ValidateCollectionUuid()
+        ])
     if strict:
         validators.extend([
             ValidateXML(),

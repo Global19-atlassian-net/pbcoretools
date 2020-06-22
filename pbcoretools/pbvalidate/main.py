@@ -53,10 +53,11 @@ def get_parser():
                         choices=["BAM", "Fasta"] + dataset.DatasetTypes.ALL,
                         help="Use the specified file type instead of guessing")
     parser.add_argument("--index", dest="validate_index", action="store_true",
-                        help="Require index files (.fai or .pbi)")
+                        help="Require index files (.fai or .pbi); this is always enforced for dataset XML")
     parser.add_argument("--strict", dest="strict", action="store_true",
                         help="Turn on additional validation, primarily for " +
                              "DataSet XML")
+    parser.add_argument("--instrument", dest="instrument_mode", action="store_true", help="Indicates that the dataset is delivered from a PacBio instrument and should be checked for metadata consistency")
     parser.add_argument("-x", "--xunit-out", dest="xunit_out", action="store",
                         default=None, help="Xunit test results for Jenkins")
     parser.add_argument("--alarms", dest="alarms_out", action="store",
@@ -113,8 +114,9 @@ class run_validator:
                 max_records=args.max_records,
                 aligned=args.aligned,
                 contents=args.contents,
-                validate_index=args.validate_index,
-                strict=args.strict)
+                validate_index=True,
+                strict=args.strict,
+                instrument_mode=args.instrument_mode)
         else:
             raise NotImplementedError("No validator found for '%s'." % ext)
         self.t_end = time.time()
