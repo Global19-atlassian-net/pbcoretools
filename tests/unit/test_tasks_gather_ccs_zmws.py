@@ -6,15 +6,15 @@ import json
 
 from pbcommand.testkit.core import PbIntegrationBase
 
-from pbcoretools.tasks.gather_ccs_zmws import gather_chunks
+from pbcoretools.tasks.gather_ccs_zmws import gather_chunks, FIELDS
 
 
 class TestGatherCcsZmws(PbIntegrationBase, unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        d1 = {"zmws": [{"a": 1, "b": 2}]}
-        d2 = {"zmws": [{"a": 3, "b": 4}]}
+        d1 = {"zmws": [{FIELDS[x]:x for x in range(5)}]}
+        d2 = {"zmws": [{FIELDS[x]:x+5 for x in range(5)}]}
         j1 = tempfile.NamedTemporaryFile(suffix=".json.gz").name
         j2 = tempfile.NamedTemporaryFile(suffix=".json.gz").name
         for d, fn in zip([d1, d2], [j1, j2]):
@@ -25,7 +25,10 @@ class TestGatherCcsZmws(PbIntegrationBase, unittest.TestCase):
     def _validate_output(self, file_name):
         with gzip.open(file_name, mode="rt") as gz_in:
             d = json.loads(gz_in.read())
-            self.assertEqual(d, {"zmws": [{"a": 1, "b": 2}, {"a": 3, "b": 4}]})
+            self.assertEqual(d, {"zmws": [
+                {FIELDS[x]:x for x in range(5)},
+                {FIELDS[x]:x+5 for x in range(5)}
+            ]})
 
     def test_gather(self):
         ofn = tempfile.NamedTemporaryFile(suffix=".json.gz").name
