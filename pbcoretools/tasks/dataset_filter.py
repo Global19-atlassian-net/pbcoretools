@@ -29,6 +29,19 @@ def run_args(args):
         min_rq=args.min_rq)
 
 
+def _phred_qv_as_accuracy(x):
+    """
+    Wrapper for phred_qv_as_accuracy that allows values of -1, which is
+    ignored (no filter added).  This is useful for CCS applications where we
+    want to allow every read through, even the ones with RQ = -1.
+    """
+    x = int(x)
+    if x == -1:
+        return -1
+    else:
+        return phred_qv_as_accuracy(x)
+
+
 def _get_parser():
     p = get_default_argparser_with_base_opts(
         version=__version__,
@@ -45,7 +58,7 @@ def _get_parser():
                    help="Minimum read score/quality (range 0.0-1.0)")
     p.add_argument("--min-qv",
                    dest="min_rq",
-                   type=lambda arg: phred_qv_as_accuracy(int(arg)),
+                   type=_phred_qv_as_accuracy,
                    help="Alternative to --min-rq, as integer on Phred scale (0-60)")
     return p
 
