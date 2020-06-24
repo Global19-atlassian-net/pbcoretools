@@ -172,6 +172,11 @@ class WrongUniqueIdError(ValidatorError):
         "expected UUID %s from the %s tag."
 
 
+class BadTagsError(ValidatorError):
+    MESSAGE_FORMAT = "The dataset Tags '%s' will prevent this dataset "+\
+        "from appearing in SMRT Link."
+
+
 class ValidateXML(ValidateFile):
 
     def _get_errors(self, path):
@@ -528,6 +533,14 @@ class ValidateCollectionUuid(ValidateResources):
         return []
 
 
+class ValidateDatasetTags(ValidateResources):
+    def _get_errors(self, file_obj):
+        ds = DatasetReader.get_dataset_object(file_obj)
+        if "hidden" in ds.tags or "internal" in ds.tags:
+            return [BadTagsError.from_args(file_obj, ds.tags)]
+        return []
+
+
 class DatasetReader:
 
     """
@@ -654,12 +667,14 @@ def validate_dataset(
     if instrument_mode:
         validators.extend([
             ValidateSingleCollectionMetadata(),
-            ValidateCollectionUuid()
+            ValidateCollectionUuid(),
+            ValidateDatasetTags()
         ])
     if strict:
         validators.extend([
             ValidateXML(),
             ValidateFileName(file_name),
+            ValidateDatasetTags()
         ])
     additional_validation_function = None
     opened_class_name = ds.__class__.__name__

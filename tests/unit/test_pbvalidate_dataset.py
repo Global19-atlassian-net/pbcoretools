@@ -119,10 +119,18 @@ class TestCase:
         e, c = validate_dataset(xml_tmp, instrument_mode=True)
         assert len(e) == 0
         xml_tmp2 = tempfile.NamedTemporaryFile(suffix=extension).name
-        ds.metadata.collections.pop(0)
-        ds.write(xml_tmp2)
+        ds2 = ds.copy()
+        ds2.metadata.collections.pop(0)
+        ds2.write(xml_tmp2)
         e, c = validate_dataset(xml_tmp2, instrument_mode=True)
         assert [type(err).__name__ for err in e] == ['MissingCollectionMetadataError']
+        xml_tmp3 = tempfile.NamedTemporaryFile(suffix=extension).name
+        ds3 = ds.copy()
+        ds3.tags = ",".join(ds3.tags.split(",") + ["hidden"])
+        ds3.uuid = ds.uuid
+        ds3.write(xml_tmp3)
+        e, c = validate_dataset(xml_tmp3, instrument_mode=True)
+        assert [type(err).__name__ for err in e] == ['BadTagsError']
 
     def test_validate_instrument_data(self):
         def set_uuid(ds):
