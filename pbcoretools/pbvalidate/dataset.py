@@ -15,20 +15,6 @@ import sys
 
 from urllib.parse import urlparse
 
-try:
-    from pyxb import exceptions_ as pyxbexceptions
-except ImportError:
-    class pyxbexceptions:
-
-        class PyXBException(Exception):
-            pass
-
-        class ValidationError(Exception):
-            pass
-
-        class StructuralBadDocumentError(Exception):
-            pass
-
 from pbcore.io.dataset.DataSetReader import xmlRootType
 from pbcore.io.dataset.DataSetIO import _dsIdToName
 from pbcore.io.dataset import DataSet, DataSetValidator
@@ -183,14 +169,6 @@ class ValidateXML(ValidateFile):
         emsg = None
         try:
             DataSetValidator.validateFile(path, skipResources=True)
-        except pyxbexceptions.StructuralBadDocumentError as e:
-            emsg = "{t} ('<{n}>')".format(t=type(e).__name__,
-                                          n=e.node.tagName)  # pylint: disable=no-member
-        except pyxbexceptions.ValidationError as e:
-            emsg = "{t}: {m}".format(
-                t=type(e).__name__, m=e.details())  # pylint: disable=no-member
-        except pyxbexceptions.PyXBException as e:
-            emsg = "{t}: {m})".format(t=type(e).__name__, m=str(e))
         except Exception as e:
             emsg = str(e)
         if emsg is not None:
