@@ -15,20 +15,6 @@ import sys
 
 from urllib.parse import urlparse
 
-try:
-    from pyxb import exceptions_ as pyxbexceptions
-except ImportError:
-    class pyxbexceptions:
-
-        class PyXBException(Exception):
-            pass
-
-        class ValidationError(Exception):
-            pass
-
-        class StructuralBadDocumentError(Exception):
-            pass
-
 from pbcore.io.dataset.DataSetReader import xmlRootType
 from pbcore.io.dataset.DataSetIO import _dsIdToName
 from pbcore.io.dataset import DataSet, DataSetValidator
@@ -172,20 +158,17 @@ class WrongUniqueIdError(ValidatorError):
         "expected UUID %s from the %s tag."
 
 
+class BadTagsError(ValidatorError):
+    MESSAGE_FORMAT = "The dataset Tags '%s' will prevent this dataset "+\
+        "from appearing in SMRT Link."
+
+
 class ValidateXML(ValidateFile):
 
     def _get_errors(self, path):
         emsg = None
         try:
             DataSetValidator.validateFile(path, skipResources=True)
-        except pyxbexceptions.StructuralBadDocumentError as e:
-            emsg = "{t} ('<{n}>')".format(t=type(e).__name__,
-                                          n=e.node.tagName)  # pylint: disable=no-member
-        except pyxbexceptions.ValidationError as e:
-            emsg = "{t}: {m}".format(
-                t=type(e).__name__, m=e.details())  # pylint: disable=no-member
-        except pyxbexceptions.PyXBException as e:
-            emsg = "{t}: {m})".format(t=type(e).__name__, m=str(e))
         except Exception as e:
             emsg = str(e)
         if emsg is not None:
@@ -528,6 +511,14 @@ class ValidateCollectionUuid(ValidateResources):
         return []
 
 
+class ValidateDatasetTags(ValidateResources):
+    def _get_errors(self, file_obj):
+        ds = DatasetReader.get_dataset_object(file_obj)
+        if "hidden" in ds.tags or "internal" in ds.tags:
+            return [BadTagsError.from_args(file_obj, ds.tags)]
+        return []
+
+
 class DatasetReader:
 
     """
@@ -654,12 +645,14 @@ def validate_dataset(
     if instrument_mode:
         validators.extend([
             ValidateSingleCollectionMetadata(),
-            ValidateCollectionUuid()
+            ValidateCollectionUuid(),
+            ValidateDatasetTags()
         ])
     if strict:
         validators.extend([
             ValidateXML(),
             ValidateFileName(file_name),
+            ValidateDatasetTags()
         ])
     additional_validation_function = None
     opened_class_name = ds.__class__.__name__
