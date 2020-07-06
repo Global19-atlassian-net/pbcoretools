@@ -250,7 +250,7 @@ class ValidateFastaRaw (ValidateFile):
         with _open(path) as f:
             prev_line_was_header = False
             prev_header = None
-            for i, line in enumerate(f.readlines()):
+            for i, line in enumerate(f):
                 if line.endswith("\n"):
                     if line.endswith("\r\n"):
                         is_dos = True
