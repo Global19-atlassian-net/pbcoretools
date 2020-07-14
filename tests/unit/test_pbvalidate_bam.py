@@ -300,6 +300,17 @@ class TestPbvalidateBam:
         errors1 = sorted([type(err).__name__ for err in e])
         assert errors1 == ["BadEncodingError"]
 
+    def test_valid_ccs_strand_suffix(self):
+        file_name = op.join(DATA_DIR, "tst_6.ccs.bam")
+        e, c = bam.validate_bam(file_name)
+        assert len(e) == 0
+
+    def test_invalid_ccs_strand_suffix(self):
+         file_name = op.join(DATA_DIR, "tst_7.ccs.bam")
+         e, c = bam.validate_bam(file_name)
+         errors1 = sorted(list(set([type(err).__name__ for err in e])))
+         assert errors1 == ['QnameFormatError']
+
     def test_exit_code_0(self):
         file_name = op.join(DATA_DIR, "tst_1_subreads.bam")
         rc = subprocess.call(["pbvalidate", file_name])
