@@ -1,4 +1,5 @@
 import subprocess
+import tempfile
 import os.path as op
 import os
 import pytest
@@ -103,3 +104,44 @@ class TestCase:
     def test_validate_transcriptset(self):
         DS = "/pbi/dept/secondary/siv/testdata/isoseqs/TranscriptSet/unpolished.transcriptset.xml"
         assert subprocess.call(["pbvalidate", "--max-records", "1", DS]) == 0
+
+    def _base_test_validate_instrument_data(self, ds_id, extension, set_uuid):
+        xml = pbtestdata.get_file(ds_id)
+        e, c = validate_dataset(xml, instrument_mode=True)
+        # FIXME it's arguably a bug in PacBioTestData that our example Sequel
+        # datasets do not have the UUIDs we expect.  but we need to test both
+        # ways anyway so this works for now
+        assert [type(err).__name__ for err in e] == ['WrongUniqueIdError']
+        ds = pbcore.io.openDataSet(xml)
+        set_uuid(ds)
+        xml_tmp = tempfile.NamedTemporaryFile(suffix=extension).name
+        ds.write(xml_tmp)
+        e, c = validate_dataset(xml_tmp, instrument_mode=True)
+        assert len(e) == 0
+        xml_tmp2 = tempfile.NamedTemporaryFile(suffix=extension).name
+        ds2 = ds.copy()
+        ds2.metadata.collections.pop(0)
+        ds2.write(xml_tmp2)
+        e, c = validate_dataset(xml_tmp2, instrument_mode=True)
+        assert [type(err).__name__ for err in e] == ['MissingCollectionMetadataError']
+        xml_tmp3 = tempfile.NamedTemporaryFile(suffix=extension).name
+        ds3 = ds.copy()
+        ds3.tags = ",".join(ds3.tags.split(",") + ["hidden"])
+        ds3.uuid = ds.uuid
+        ds3.write(xml_tmp3)
+        e, c = validate_dataset(xml_tmp3, instrument_mode=True)
+        assert [type(err).__name__ for err in e] == ['BadTagsError']
+
+    def test_validate_instrument_data(self):
+        def set_uuid(ds):
+            ds.uuid = ds.metadata.collections[0].uniqueId
+        self._base_test_validate_instrument_data("subreads-sequel",
+                                                 ".subreadset.xml",
+                                                 set_uuid)
+
+    def test_validate_instrument_data_ccs(self):
+        def set_uuid(ds):
+            ds.uuid = ds.metadata.collections[0].consensusReadSetRef.uuid
+        self._base_test_validate_instrument_data("ccs-sequel",
+                                                 ".consensusreadset.xml",
+                                                 set_uuid)

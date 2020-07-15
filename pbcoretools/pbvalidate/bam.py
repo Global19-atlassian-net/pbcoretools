@@ -44,7 +44,7 @@ class Constants:
     DEFAULT_SN = [-1., -1., -1., -1.]
     # XXX supposedly the movie name should be lowercase, but this is not always
     # true - should it be?
-    REGEX_QNAME = "([a-zA-Z0-9_]+)/([0-9]+)/((ccs)|([0-9]+_[0-9]+))$"
+    REGEX_QNAME = "([a-zA-Z0-9_]+)/([0-9]+)/((ccs(/(fwd|rev))?)|([0-9]+_[0-9]+))$"
     REGEX_BASECALLS = "^[ACGTN]+$"
     REGEX_BAD_CIGAR = "M"
     # various tag keys and values
@@ -740,6 +740,9 @@ class ValidateReadQname (ValidateReadBase):
             if aln.movieName != movieName:
                 err.append(
                     QnameMovieError.from_args(aln, movieName, aln.movieName))
+            
+            ccs_suffixes = ["ccs", "ccs/fwd", "ccs/rev"]
+
             # commented out since this is implicit in the regex
             # try :
             holeNumber = int(holeNumber)
@@ -748,11 +751,11 @@ class ValidateReadQname (ValidateReadBase):
             if holeNumber != aln.HoleNumber:
                 err.append(
                     QnameHoleNumberError.from_args(aln, aln.qName, aln.HoleNumber))
-            if ((rg.ReadType == Constants.READ_TYPE_CCS and qrange != "ccs") or
-                    (rg.ReadType != Constants.READ_TYPE_CCS and qrange == "ccs")):
+            if ((rg.ReadType == Constants.READ_TYPE_CCS and qrange not in ccs_suffixes) or
+                    (rg.ReadType != Constants.READ_TYPE_CCS and qrange in ccs_suffixes)):
                 err.append(
                     QnameReadTypeError.from_args(aln, rg.readType, aln.qName))
-            if qrange != "ccs":
+            if qrange not in ccs_suffixes:
                 try:
                     qstart, qend = [int(x) for x in qrange.split("_")]
                 except Exception:
