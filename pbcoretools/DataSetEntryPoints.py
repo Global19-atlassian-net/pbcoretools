@@ -86,8 +86,10 @@ def createXml(args):
         raise IOError("Output file {} already exists. Use --force to "
                       "clobber".format(args.outfile))
     if args.dsType is None:
-        dset = openDataFile(*args.infile, strict=args.strict,
+        dset = openDataFile(*args.infile,
+                            strict=args.strict,
                             skipCounts=args.skipCounts,
+                            trustCounts=args.trustCounts,
                             generateIndices=args.generateIndices,
                             referenceFastaFname=args.reference_fasta_fname)
     else:
@@ -96,6 +98,7 @@ def createXml(args):
             *args.infile,
             strict=args.strict,
             skipCounts=args.skipCounts,
+            trustCounts=args.trustCounts,
             generateIndices=args.generateIndices,
             referenceFastaFname=args.reference_fasta_fname)
     if args.dsName != '':
@@ -176,6 +179,9 @@ def create_options(parser):
     pad("--unique-collections", action="store_true",
         default=False,
         help="Make sure CollectionMetadata records are unique")
+    pad("--trustCounts", action="store_true", default=False,
+        help="Assuming record counts in input dataset are correct, and "+
+             "skip reading index files to get overall count")
     parser.set_defaults(func=createXml)
 
 
