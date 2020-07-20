@@ -148,3 +148,16 @@ class TestDataSet:
             i=testFile, d=datafile, x=xmlfile)
         log.debug(cmd)
         subprocess.check_call(cmd.split())
+
+    def test_gather_alignments_trust_counts(self):
+        f1 = pbtestdata.get_file("aligned-xml")
+        f2 = pbtestdata.get_file("aligned-ds-2")
+        tmp_out = tempfile.NamedTemporaryFile(suffix=".alignmentset.xml").name
+        args = [
+            "dataset", "create", "--trustCounts",
+            tmp_out, f1, f2
+        ]
+        assert subprocess.check_call(args) == 0
+        ds = AlignmentSet(tmp_out, trustCounts=True)
+        assert ds.numRecords == 133
+        assert ds.totalLength == 274217
