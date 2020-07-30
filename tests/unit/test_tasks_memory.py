@@ -60,7 +60,7 @@ class TestEstimateLimaMemory(PbIntegrationBase):
         assert mem_gb == 2
 
 
-class TestGetDatasetSize(PbIntegrationBase):
+class TestGetDatasetInfo(PbIntegrationBase):
     TINY_DATA = pbtestdata.get_file("subreads-sequel")
     BIG_DATA = TestEstimateLimaMemory.BIG_DATA
     TINY_REF = pbtestdata.get_file("lambdaNEB")
@@ -72,6 +72,7 @@ class TestGetDatasetSize(PbIntegrationBase):
         assert m.numRecords == 20
         assert m.totalLengthMb == 1
         assert m.indexSizeGb == 2
+        assert m.numResources == 1 and m.numFilters == 0
         m = get_dataset_size(tiny_xml, False, False)
         assert m.numRecords == 20
         assert m.totalLengthMb == 1
@@ -80,18 +81,24 @@ class TestGetDatasetSize(PbIntegrationBase):
         assert m.numRecords == 805580876
         assert m.totalLengthMb == 271330
         assert m.indexSizeGb == 45
+        assert m.numResources == 1 and m.numFilters == 0
         m = get_dataset_size(self.TINY_REF, False, False)
         assert m.numRecords == 1
         assert m.totalLengthMb == 1
         m = get_dataset_size(self.BIG_REF, False, False)
         assert m.numRecords == 86
         assert m.totalLengthMb == 2993
+        ds_aln = pbtestdata.get_file("aligned-ds-2")
+        m = get_dataset_size(ds_aln, True, True)
+        assert m.numRecords == 21
+        assert m.numResources == 2
 
-    def _verify_outputs(self, numRecords, totalLengthMb, indexSizeGb):
+    def _verify_outputs(self, numRecords, totalLengthMb, indexSizeGb,
+                              numResources, numFilters):
         vals = [numRecords, totalLengthMb, indexSizeGb]
-        files = ["numrecords.txt", "totallength.txt", "indexsize.txt"]
+        files = ["numrecords", "totallength", "indexsize", "numresources", "numfilters"]
         for fn, val in zip(files, vals):
-            with open(fn, "rt") as f:
+            with open(fn + ".txt", "rt") as f:
                 assert f.read() == str(val)
 
     def test_integration_tiny(self):
@@ -101,7 +108,7 @@ class TestGetDatasetSize(PbIntegrationBase):
             "--skip-counts", "--get-index-size"
         ]
         self._check_call(args)
-        self._verify_outputs(20, 1, 2)
+        self._verify_outputs(20, 1, 2, 1, 0)
 
     def test_integration_big(self):
         args = [
@@ -110,7 +117,7 @@ class TestGetDatasetSize(PbIntegrationBase):
             "--skip-counts", "--get-index-size"
         ]
         self._check_call(args)
-        self._verify_outputs(805580876, 271330, 45)
+        self._verify_outputs(805580876, 271330, 45, 1, 0)
 
     def test_integration_ref(self):
         args = [
@@ -118,4 +125,4 @@ class TestGetDatasetSize(PbIntegrationBase):
             self.TINY_REF
         ]
         self._check_call(args)
-        self._verify_outputs(1, 1, 1)
+        self._verify_outputs(1, 1, 1, 1, 0)
