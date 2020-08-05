@@ -35,7 +35,7 @@ def _to_zmw_info_hook(d):
 
 
 class ZmwInfoEncoder(JSONEncoder):
-    def default(self, o):
+    def default(self, o):  # pylint: disable=method-hidden
         return {getattr(o, name) for name in FIELDS.split()}
 
 

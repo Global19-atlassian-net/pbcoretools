@@ -14,6 +14,7 @@ import os.path as op
 import re
 import sys
 
+import pysam
 from pysam.libcalignmentfile import AlignmentFile  # pylint: disable=no-name-in-module, import-error, fixme, line-too-long
 
 from pbcommand.common_options import (add_log_quiet_option,
@@ -420,6 +421,8 @@ def show_zmws(input_file):
 
 
 def run(args):
+    # XXX https://github.com/pysam-developers/pysam/issues/939
+    pysam.set_verbosity(0)  # pylint: disable=no-member
     if args.show_zmws:
         if [args.whitelist, args.blacklist, args.percentage].count(None) != 3:
             log.warning("Ignoring unused filtering arguments")
