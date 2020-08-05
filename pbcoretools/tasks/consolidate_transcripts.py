@@ -9,6 +9,7 @@ import os.path as op
 import logging
 import subprocess
 
+import pysam
 from pysam import AlignmentFile  # pylint: disable=no-member, no-name-in-module
 
 from pbcommand.utils import setup_log
@@ -93,6 +94,8 @@ def get_reads_name(ds_in):
 def run_consolidate(dataset_file, output_file, datastore_file,
                     consolidate, n_files,
                     consolidate_f=lambda ds: ds.consolidate):
+    # XXX https://github.com/pysam-developers/pysam/issues/939
+    pysam.set_verbosity(0)  # pylint: disable=no-member
     datastore_files = []
     with openDataSet(dataset_file) as ds_in:
         if consolidate:
