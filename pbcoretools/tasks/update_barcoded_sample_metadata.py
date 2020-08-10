@@ -20,7 +20,7 @@ __version__ = "0.1"
 def run_args(args):
     base_dir = args.outdir
     if base_dir is None:
-        base_dir = op.dirname(args.lima_datastore)
+        base_dir = op.dirname(op.realpath(args.lima_datastore))
     datastore = update_barcoded_sample_metadata(
         base_dir=base_dir,
         datastore_file=op.realpath(args.lima_datastore),
