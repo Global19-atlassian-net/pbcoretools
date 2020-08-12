@@ -33,6 +33,8 @@ def reheader_bam(bam_file_in,
 
     :return: True if header was changed, False if header is already current
     """
+    # XXX https://github.com/pysam-developers/pysam/issues/939
+    pysam.set_verbosity(0)  # pylint: disable=no-member
     was_changed = False
     with pysam.AlignmentFile(bam_file_in, "rb", check_sq=False) as bam_in:  # pylint: disable=no-member
         header = dict(bam_in.header)

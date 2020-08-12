@@ -19,7 +19,8 @@ from pbcoretools.utils import get_base_parser
 log = logging.getLogger(__name__)
 
 
-MemInfo = namedtuple("MemInfo", ["numRecords", "totalLengthMb", "indexSizeGb"])
+ATTRS = ["numRecords", "totalLengthMb", "indexSizeGb", "numResources", "numFilters"]
+DsInfo = namedtuple("DsInfo", ATTRS)
 
 
 def get_dataset_size(dataset, get_index_size=False, skip_counts=True):
@@ -32,15 +33,17 @@ def get_dataset_size(dataset, get_index_size=False, skip_counts=True):
                 index_size += get_index_size_bytes(ext_res.pbi)
         # FIXME this is excessive, please reduce it
         index_size = 1 + math.ceil(2 * index_size / 1024**3)
-    return MemInfo(ds.numRecords, length_mb, index_size)
+    n_filt = len(ds.filters)
+    n_res = len(ds.externalResources)
+    return DsInfo(ds.numRecords, length_mb, index_size, n_res, n_filt)
 
 
 def run_args(args):
     def logf(p): return log.info("Wrote %s", op.abspath(p))
     m = get_dataset_size(args.dataset, args.get_index_size, args.skip_counts)
-    ofns = ["numrecords.txt", "totallength.txt", "indexsize.txt"]
-    attrs = ["numRecords", "totalLengthMb", "indexSizeGb"]
-    for ofn, attr in zip(ofns, attrs):
+    ofns = ["numrecords", "totallength", "indexsize", "numresources", "numfilters"]
+    for ofn, attr in zip(ofns, ATTRS):
+        ofn = ofn + ".txt"
         with open(ofn, "wt") as f:
             log.info("{a}={n}".format(a=attr, n=getattr(m, attr)))
             f.write(str(getattr(m, attr)))
