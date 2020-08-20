@@ -187,13 +187,18 @@ def make_barcode_sample_csv(subreads, csv_file):
 
 def parse_biosamples_csv(csv_file):
     records = []
+    log.info("Reading biosamples from CSV ({f})".format(f=csv_file))
     with open(csv_file, "rt") as csv_in:
         reader = csv.reader(csv_in, delimiter=',')
         for k, row in enumerate(reader):
             if len(row) != 2:
                 raise ValueError("Expected two fields, got %s" % row)
             row = [item.encode("ascii", errors="ignore").decode() for item in row]
-            if k > 0:
+            if len(row) != 2:
+                raise ValueError("Bad format for CSV record - expected two fields: {r}".format(r=",".join(row)))
+            if k > 0 or "--" in row[0]:
+                log.info("Sample record: barcode={b} name={n}".format(
+                         b=row[0], n=row[1]))
                 records.append(tuple(row))
     return records
 
