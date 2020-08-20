@@ -1,7 +1,11 @@
 # pbcoretools [![Circle CI](https://circleci.com/gh/PacificBiosciences/pbcoretools.svg?style=svg)](https://circleci.com/gh/PacificBiosciences/pbcoretools)
 
 The `pbcoretools` package provides Python CLIs for interacting with PacBio
-data files and writing bioinformatics applications.
+data files and writing bioinformatics applications.  Main components are:
+
+  - the `dataset` command, for all dataset XML operations
+  - the `bamsieve` command, for advanced BAM/dataset subsetting
+  - SMRT Link analysis application tasks
 
 ## Availability
 Latest version can be installed via bioconda package `pbcoretools`.
