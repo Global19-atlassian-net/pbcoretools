@@ -394,13 +394,13 @@ class TestBarcodeUtils:
     def test_sanitize_dataset_tags(self):
         ds = SubreadSet(pbtestdata.get_file("subreads-sequel"))
         base_name = ds.name
-        ds.name = ds.name + " (filtered) (CCS)"
+        ds.name = ds.name + " (filtered) (HiFi reads)"
         ds.tags = "subreads,hidden,testdata,filtered "
         sanitize_dataset_tags(ds)
-        assert ds.name == base_name + " (CCS)"
+        assert ds.name == base_name + " (HiFi reads)"
         assert ds.tags == "hidden,subreads,testdata"
         sanitize_dataset_tags(ds, remove_hidden=True)
-        assert ds.name == base_name + " (CCS)"
+        assert ds.name == base_name + " (HiFi reads)"
         assert ds.tags == "subreads,testdata"
         ds.tags = ", hidden, ccs"
         sanitize_dataset_tags(ds, remove_hidden=True)
