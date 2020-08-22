@@ -697,7 +697,10 @@ def reparent_dataset(input_file,
             log.warning("Removing existing provenance record: %s",
                         ds_in.metadata.provenance)
             ds_in.metadata.provenance = None
-        ds_in.name = dataset_name
+        if dataset_name:
+            ds_in.name = dataset_name
+        else:
+            ds_in.name = ds_in.name + " (copy)"
         ds_in.newUuid(random=True)
         sanitize_dataset_tags(ds_in, remove_hidden=True)
         if (biosamples_csv is not None):
