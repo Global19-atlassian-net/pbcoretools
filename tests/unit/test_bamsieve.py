@@ -168,6 +168,8 @@ class TestBamSieve:
         with SubreadSet(ofn, strict=False) as bam_out:
             with SubreadSet(DS2) as ds_in:
                 assert ds_in.uuid != bam_out.uuid
+                assert bam_out.name == ds_in.name + " (bamsieve)"
+                assert bam_out.tags == ds_in.tags
             have_zmws = set([rec.HoleNumber for rec in bam_out])
             assert have_zmws == set([8])
         # make sure paths are absolute
