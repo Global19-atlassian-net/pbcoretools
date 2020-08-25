@@ -11,13 +11,12 @@ import sys
 
 import pysam
 
-from pbcommand.cli import (pacbio_args_runner,
-                           get_default_argparser_with_base_opts)
+from pbcommand.cli import pacbio_args_runner
 from pbcommand.utils import setup_log
 from pbcore.io import openDataSet
 
 from pbcoretools import file_utils
-from pbcoretools import __VERSION__
+from pbcoretools.utils import get_base_parser
 
 log = logging.getLogger(__name__)
 
@@ -114,10 +113,7 @@ def _run_args(args):
 
 
 def _get_parser():
-    p = get_default_argparser_with_base_opts(
-        version=__VERSION__,
-        description=__doc__,
-        default_level="INFO")
+    p = get_base_parser(__doc__)
     p.add_argument("dataset", type=openDataSet, help="Path to input dataset")
     p.add_argument("output_file", help="Name of output dataset file")
     p.add_argument("--biosample-name", default=None, help="New BioSample Name")
