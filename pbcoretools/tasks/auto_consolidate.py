@@ -3,6 +3,7 @@
 BAM consolidation wrapper whose default behavior is dependent on input size.
 """
 
+from pathlib import Path
 import logging
 import uuid
 import os.path as op
@@ -80,6 +81,7 @@ def run_args(args):
         else:
             log.warning(
                 "--force was used, so BAM consolidation will be run anyway")
+    Path("dataset_was_consolidated.txt").touch()
     args.dataset.consolidate(args.output_bam,
                              numFiles=1,
                              useTmp=not args.noTmp)
