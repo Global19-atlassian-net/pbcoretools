@@ -3,6 +3,7 @@
 BAM consolidation wrapper whose default behavior is dependent on input size.
 """
 
+from pathlib import Path
 import logging
 import uuid
 import os.path as op
@@ -48,6 +49,7 @@ def _to_datastore(bam_file, bam_bai_file, datastore_json):
 def run_args(args):
     if op.exists(args.output_bam):
         raise IOError("{f} already exists".format(f=args.output_bam))
+    orig_uuid = args.dataset.uuid
     bam_size = sum([op.getsize(r.bam) for r in args.dataset.externalResources])
     size_gb = bam_size / 1e9
     log.info("Total file size (in gigabytes): {s}".format(s=size_gb))
@@ -79,9 +81,11 @@ def run_args(args):
         else:
             log.warning(
                 "--force was used, so BAM consolidation will be run anyway")
+    Path("dataset_was_consolidated.txt").touch()
     args.dataset.consolidate(args.output_bam,
                              numFiles=1,
                              useTmp=not args.noTmp)
+    args.dataset.uuid = orig_uuid
     args.dataset.write(xml_out)
     return _to_datastore(args.output_bam, bai_file, datastore_json)
 
