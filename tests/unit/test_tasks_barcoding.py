@@ -95,12 +95,11 @@ class TestReparent(PbIntegrationBase):
                              "new_parent.consensusreadset.xml")
         self._run_and_check_output(args)
 
-    def test_reparent_with_biosamples(self):
+    def _run_test_reparent_with_biosamples(self, csv):
         args = self._to_args(pbtestdata.get_file("subreads-sequel"),
                              "new_parent_with_samples.subreadset.xml")
         input_file = args[-3]
         output_file = args[-1]
-        csv = "Barcode,BioSample Name\nlbc1--lbc1,Alice\nlbc2--lbc2,Bob"
         csv_tmp = tempfile.NamedTemporaryFile(suffix=".csv").name
         with open(csv_tmp, "w") as csv_out:
             csv_out.write(csv)
@@ -112,6 +111,14 @@ class TestReparent(PbIntegrationBase):
             samples_out = {
                 s.DNABarcodes[0].name: s.name for s in ds_out.metadata.collections[0].wellSample.bioSamples}
             assert samples_out == dict(samples)
+
+    def test_reparent_with_biosamples(self):
+        csv = "Barcode,BioSample Name\nlbc1--lbc1,Alice\nlbc2--lbc2,Bob"
+        return self._run_test_reparent_with_biosamples(csv)
+
+    def test_reparent_with_biosamples_noheader(self):
+        csv = "lbc1--lbc1,Alice\nlbc2--lbc2,Bob"
+        return self._run_test_reparent_with_biosamples(csv)
 
     def test_reparent_with_non_ascii_biosamples(self):
         args = self._to_args(pbtestdata.get_file("subreads-sequel"),

@@ -40,7 +40,9 @@ def get_dataset_size(dataset, get_index_size=False, skip_counts=True):
 
 def run_args(args):
     def logf(p): return log.info("Wrote %s", op.abspath(p))
-    m = get_dataset_size(args.dataset, args.get_index_size, args.skip_counts)
+    m = get_dataset_size(op.realpath(args.dataset),
+                         args.get_index_size,
+                         args.skip_counts)
     ofns = ["numrecords", "totallength", "indexsize", "numresources", "numfilters"]
     for ofn, attr in zip(ofns, ATTRS):
         ofn = ofn + ".txt"

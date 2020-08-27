@@ -379,6 +379,8 @@ def filter_reads(input_bam,
             if not ignore_metadata:
                 ds_out.metadata = ds_in.metadata
                 ds_out.updateCounts()
+            ds_out.name = ds_in.name + " (bamsieve)"
+            ds_out.tags = ds_in.tags
             if relative:
                 ds_out.makePathsRelative(op.dirname(output_ds))
             if keep_original_uuid:
