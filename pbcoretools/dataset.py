@@ -55,6 +55,8 @@ def get_parser():
                         help="Skip updating NumRecords and TotalLength counts")
     subparser_list = get_subparsers()
     parser = add_subparsers(parser, subparser_list)
+    msg = "Please specify a sub-command, or call with --help for more options"
+    parser.set_defaults(func=lambda args: parser.error(msg))
     return parser
 
 
