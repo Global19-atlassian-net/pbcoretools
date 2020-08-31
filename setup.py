@@ -18,7 +18,7 @@ test_deps = [
 
 setup(
     name='pbcoretools',
-    version='0.8.7',
+    version='0.8.8',
     author='Pacific Biosciences',
     author_email='devnet@pacificbiosciences.com',
     description='Python CLI tools and add-ons for reading and writing PacBio® data files',
@@ -36,7 +36,7 @@ setup(
     install_requires=[
         'numpy >= 1.17',
         'pysam >= 0.15.1',
-        'pbcore >= 2.2.2',
+        'pbcore >= 2.2.4',
         'pbcommand >= 2.0.0',
     ],
     tests_require=test_deps,

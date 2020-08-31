@@ -284,16 +284,18 @@ def splitXml(args):
     if isinstance(dataSet, ContigSet):
         dss = dataSet.split(chunks)
     else:
-        dss = dataSet.split(chunks=chunks,
-                            ignoreSubDatasets=(not args.subdatasets),
-                            contigs=args.contigs,
-                            maxChunks=args.maxChunks,
-                            breakContigs=args.breakContigs,
-                            targetSize=args.targetSize,
-                            zmws=split_zmws,
-                            barcodes=split_barcodes,
-                            byRecords=(not args.byRefLength),
-                            updateCounts=(not args.noCounts))
+        dss = dataSet.split(
+            chunks=chunks,
+            ignoreSubDatasets=(not args.subdatasets),
+            contigs=args.contigs,
+            maxChunks=args.maxChunks,
+            breakContigs=args.breakContigs,
+            targetSize=args.targetSize,
+            zmws=split_zmws,
+            barcodes=split_barcodes,
+            byRecords=(not args.byRefLength),
+            updateCounts=(not args.noCounts),
+            breakReadGroups=args.breakReadGroups and not args.auto)
     for i, ds in enumerate(dss):
         infix = 'chunk{i}'
         chNum = str(i)
@@ -348,6 +350,10 @@ def split_options(parser):
         help="Optional output file prefix")
     pad("--simple-chunk-ids", default=False, action="store_true",
         help="Don't include barcode IDs in output file names (only applies if --barcodes was used)")
+    pad("--breakReadGroups", action="store_true", default=True,
+        help="Split across read group boundaries (default behavior)")
+    pad("--keepReadGroups", dest="breakReadGroups", action="store_false",
+        help="Don't combine multiple read groups in a chunk")
     pad("outfiles", nargs=argparse.REMAINDER, type=str,
         help="The resulting XML files (optional)")
     parser.set_defaults(func=splitXml)
