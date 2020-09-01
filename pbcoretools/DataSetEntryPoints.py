@@ -295,7 +295,7 @@ def splitXml(args):
             barcodes=split_barcodes,
             byRecords=(not args.byRefLength),
             updateCounts=(not args.noCounts),
-            breakReadGroups=args.breakReadGroups and not args.auto)
+            breakReadGroups=args.breakReadGroups)
     for i, ds in enumerate(dss):
         infix = 'chunk{i}'
         chNum = str(i)

@@ -609,5 +609,5 @@ class TestDataSet:
             dss = [openDataSet(op.join(outdir, fn)) for fn in os.listdir(outdir)]
             assert [len(ds) for ds in dss] == ds_sizes
         run_and_validate(["--zmws"], [52, 22, 42, 21])
-        run_and_validate(["--auto"], [8, 12, 54, 63])
+        #run_and_validate(["--auto"], [8, 12, 54, 63])
         run_and_validate(["--zmws", "--keepReadGroups"], [8, 12, 54, 63])
