@@ -49,11 +49,12 @@ def _to_datastore(bam_file, bam_bai_file, datastore_json):
 def run_args(args):
     if op.exists(args.output_bam):
         raise IOError("{f} already exists".format(f=args.output_bam))
-    orig_uuid = args.dataset.uuid
-    bam_size = sum([op.getsize(r.bam) for r in args.dataset.externalResources])
+    dataset = openDataSet(args.dataset_xml)
+    orig_uuid = dataset.uuid
+    bam_size = sum([op.getsize(r.bam) for r in dataset.externalResources])
     size_gb = bam_size / 1e9
     log.info("Total file size (in gigabytes): {s}".format(s=size_gb))
-    metatype = args.dataset.datasetType
+    metatype = dataset.datasetType
     bam_prefix = op.splitext(args.output_bam)[0]
     xml_out = ".".join([bam_prefix, FileTypes.ALL()[metatype].ext])
     log.info("Output dataset file name: {f}".format(f=xml_out))
@@ -62,16 +63,16 @@ def run_args(args):
         datastore_json = bam_prefix + ".datastore.json"
     bai_file = args.output_bam + ".bai"
     pbi_file = args.output_bam + ".pbi"
-    if len(args.dataset.externalResources) == 1:
+    if len(dataset.externalResources) == 1:
         log.info("Dataset already has a single BAM file: {f}".format(
-                 f=args.dataset.externalResources[0].bam))
+                 f=dataset.externalResources[0].bam))
         log.info("Making sure we have a .bai index too")
-        args.dataset.induceIndices()
+        dataset.induceIndices()
         log.info("Symlinking as {f}".format(f=args.output_bam))
-        os.symlink(args.dataset.externalResources[0].bam, args.output_bam)
-        os.symlink(args.dataset.externalResources[0].bai, bai_file)
-        os.symlink(args.dataset.externalResources[0].pbi, pbi_file)
-        args.dataset.write(xml_out)
+        os.symlink(dataset.externalResources[0].bam, args.output_bam)
+        os.symlink(dataset.externalResources[0].bai, bai_file)
+        os.symlink(dataset.externalResources[0].pbi, pbi_file)
+        dataset.write(xml_out)
         return _to_datastore(args.output_bam, bai_file, datastore_json)
     elif size_gb > args.max_size:
         if not args.force:
@@ -82,11 +83,11 @@ def run_args(args):
             log.warning(
                 "--force was used, so BAM consolidation will be run anyway")
     Path("dataset_was_consolidated.txt").touch()
-    args.dataset.consolidate(args.output_bam,
-                             numFiles=1,
-                             useTmp=not args.noTmp)
-    args.dataset.uuid = orig_uuid
-    args.dataset.write(xml_out)
+    dataset.consolidate(args.output_bam,
+                        numFiles=1,
+                        useTmp=not args.noTmp)
+    dataset.uuid = orig_uuid
+    dataset.write(xml_out)
     return _to_datastore(args.output_bam, bai_file, datastore_json)
 
 
@@ -95,7 +96,7 @@ def _get_parser():
         version=__version__,
         description=__doc__,
         default_level="INFO")
-    p.add_argument("dataset", type=openDataSet, help="Path to input dataset")
+    p.add_argument("dataset_xml", help="Path to input dataset")
     p.add_argument("output_bam", help="Name of consolidated BAM file")
     p.add_argument("--force", action="store_true", default=False,
                    help="Consolidate the BAM files even if they exceed the size cutoff")

@@ -100,7 +100,8 @@ def _run_args(args):
         log.error("No biosample or library name specified")
         return 1
     ds_out_file = op.abspath(args.output_file)
-    ds_out = reheader_dataset_bams(args.dataset,
+    dataset = openDataSet(args.dataset_xml)
+    ds_out = reheader_dataset_bams(dataset,
                                    op.dirname(ds_out_file),
                                    args.biosample_name,
                                    args.library_name)
@@ -114,7 +115,7 @@ def _run_args(args):
 
 def _get_parser():
     p = get_base_parser(__doc__)
-    p.add_argument("dataset", type=openDataSet, help="Path to input dataset")
+    p.add_argument("dataset_xml", help="Path to input dataset")
     p.add_argument("output_file", help="Name of output dataset file")
     p.add_argument("--biosample-name", default=None, help="New BioSample Name")
     p.add_argument("--library-name", default=None, help="New Library Name")
