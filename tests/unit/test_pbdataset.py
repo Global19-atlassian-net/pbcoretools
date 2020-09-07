@@ -606,7 +606,8 @@ class TestDataSet:
             outdir = tempfile.mkdtemp(suffix="dataset-unittest")
             final_args = base_args + args + ["--outdir", outdir, tmp_ds]
             self._check_cmd(" ".join(final_args))
-            dss = [openDataSet(op.join(outdir, fn)) for fn in os.listdir(outdir)]
+            dss = [openDataSet(op.join(outdir, fn))
+                   for fn in sorted(os.listdir(outdir))]
             assert [len(ds) for ds in dss] == ds_sizes
         run_and_validate(["--zmws"], [52, 22, 42, 21])
         #run_and_validate(["--auto"], [8, 12, 54, 63])
