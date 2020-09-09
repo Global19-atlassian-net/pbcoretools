@@ -590,3 +590,25 @@ class TestDataSet:
             'zmws.chunk1.subreadset.xml',
             'zmws.chunk2.subreadset.xml'
         ]
+
+    def test_dataset_split_multi_movie(self):
+        ds1 = pbtestdata.get_file("subreads-sequel")
+        ds2 = pbtestdata.get_file("subreads-xml")
+        tmp_ds = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
+        with SubreadSet(ds1, ds2) as ds:
+            ds.write(tmp_ds)
+        outdir = tempfile.mkdtemp(suffix="dataset-unittest")
+        base_args = [
+            "dataset", "split", "--maxChunks", "4", "--targetSize", "1",
+            "--prefix", "tst_multi_ds"
+        ]
+        def run_and_validate(args, ds_sizes):
+            outdir = tempfile.mkdtemp(suffix="dataset-unittest")
+            final_args = base_args + args + ["--outdir", outdir, tmp_ds]
+            self._check_cmd(" ".join(final_args))
+            dss = [openDataSet(op.join(outdir, fn))
+                   for fn in sorted(os.listdir(outdir))]
+            assert [len(ds) for ds in dss] == ds_sizes
+        run_and_validate(["--zmws"], [52, 22, 42, 21])
+        #run_and_validate(["--auto"], [8, 12, 54, 63])
+        run_and_validate(["--zmws", "--keepReadGroups"], [8, 12, 54, 63])
