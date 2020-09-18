@@ -693,6 +693,7 @@ def reparent_dataset(input_file,
                      output_file,
                      biosamples_csv=None):
     with openDataSet(input_file, strict=True, skipCounts=True) as ds_in:
+        ds_in.makePathsAbsolute()
         if len(ds_in.metadata.provenance) > 0:
             log.warning("Removing existing provenance record: %s",
                         ds_in.metadata.provenance)
