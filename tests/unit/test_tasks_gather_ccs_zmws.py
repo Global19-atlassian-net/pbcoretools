@@ -25,10 +25,10 @@ class TestGatherCcsZmws(PbIntegrationBase, unittest.TestCase):
     def _validate_output(self, file_name):
         with gzip.open(file_name, mode="rt") as gz_in:
             d = json.loads(gz_in.read())
-            self.assertEqual(d, {"zmws": [
+            assert d == {"zmws": [
                 {FIELDS[x]:x for x in range(5)},
                 {FIELDS[x]:x+5 for x in range(5)}
-            ]})
+            ]}
 
     def test_gather(self):
         ofn = tempfile.NamedTemporaryFile(suffix=".json.gz").name
