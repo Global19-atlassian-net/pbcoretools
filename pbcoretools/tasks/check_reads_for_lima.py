@@ -7,7 +7,9 @@ import logging
 import os.path as op
 import sys
 from argparse import ArgumentParser
+
 from pbcore.io import ConsensusReadSet
+from pbcore.io.align.PacBioBamIndex import PbiHeaderOnly
 
 log = logging.getLogger(__name__)
 __version__ = "0.1"
@@ -15,8 +17,10 @@ __version__ = "0.1"
 
 def is_ccs_demultiplexed(input_file):
     log.info("Checking {} is lima-demultiplexed or not.".format(input_file))
-    ds = ConsensusReadSet(input_file)
-    return ds.isBarcoded
+    # keep memory to an absolute minimum
+    ds = ConsensusReadSet(input_file, skipCounts=True)
+    pbi_headers = [PbiHeaderOnly(er.pbi) for er in ds.externalResources]
+    return any([pbi.hasBarcodeInfo for pbi in pbi_headers])
 
 
 def run(args):

@@ -570,3 +570,45 @@ class TestDataSet:
             "example_barcodes.fasta",
             "example_barcodes.fasta.fai"
         ])
+
+    @pytest.mark.internal_data
+    def test_dataset_split_auto_mode(self):
+        outdir = tempfile.mkdtemp(suffix="dataset-unittest")
+        ifn = "/pbi/dept/secondary/siv/testdata/SA3-Sequel/phi29/315/3150101/r54008_20160219_002905/1_A01_tiny_barcoded/m54008_160219_003234.tiny.subreadset.xml"
+        base_args = ["dataset", "split", "--auto", "--outdir", outdir,
+                     "--maxChunks", "5"]
+        args = base_args + ["--prefix", "barcodes", ifn]
+        self._check_cmd(" ".join(args))
+        ifn2 = "/pbi/dept/secondary/siv/testdata/SA3-Sequel/phi29/315/3150101/r54008_20160219_002905/1_A01_tiny/m54008_160219_003234_tiny.subreadset.xml"
+        args = base_args + ["--prefix", "zmws", ifn2]
+        self._check_cmd(" ".join(args))
+        assert sorted(os.listdir(outdir)) == [
+            'barcodes.0-0.subreadset.xml',
+            'barcodes.1-1.subreadset.xml',
+            'barcodes.2-2.subreadset.xml',
+            'zmws.chunk0.subreadset.xml',
+            'zmws.chunk1.subreadset.xml',
+            'zmws.chunk2.subreadset.xml'
+        ]
+
+    def test_dataset_split_multi_movie(self):
+        ds1 = pbtestdata.get_file("subreads-sequel")
+        ds2 = pbtestdata.get_file("subreads-xml")
+        tmp_ds = tempfile.NamedTemporaryFile(suffix=".subreadset.xml").name
+        with SubreadSet(ds1, ds2) as ds:
+            ds.write(tmp_ds)
+        outdir = tempfile.mkdtemp(suffix="dataset-unittest")
+        base_args = [
+            "dataset", "split", "--maxChunks", "4", "--targetSize", "1",
+            "--prefix", "tst_multi_ds"
+        ]
+        def run_and_validate(args, ds_sizes):
+            outdir = tempfile.mkdtemp(suffix="dataset-unittest")
+            final_args = base_args + args + ["--outdir", outdir, tmp_ds]
+            self._check_cmd(" ".join(final_args))
+            dss = [openDataSet(op.join(outdir, fn))
+                   for fn in sorted(os.listdir(outdir))]
+            assert [len(ds) for ds in dss] == ds_sizes
+        run_and_validate(["--zmws"], [52, 22, 42, 21])
+        #run_and_validate(["--auto"], [8, 12, 54, 63])
+        run_and_validate(["--zmws", "--keepReadGroups"], [8, 12, 54, 63])

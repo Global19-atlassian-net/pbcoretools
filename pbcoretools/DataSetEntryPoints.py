@@ -86,8 +86,10 @@ def createXml(args):
         raise IOError("Output file {} already exists. Use --force to "
                       "clobber".format(args.outfile))
     if args.dsType is None:
-        dset = openDataFile(*args.infile, strict=args.strict,
+        dset = openDataFile(*args.infile,
+                            strict=args.strict,
                             skipCounts=args.skipCounts,
+                            trustCounts=args.trustCounts,
                             generateIndices=args.generateIndices,
                             referenceFastaFname=args.reference_fasta_fname)
     else:
@@ -96,6 +98,7 @@ def createXml(args):
             *args.infile,
             strict=args.strict,
             skipCounts=args.skipCounts,
+            trustCounts=args.trustCounts,
             generateIndices=args.generateIndices,
             referenceFastaFname=args.reference_fasta_fname)
     if args.dsName != '':
@@ -176,6 +179,9 @@ def create_options(parser):
     pad("--unique-collections", action="store_true",
         default=False,
         help="Make sure CollectionMetadata records are unique")
+    pad("--trustCounts", action="store_true", default=False,
+        help="Assuming record counts in input dataset are correct, and "+
+             "skip reading index files to get overall count")
     parser.set_defaults(func=createXml)
 
 
@@ -254,6 +260,16 @@ def filter_options(parser):
     parser.set_defaults(func=filterXml)
 
 
+def _get_auto_split_mode(ds, args):
+    if args.auto:
+        if ds.isBarcoded and ds.numBarcodes > 1:
+            return (False, True)  # (zmws, barcodes)
+        else:
+            return (True, False)
+    else:
+        return (args.zmws, args.barcodes)
+
+
 def splitXml(args):
     log.debug("Starting split")
     dataSet = openDataSet(args.infile, strict=args.strict)
@@ -262,25 +278,28 @@ def splitXml(args):
     default_prefix = '.'.join(args.infile.split('.')[:nSuf])
     ext = '.'.join(args.infile.split('.')[nSuf:])
     prefix = args.prefix if args.prefix is not None else default_prefix
+    split_zmws, split_barcodes = _get_auto_split_mode(dataSet, args)
     if args.chunks:
         chunks = args.chunks
     if isinstance(dataSet, ContigSet):
         dss = dataSet.split(chunks)
     else:
-        dss = dataSet.split(chunks=chunks,
-                            ignoreSubDatasets=(not args.subdatasets),
-                            contigs=args.contigs,
-                            maxChunks=args.maxChunks,
-                            breakContigs=args.breakContigs,
-                            targetSize=args.targetSize,
-                            zmws=args.zmws,
-                            barcodes=args.barcodes,
-                            byRecords=(not args.byRefLength),
-                            updateCounts=(not args.noCounts))
+        dss = dataSet.split(
+            chunks=chunks,
+            ignoreSubDatasets=(not args.subdatasets),
+            contigs=args.contigs,
+            maxChunks=args.maxChunks,
+            breakContigs=args.breakContigs,
+            targetSize=args.targetSize,
+            zmws=split_zmws,
+            barcodes=split_barcodes,
+            byRecords=(not args.byRefLength),
+            updateCounts=(not args.noCounts),
+            breakReadGroups=args.breakReadGroups)
     for i, ds in enumerate(dss):
         infix = 'chunk{i}'
         chNum = str(i)
-        if args.barcodes and not args.simple_chunk_ids:
+        if split_barcodes and not args.simple_chunk_ids:
             infix = '{i}'
             chNum = '_'.join(ds.barcodes).replace(
                 '[', '').replace(']', '').replace(', ', '-')
@@ -308,6 +327,8 @@ def split_options(parser):
         help="Split on barcodes")
     pad("--zmws", default=False, action='store_true',
         help="Split on ZMWs, keeping ZMWs together")
+    pad("--auto", default=False, action="store_true",
+        help="Split on barcodes if present, fall back on ZMWs")
     pad("--byRefLength", default=True, action='store_true',
         help="Split contigs by contig length")
     pad("--noCounts", default=False, action='store_true',
@@ -329,6 +350,10 @@ def split_options(parser):
         help="Optional output file prefix")
     pad("--simple-chunk-ids", default=False, action="store_true",
         help="Don't include barcode IDs in output file names (only applies if --barcodes was used)")
+    pad("--breakReadGroups", action="store_true", default=True,
+        help="Split across read group boundaries (default behavior)")
+    pad("--keepReadGroups", dest="breakReadGroups", action="store_false",
+        help="Don't combine multiple read groups in a chunk")
     pad("outfiles", nargs=argparse.REMAINDER, type=str,
         help="The resulting XML files (optional)")
     parser.set_defaults(func=splitXml)

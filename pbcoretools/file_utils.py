@@ -7,6 +7,7 @@ from collections import defaultdict
 import multiprocessing
 import tempfile
 import zipfile
+import tarfile
 import logging
 import shutil
 import uuid
@@ -31,9 +32,25 @@ class Constants:
                             [FileTypes.DS_SUBREADS, FileTypes.DS_CCS]])
 
 
+def _archive_files_zip(input_file_names, output_file_name, archive_file_names):
+    with zipfile.ZipFile(output_file_name, "w", zipfile.ZIP_DEFLATED,
+                         allowZip64=True) as zip_out:
+        for file_name, archive_file_name in zip(input_file_names,
+                                                archive_file_names):
+            zip_out.write(file_name, archive_file_name)
+
+
+def _archive_files_tgz(input_file_names, output_file_name, archive_file_names):
+    with tarfile.open(output_file_name, mode="w:gz") as tgz_out:
+        for file_name, archive_file_name in zip(input_file_names,
+                                                archive_file_names):
+            tgz_out.add(file_name, archive_file_name)
+    return 0
+
+
 def archive_files(input_file_names, output_file_name, remove_path=True):
     """
-    Create a zipfile from a list of input files.
+    Create a zipfile or tar.gz archive from a list of input files.
 
     :param remove_path: if True, the directory will be removed from the input
                         file names before archiving.  All inputs and the output
@@ -42,12 +59,13 @@ def archive_files(input_file_names, output_file_name, remove_path=True):
     archive_file_names = input_file_names
     if remove_path:
         archive_file_names = [op.basename(fn) for fn in archive_file_names]
-    log.info("Creating zip file %s", output_file_name)
-    with zipfile.ZipFile(output_file_name, "w", zipfile.ZIP_DEFLATED,
-                         allowZip64=True) as zip_out:
-        for file_name, archive_file_name in zip(input_file_names,
-                                                archive_file_names):
-            zip_out.write(file_name, archive_file_name)
+    log.info("Creating archive file %s", output_file_name)
+    if output_file_name.endswith(".zip"):
+        _archive_files_zip(input_file_names, output_file_name, archive_file_names)
+    elif output_file_name.endswith(".gz"):
+        _archive_files_tgz(input_file_names, output_file_name, archive_file_names)
+    else:
+        raise ValueError("Couldn't determine type for %s" % output_file_name)
     return 0
 
 
@@ -169,13 +187,18 @@ def make_barcode_sample_csv(subreads, csv_file):
 
 def parse_biosamples_csv(csv_file):
     records = []
+    log.info("Reading biosamples from CSV ({f})".format(f=csv_file))
     with open(csv_file, "rt") as csv_in:
         reader = csv.reader(csv_in, delimiter=',')
         for k, row in enumerate(reader):
             if len(row) != 2:
                 raise ValueError("Expected two fields, got %s" % row)
             row = [item.encode("ascii", errors="ignore").decode() for item in row]
-            if k > 0:
+            if len(row) != 2:
+                raise ValueError("Bad format for CSV record - expected two fields: {r}".format(r=",".join(row)))
+            if k > 0 or "--" in row[0]:
+                log.info("Sample record: barcode={b} name={n}".format(
+                         b=row[0], n=row[1]))
                 records.append(tuple(row))
     return records
 
@@ -369,6 +392,7 @@ def _update_barcoded_dataset(
                                       createdBy="AnalysisJob",
                                       timeStampedName="")
     dataset.name = get_ds_name(dataset, parent_name, barcode_label)
+    sanitize_dataset_tags(dataset, remove_hidden=True)
     if min_score_filter is not None:
         dataset.filters.addRequirement(bq=[('>', min_score_filter)])
     if use_barcode_uuids:
@@ -668,12 +692,16 @@ def reparent_dataset(input_file,
                      dataset_name,
                      output_file,
                      biosamples_csv=None):
-    with openDataSet(input_file, strict=True) as ds_in:
+    with openDataSet(input_file, strict=True, skipCounts=True) as ds_in:
+        ds_in.makePathsAbsolute()
         if len(ds_in.metadata.provenance) > 0:
             log.warning("Removing existing provenance record: %s",
                         ds_in.metadata.provenance)
             ds_in.metadata.provenance = None
-        ds_in.name = dataset_name
+        if dataset_name:
+            ds_in.name = dataset_name
+        else:
+            ds_in.name = ds_in.name + " (copy)"
         ds_in.newUuid(random=True)
         sanitize_dataset_tags(ds_in, remove_hidden=True)
         if (biosamples_csv is not None):
@@ -704,6 +732,7 @@ def update_consensus_reads(ccs_in, subreads_in, ccs_out, use_run_design_uuid=Fal
                 for collection2 in ds_subreads.metadata.collections:
                     for bio_sample in collection2.wellSample.bioSamples:
                         collection.bioSamples.append(bio_sample)
+        ds.updateCounts()
         if run_design_uuid is not None:
             ds.uuid = run_design_uuid
         else:
