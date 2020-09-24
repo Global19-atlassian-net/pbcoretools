@@ -22,11 +22,11 @@ class TestEstimateLimaMemory(PbIntegrationBase):
         # this is silly of course.  but it's technically possible with the
         # Sequel II system, so we might as well just deal with it
         mem_gb = estimate_lima_memory(self.BIG_BARCODES, self.BIG_DATA, False)
-        assert mem_gb == 551
+        assert mem_gb == 2752
         # this is a more realistic case - 147K barcode pairs but the BAM file
         # is small enough to fit in the default footprint
         mem_gb = estimate_lima_memory(self.BIG_BARCODES, self.CCS_DATA, False)
-        assert mem_gb == 2
+        assert mem_gb == 7
 
     def test_integration_tiny(self):
         args = [
@@ -44,7 +44,7 @@ class TestEstimateLimaMemory(PbIntegrationBase):
         ]
         self._check_call(args)
         with open("lima_mem_gb.txt") as txt_out:
-            assert txt_out.read() == "551"
+            assert txt_out.read() == "2752"
 
     def test_defined_biosamples(self):
         # XXX awful dependency but it makes testing easier

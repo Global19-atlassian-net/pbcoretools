@@ -16,6 +16,7 @@ from pbcoretools.utils import get_base_parser
 
 log = logging.getLogger(__name__)
 DEFAULT_MEM_GB = 2
+BAM_COMPRESSION_FACTOR = 5
 
 
 def estimate_lima_memory(barcodes, dataset, symmetric):
@@ -36,6 +37,11 @@ def estimate_lima_memory(barcodes, dataset, symmetric):
                 for bioSample in coll.wellSample.bioSamples:
                     bioSampleBarcodes.extend(bioSample.DNABarcodes)
             n_bc_pairs = len(bioSampleBarcodes)
+            if n_bc_pairs == 0:
+                log.warn("No biosamples defined, assuming all barcodes used")
+                n_bc_pairs = n_barcodes
+                if not symmetric:
+                    n_bc_pairs *= n_bc_pairs
             if 0 < n_bc_pairs < 500:
                 log.info(
                     "only {n} sample barcodes, will use default memory".format(n=n_bc_pairs))
@@ -45,14 +51,15 @@ def estimate_lima_memory(barcodes, dataset, symmetric):
                 bam_size_bytes = sum([op.getsize(f) for f in bam_files])
                 bam_size_gb = int(math.ceil(bam_size_bytes / 1024**3))
                 log.info(
-                    "guessing memory from total BAM size: 1 + {m} GB".format(m=bam_size_gb))
-                return 1 + bam_size_gb
+                    "guessing memory from total BAM size ({m} GB)".format(m=bam_size_gb))
+                return DEFAULT_MEM_GB + (bam_size_gb * BAM_COMPRESSION_FACTOR)
 
 
 def run_args(args):
     mem_gb = estimate_lima_memory(args.barcodes,
                                   args.dataset,
                                   args.symmetric_barcodes)
+    log.info("Final memory: {}GB".format(mem_gb))
     with open("lima_mem_gb.txt", mode="wt") as txt_out:
         txt_out.write(str(mem_gb))
     return 0

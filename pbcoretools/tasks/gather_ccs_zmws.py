@@ -22,7 +22,17 @@ __version__ = "0.1"
 # dicts as namedtuples conserves memory
 FIELDS = "insert_size polymerase_length predicted_accuracy num_full_passes status"
 
-ZmwInfo = namedtuple("ZmwInfo", FIELDS.split())
+ZmwInfoInternal = namedtuple("ZmwInfoInternal", FIELDS.split())
+
+# workaround for namedtuple json encoding as dict
+class ZmwInfo:
+    __slots__ = ["_fields"]
+    def __init__(self, *args):
+        self._fields = ZmwInfoInternal(*args)
+
+    def as_dict(self):
+        return self._fields._asdict()
+
 
 def _to_zmw_info_hook(d):
     if "insert_size" in d:
@@ -35,8 +45,10 @@ def _to_zmw_info_hook(d):
 
 
 class ZmwInfoEncoder(JSONEncoder):
-    def default(self, o):  # pylint: disable=method-hidden
-        return {getattr(o, name) for name in FIELDS.split()}
+    def default(self, obj):  # pylint: disable=method-hidden
+        if isinstance(obj, ZmwInfo):
+            return obj.as_dict()
+        return JSONEncoder.default(self, obj)
 
 
 def gather_chunks(chunks, output_file):
