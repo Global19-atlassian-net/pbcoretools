@@ -614,6 +614,8 @@ def force_set_all_bio_sample_names(ds, sample_name):
             log.debug("Adding new BioSample '%s' to dataset", sample_name)
             bioSamples.addSample(sample_name)
         elif n_samples == 1:
+            log.debug("Changing BioSample '%s' to '%s'", bioSamples[0].name,
+                      sample_name)
             bioSamples[0].name = sample_name
         else:
             log.warning("Multiple BioSamples found: '%s'",
@@ -621,6 +623,11 @@ def force_set_all_bio_sample_names(ds, sample_name):
             log.warning("These will be overwritten with '%s'", sample_name)
             for sample in bioSamples:
                 sample.name = sample_name
+    for bioSample in ds.metadata.bioSamples:
+        log.debug("Changing top-level BioSample '%s' to '%s'", bioSample.name,
+                  sample_name)
+        bioSample.name = sample_name
+        n_total += 1
     return n_total
 
 
