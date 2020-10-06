@@ -192,7 +192,8 @@ def run_args(args):
         elif args.mode == "consolidate":
             if bam_file_name is None:
                 datastore_files.append(
-                    consolidate_bam(base_dir, file_prefix, ds))
+                    consolidate_bam(base_dir, file_prefix, ds,
+                                    min_rq=args.min_rq))
     DataStore(datastore_files).write_json(datastore_out)
     return 0
 
