@@ -1,6 +1,7 @@
 
 import tempfile
 import shutil
+import json
 import os.path as op
 import os
 
@@ -82,3 +83,21 @@ class TestConsolidateReadsBam(PbIntegrationBase):
         ]
         self._check_call(args)
         assert op.isfile("reads.bam")
+
+
+class TestCollectIsoseqRefineOutputs(PbIntegrationBase):
+
+    def test_integration_simple(self):
+        d = {"num_reads_fl": 35,
+             "num_reads_flnc": 35,
+             "num_reads_flnc_polya": 35}
+        with open("flnc_summary.json", "wt") as json_out:
+            json_out.write(json.dumps(d))
+        ds_in = pbtestdata.get_file("ccs-sequel")
+        args = [
+            "python3", "-m", "pbcoretools.tasks.collect_isoseq_refine_outputs",
+            ds_in, "flnc_summary.json",
+            "-o", "isoseq_refine.report.json"
+        ]
+        self._check_call(args)
+        assert op.isfile("isoseq_refine.report.json")
