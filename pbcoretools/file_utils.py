@@ -238,8 +238,9 @@ def discard_bio_samples(ds, barcode_label):
     Remove any BioSample records from a SubreadSet that are not associated
     with the specified barcode.
     """
-    while len(ds.metadata.bioSamples) > 0:
-        ds.metadata.bioSamples.pop(0)
+    if len(ds.metadata.collections) > 0:
+        while len(ds.metadata.bioSamples) > 0:
+            ds.metadata.bioSamples.pop(0)
     for coll in ds.metadata.collections:
         deletions = []
         for k, bio_sample in enumerate(coll.wellSample.bioSamples):
@@ -384,8 +385,11 @@ def _update_barcoded_dataset(
     else:
         log.warn("Can't find sample name for '{b}'".format(b=barcode_label))
     assert parent_type == dataset.datasetType
-    while len(dataset.metadata.bioSamples) > 0:
-        dataset.metadata.bioSamples.pop(0)
+    if len(dataset.metadata.collections) > 0:
+        while len(dataset.metadata.bioSamples) > 0:
+            log.warning("Removing top-level biosample %s",
+                        dataset.metadata.bioSamples[0].Name)
+            dataset.metadata.bioSamples.pop(0)
     dataset.subdatasets = []
     dataset.metadata.addParentDataSet(parent_uuid,
                                       parent_type,
@@ -479,12 +483,18 @@ def _load_files_for_update(
             update_files.append(f)
     bio_samples_d = {}
     barcode_uuids_d = {}
+    def _update_from_sample(bio_sample):
+        for dnabc in bio_sample.DNABarcodes:
+            bio_samples_d[dnabc.name] = bio_sample.name
+            barcode_uuids_d[dnabc.name] = dnabc.uniqueId
     for collection in parent_ds.metadata.collections:
         for bio_sample in collection.wellSample.bioSamples:
-            for dnabc in bio_sample.DNABarcodes:
-                bio_samples_d[dnabc.name] = bio_sample.name
-                barcode_uuids_d[dnabc.name] = dnabc.uniqueId
+            _update_from_sample(bio_sample)
         break
+    if len(parent_ds.metadata.collections) == 0:
+        log.warning("No CollectionMetadata, looking for BioSamples elsewhere")
+        for bio_sample in parent_ds.metadata.bioSamples:
+            _update_from_sample(bio_sample)
     return barcode_names, bio_samples_d, barcode_uuids_d, update_files, parent_info
 
 
