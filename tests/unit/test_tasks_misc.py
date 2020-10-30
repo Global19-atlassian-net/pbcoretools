@@ -105,6 +105,7 @@ class TestCollectIsoseqFiles(PbIntegrationBase):
                 _get_tmp_file_of_type(file_type)
             ])
         args.extend(["--single-sample", "--datastore", "datastore.json"])
+        args.append(tempfile.NamedTemporaryFile(suffix=".bam").name)
         self._check_call(args)
         ds = DataStore.load_from_json("datastore.json")
         assert len(ds.files) == len(FILE_IDS_AND_NAMES)
