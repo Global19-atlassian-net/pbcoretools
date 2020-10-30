@@ -45,7 +45,7 @@ def _to_datastore_file(file_name, file_id, file_type, label):
 def run_args(args):
     sample_name = None
     if not args.single_sample and not args.all_samples:
-        bam = BamReader(args.flnc_bam)
+        bam = BamReader(args.samples_file)
         sample_name = bam.readGroupTable[0].SampleName
         log.info("Sample name is {}".format(sample_name))
     elif args.all_samples:
@@ -66,6 +66,7 @@ def run_args(args):
 
 def _get_parser():
     p = get_base_parser(__doc__)
+    p.add_argument("samples_file", help="BAM file with sample name")
     for file_id, _, label in FILE_IDS_AND_NAMES:
         p.add_argument("--{}".format(file_id.replace("_", "-")),
                        default=None,
