@@ -10,7 +10,7 @@ import sys
 from pbcommand.models import FileTypes, DataStore, DataStoreFile
 from pbcommand.cli import pacbio_args_runner
 from pbcommand.utils import setup_log
-from pbcore.io import BamReader
+from pbcore.io import openDataFile
 
 from pbcoretools.utils import get_base_parser
 
@@ -45,7 +45,7 @@ def _to_datastore_file(file_name, file_id, file_type, label):
 def run_args(args):
     sample_name = None
     if not args.single_sample and not args.all_samples:
-        bam = BamReader(args.samples_file)
+        bam = openDataFile(args.samples_file)
         sample_name = bam.readGroupTable[0].SampleName
         log.info("Sample name is {}".format(sample_name))
     elif args.all_samples:
