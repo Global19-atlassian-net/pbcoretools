@@ -237,7 +237,7 @@ class TestBam2FastxTranscripts(PbIntegrationBase):
     def _get_args(self, fastx):
         return [
             "python", "-m",
-            "pbcoretools.tasks.bam2{f}_transcripts".format(f=fastx),
+            "pbcoretools.tasks.isoseq.bam2{f}_transcripts".format(f=fastx),
             self.INPUT_FILES[0],
             self.INPUT_FILES[1],
             self.INPUT_FILES[2],
@@ -249,8 +249,3 @@ class TestBam2FastxTranscripts(PbIntegrationBase):
         args = self._get_args("fasta")
         self._check_call(args)
         self.run_after(args[-2], args[-1], FastaReader)
-
-    def test_bam2fastq_transcripts(self):
-        args = self._get_args("fastq")
-        self._check_call(args)
-        self.run_after(args[-2], args[-1], FastqReader)
