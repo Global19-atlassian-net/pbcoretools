@@ -3,7 +3,7 @@ import tempfile
 import logging
 import os
 
-from pbcoretools.tasks.check_reads_for_lima import is_ccs_demultiplexed
+from pbcoretools.tasks.isoseq.check_reads_for_lima import is_ccs_demultiplexed
 
 import pbtestdata
 
