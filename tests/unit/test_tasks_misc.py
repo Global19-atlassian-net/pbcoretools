@@ -97,8 +97,8 @@ def _get_tmp_file_of_type(ft):
 class TestCollectIsoseqFiles(PbIntegrationBase):
 
     def test_integration_simple_1(self):
-        from pbcoretools.tasks.collect_isoseq_files import FILE_IDS_AND_NAMES
-        args = ["python3", "-m" "pbcoretools.tasks.collect_isoseq_files"]
+        from pbcoretools.tasks.isoseq.collect_files import FILE_IDS_AND_NAMES
+        args = ["python3", "-m" "pbcoretools.tasks.isoseq.collect_files"]
         for file_id, file_type, label in FILE_IDS_AND_NAMES:
             args.extend([
                 "--{}".format(file_id.replace("_", "-")),

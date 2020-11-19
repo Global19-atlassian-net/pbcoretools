@@ -33,7 +33,7 @@ FILE_IDS_AND_NAMES = [
 ]
 
 
-def _to_datastore_file(file_name, file_id, file_type, label):
+def to_datastore_file(file_name, file_id, file_type, label):
     return DataStoreFile(uuid.uuid4(),
                          file_id,
                          file_type.file_type_id,
@@ -59,7 +59,7 @@ def run_args(args):
         assert file_path is not None and op.exists(file_path)
         if sample_name:
             label += " ({})".format(sample_name)
-        files.append(_to_datastore_file(file_path, file_id, file_type, label))
+        files.append(to_datastore_file(file_path, file_id, file_type, label))
     DataStore(files).write_json(args.datastore)
     return 0
 
