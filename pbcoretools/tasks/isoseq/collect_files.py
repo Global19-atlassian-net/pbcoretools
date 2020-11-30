@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 FILE_IDS_AND_NAMES = [
     ("flnc_bam", FileTypes.BAM, "Full-Length Non-Concatemer Reads"),
-    ("flnc_report", FileTypes.CSV, "Full-length Non-Concatemer Report"),
+    ("flnc_report", FileTypes.CSV, "Full-Length Non-Concatemer Report"),
     ("cluster_report_csv", FileTypes.CSV, "Cluster Report"),
     ("barcode_overview_report", FileTypes.CSV, "Isoform Counts by Barcode"),
     ("hq_aln_bam", FileTypes.BAM, "Mapped High Quality Isoforms"),
@@ -29,7 +29,7 @@ FILE_IDS_AND_NAMES = [
     ("collapse_gff", FileTypes.GFF, "Collapsed Filtered Isoform GFF"),
     ("collapse_group", FileTypes.TXT, "Collapsed Filtered Isoform Groups"),
     ("collapse_abundance", FileTypes.TXT, "Collapsed Filtered Isoform Counts"),
-    ("collapse_readstat", FileTypes.TXT, "Full-length Non-Concatemer Read Assignments"),
+    ("collapse_readstat", FileTypes.TXT, "Full-Length Non-Concatemer Read Assignments"),
 ]
 
 
