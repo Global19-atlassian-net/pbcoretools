@@ -7,6 +7,7 @@ where all transcripts or isoforms may belong to more than one sample.
 from collections import defaultdict
 import logging
 import csv
+import re
 import os.path as op
 import sys
 
@@ -114,7 +115,7 @@ def demultiplex_transcripts(transcripts_file,
         #header = dict(ds.resourceReaders()[0].peer.header)
         _cache = {}
         for j, sample in enumerate(sample_names, start=1):
-            fasta_file = "unpolished-{j}.{t}.fasta".format(
+            fasta_file = "{t}_transcripts-{j}.fasta".format(
                 j=j, t=transcript_type)
             log.info("writing per-sample %s transcripts for '%s' to %s",
                      transcript_type, sample, fasta_file)
@@ -145,12 +146,14 @@ def demultiplex_collapsed_isoforms(fasta_file,
             collapsed_sequences[isoform_id] = (rec.header, rec.sequence)
     sample_files = {}
     for j, sample in enumerate(sample_names, start=1):
-        fasta_file = "collapsed-{j}.fasta".format(j=j)
+        fasta_file = "collapsed_isoforms-{j}.fasta".format(j=j)
         log.info("writing per-sample collapsed isoforms for '%s' to %s",
                  sample, fasta_file)
+        sample_id = re.sub(" ", "_", sample)
         with FastaWriter(fasta_file) as fasta_out:
             for isoform_id in sorted(sample_isoforms[sample]):
                 header, sequence = collapsed_sequences[isoform_id]
+                header = re.sub("UnnamedSample", sample_id, header)
                 fasta_out.writeRecord(header, sequence)
         sample_files[sample] = fasta_file
     return sample_files
