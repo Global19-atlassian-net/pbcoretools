@@ -1,12 +1,14 @@
 
 import tempfile
 import shutil
+import json
 import os.path as op
 import os
 
 import pytest
 
 from pbcommand.testkit import PbIntegrationBase
+from pbcommand.models.common import DataStore
 from pbcore.io import BarcodeSet, SubreadSet
 
 import pbtestdata
@@ -82,3 +84,28 @@ class TestConsolidateReadsBam(PbIntegrationBase):
         ]
         self._check_call(args)
         assert op.isfile("reads.bam")
+
+
+def _get_tmp_file_of_type(ft):
+    ext = "." + ft.ext
+    fn = tempfile.NamedTemporaryFile(suffix=ext).name
+    with open(fn, "wt") as f_out:
+        f_out.write("asdf")
+    return fn
+
+
+class TestCollectIsoseqFiles(PbIntegrationBase):
+
+    def test_integration_simple_1(self):
+        from pbcoretools.tasks.isoseq.collect_files import FILE_IDS_AND_NAMES
+        args = ["python3", "-m" "pbcoretools.tasks.isoseq.collect_files"]
+        for file_id, file_type, label in FILE_IDS_AND_NAMES:
+            args.extend([
+                "--{}".format(file_id.replace("_", "-")),
+                _get_tmp_file_of_type(file_type)
+            ])
+        args.extend(["--single-sample", "--datastore", "datastore.json"])
+        args.append(tempfile.NamedTemporaryFile(suffix=".bam").name)
+        self._check_call(args)
+        ds = DataStore.load_from_json("datastore.json")
+        assert len(ds.files) == len(FILE_IDS_AND_NAMES)
